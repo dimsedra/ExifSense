@@ -1,0 +1,119 @@
+.expert-card {
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    margin-bottom: 2rem;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
+    position: relative;
+    overflow: hidden;
+}
+
+.expert-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary);
+}
+
+.expert-card .card-header {
+    background: var(--secondary);
+    border-bottom: 1px solid var(--border-color);
+    padding: 1.25rem 1.5rem;
+}
+
+.expert-card .card-header h3 {
+    font-size: 1.1rem;
+    color: var(--text-main);
+}
+
+.expert-analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 2rem;
+    padding: 2rem;
+    animation: fadeIn 0.5s ease-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.expert-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 12px;
+    transition: background-color 0.2s;
+}
+
+.expert-item:hover {
+    background-color: var(--secondary);
+}
+
+.expert-item-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+}
+
+.expert-item-header i {
+    width: 18px;
+    height: 18px;
+    color: var(--primary);
+}
+
+.expert-narrative-bubble p {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-main);
+    margin: 0;
+    font-family: var(--font-sans);
+}
+
+.expert-narrative-bubble strong {
+    color: var(--primary);
+    font-weight: 600;
+    background-color: var(--secondary);
+    padding: 0 4px;
+    border-radius: 4px;
+}
+
+.forensic-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #ecfdf5;
+    color: #059669;
+    padding: 0.25rem 0.75rem;
+    border-radius: 99px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-left: auto;
+    border: 1px solid #d1fae5;
+}
+
+@media (max-width: 900px) {
+    .expert-analysis-grid {
+        grid-template-columns: 1fr;
+        padding: 1.25rem;
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 640px) {
+    .expert-narrative-bubble p { font-size: 0.9rem; }
+    .forensic-badge {
+        font-size: 0.6rem;
+        padding: 0.2rem 0.5rem;
+    }
+}
