@@ -45,6 +45,9 @@ export function saveSession(assets) {
         assets: assets.map(a => ({
             id: a.id,
             fileName: a.fileName,
+            fileSize: a.fileSize,
+            fileType: a.fileType,
+            fileDate: a.fileDate,
             exifData: a.exifData,
             thumbUrl: a.thumbUrl
         })),
@@ -74,6 +77,12 @@ export function getHistory() {
 
 export function clearHistory() {
     localStorage.removeItem(HISTORY_KEY);
+}
+
+export function deleteHistoryItem(id) {
+    const history = getHistory();
+    const updated = history.filter(item => item.id !== id);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
 }
 
 export function renderHistoryItems(container, query = '', filter = 'all', onLoad) {
@@ -120,8 +129,29 @@ export function renderHistoryItems(container, query = '', filter = 'all', onLoad
                     <span>${item.isBatch ? `${item.assetCount} Assets` : Utils.escapeHTML(item.assets[0]?.exifData?.Make || 'Unknown')}</span>
                 </div>
             </div>
+            <button class="history-delete-btn" title="Delete record" data-id="${item.id}">
+                <i data-lucide="trash-2"></i>
+            </button>
         `;
-        card.addEventListener('click', () => onLoad(item));
+        
+        card.addEventListener('click', (e) => {
+            if (e.target.closest('.history-delete-btn')) {
+                e.stopPropagation();
+                Utils.showConfirm({
+                    title: 'Delete Forensic Record',
+                    message: `Are you sure you want to permanently purge the record for "${item.sessionTitle}"? This action cannot be reversed.`,
+                    confirmText: 'Purge Record',
+                    type: 'danger',
+                    onConfirm: () => {
+                        deleteHistoryItem(item.id);
+                        renderHistoryItems(container, query, filter, onLoad);
+                    }
+                });
+                return;
+            }
+            onLoad(item);
+        });
+        
         container.appendChild(card);
     });
     

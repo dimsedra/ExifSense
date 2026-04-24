@@ -188,10 +188,16 @@ function initHistory() {
     });
 
     elements.clearHistoryBtn.addEventListener('click', () => {
-        if (confirm('Are you sure you want to clear all history?')) {
-            History.clearHistory();
-            refreshHistory();
-        }
+        Utils.showConfirm({
+            title: 'Delete All Records',
+            message: 'This will permanently remove all forensic sessions from your browser storage. This action cannot be reversed.',
+            confirmText: 'Purge All Records',
+            type: 'danger',
+            onConfirm: () => {
+                History.clearHistory();
+                refreshHistory();
+            }
+        });
     });
 }
 
@@ -296,6 +302,9 @@ async function handleFiles(fileList) {
                 id: Date.now() + Math.random(),
                 fileName: file.name,
                 fileObject: file,
+                fileSize: file.size,
+                fileType: file.type,
+                fileDate: file.lastModified,
                 exifData: exifData || {},
                 thumbUrl: thumbUrl,
                 locationData: null
@@ -422,7 +431,12 @@ async function switchAsset(index) {
         elements.previewImage.src = asset.thumbUrl;
     }
     
-    renderBasicFileInfo(asset.fileObject || { name: asset.fileName, size: 0, lastModified: Date.now(), type: 'image/jpeg' });
+    renderBasicFileInfo({ 
+        name: asset.fileName, 
+        size: asset.fileSize || 0, 
+        lastModified: asset.fileDate || Date.now(), 
+        type: asset.fileType || 'image/jpeg' 
+    });
     
     // Handle reverse geocoding if needed
     if (asset.exifData?.latitude != null && !asset.locationData) {

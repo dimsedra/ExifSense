@@ -115,3 +115,70 @@ export function categorizeExif(data) {
     }
     return categories;
 }
+
+export function showConfirm(options) {
+    const { 
+        title = 'Confirm', 
+        message = 'Are you sure?', 
+        confirmText = 'Confirm', 
+        cancelText = 'Cancel', 
+        type = 'info', // 'info' or 'danger'
+        onConfirm,
+        onCancel 
+    } = options;
+
+    const overlay = document.getElementById('modal-overlay');
+    const titleEl = document.getElementById('modal-title');
+    const messageEl = document.getElementById('modal-message');
+    const confirmBtn = document.getElementById('modal-confirm');
+    const cancelBtn = document.getElementById('modal-cancel');
+    const iconContainer = document.getElementById('modal-icon-container');
+
+    if (!overlay) return;
+
+    titleEl.textContent = title;
+    messageEl.textContent = message;
+    confirmBtn.textContent = confirmText;
+    cancelBtn.textContent = cancelText;
+
+    // Reset classes
+    confirmBtn.className = 'btn btn-primary';
+    iconContainer.className = 'modal-icon';
+    
+    if (type === 'danger') {
+        confirmBtn.classList.add('danger');
+        iconContainer.classList.add('danger');
+        iconContainer.innerHTML = '<i data-lucide="alert-triangle"></i>';
+    } else {
+        iconContainer.innerHTML = '<i data-lucide="help-circle"></i>';
+    }
+
+    if (window.lucide) lucide.createIcons();
+
+    const handleConfirm = () => {
+        close();
+        if (onConfirm) onConfirm();
+    };
+
+    const handleCancel = () => {
+        close();
+        if (onCancel) onCancel();
+    };
+
+    const close = () => {
+        overlay.classList.add('hidden');
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        overlay.removeEventListener('click', handleOverlayClick);
+    };
+
+    const handleOverlayClick = (e) => {
+        if (e.target === overlay) handleCancel();
+    };
+
+    confirmBtn.addEventListener('click', handleConfirm, { once: true });
+    cancelBtn.addEventListener('click', handleCancel, { once: true });
+    overlay.addEventListener('click', handleOverlayClick);
+
+    overlay.classList.remove('hidden');
+}
