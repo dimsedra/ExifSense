@@ -14,8 +14,6 @@ const elements = {
     loadingState: document.getElementById('loading-state'),
     dashboardState: document.getElementById('dashboard-state'),
     themeToggle: document.getElementById('theme-toggle'),
-    sunIcon: document.querySelector('.sun-icon'),
-    moonIcon: document.querySelector('.moon-icon'),
     startAnalysisBtn: document.getElementById('start-analysis-btn'),
     viewHistoryBtn: document.getElementById('view-history-btn'),
     analysisSection: document.getElementById('analysis-section'),
@@ -109,12 +107,8 @@ function initTheme() {
 function applyTheme(theme) {
     if (theme === 'dark') {
         document.body.classList.add('dark-mode');
-        elements.sunIcon.classList.add('hidden');
-        elements.moonIcon.classList.remove('hidden');
     } else {
         document.body.classList.remove('dark-mode');
-        elements.sunIcon.classList.remove('hidden');
-        elements.moonIcon.classList.add('hidden');
     }
 }
 

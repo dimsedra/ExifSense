@@ -97,6 +97,10 @@ body {
     color: var(--text-muted);
 }
 
+/* Theme Toggle Icons */
+body.dark-mode .sun-icon { display: none !important; }
+body:not(.dark-mode) .moon-icon { display: none !important; }
+
 .btn {
     display: inline-flex;
     align-items: center;
