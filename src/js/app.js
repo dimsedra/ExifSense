@@ -546,12 +546,12 @@ function renderMetadata(data) {
 
 function renderBasicFileInfo(file) {
     const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
-    const lastModified = new Date(file.lastModified).toLocaleString();
+    const lastModified = Utils.formatFullDate(file.lastModified);
     elements.fileBasicInfo.innerHTML = `
         <div><span>Name:</span> <span>${Utils.escapeHTML(Utils.truncate(file.name, 25))}</span></div>
         <div><span>Type:</span> <span>${Utils.escapeHTML(file.type || 'Unknown')}</span></div>
         <div><span>Size:</span> <span>${sizeInMB} MB</span></div>
-        <div><span>File System Date:</span> <span>${Utils.escapeHTML(lastModified)}</span></div>
+        <div><span>File System (Last Modified):</span> <span>${Utils.escapeHTML(lastModified)}</span></div>
     `;
 }
 

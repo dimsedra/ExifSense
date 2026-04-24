@@ -7,13 +7,26 @@ export function formatValue(key, value) {
     else if (key === 'FNumber') result = `f/${value}`;
     else if (key.includes('FocalLength')) result = `${value}mm`;
     else if (key.toLowerCase().includes('date') || key.toLowerCase().includes('time')) {
-        try {
-            const d = new Date(value);
-            if (!isNaN(d.getTime())) result = d.toLocaleString();
-        } catch(e) { /* use raw value */ }
+        result = formatFullDate(value);
     }
     
     return String(result);
+}
+
+export function formatFullDate(date) {
+    if (!date) return 'Unknown';
+    const d = (date instanceof Date) ? date : new Date(date);
+    if (isNaN(d.getTime())) return String(date);
+    
+    const pad = (n) => String(n).padStart(2, '0');
+    const day = pad(d.getDate());
+    const month = pad(d.getMonth() + 1);
+    const year = d.getFullYear();
+    const hours = pad(d.getHours());
+    const minutes = pad(d.getMinutes());
+    const seconds = pad(d.getSeconds());
+    
+    return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
 }
 
 export function calculateDistance(lat1, lon1, lat2, lon2) {
