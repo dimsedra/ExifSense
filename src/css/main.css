@@ -403,3 +403,43 @@ input[type="checkbox"] {
         font-size: 0.75rem;
     }
 }
+
+/* Forensic Advisory */
+.forensic-advisory {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-left: 4px solid var(--accent);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.advisory-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 0.9rem;
+    margin-bottom: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.advisory-header i {
+    width: 18px;
+    height: 18px;
+}
+
+.advisory-body p {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.6;
+}
+
+.advisory-body strong {
+    color: var(--text-main);
+}
+
+.mt-6 { margin-top: 1.5rem; }
+.mt-2 { margin-top: 0.5rem; }
