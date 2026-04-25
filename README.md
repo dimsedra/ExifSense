@@ -1,6 +1,8 @@
 # ExifSense
 ### Professional Asset Intelligence and Forensic Visualization
 
+![Hero Screenshot](./assets/screenshots/hero.png)
+
 ExifSense is an advanced, browser-native forensic platform designed to transform raw image metadata into comprehensive investigative intelligence.
 
 > "Standard EXIF viewers provide a list of tags. ExifSense provides a narrative."
@@ -70,6 +72,25 @@ ExifSense is built with a modular vanilla architecture to ensure maximum perform
 2.  **Import**: Drag and drop single or multiple assets into the investigation zone.
 3.  **Analyze**: Review the forensic narratives and geospatial movement path.
 4.  **Export**: Download findings in the preferred format for formal documentation.
+
+---
+
+---
+
+## Visual Walkthrough
+
+### Professional Investigation Dashboard
+![Technical Details](./assets/screenshots/dashboard-technical-details.png)
+*Detailed technical extraction and forensic intelligence narratives.*
+
+### Individual Asset Analysis
+![Individual Analysis](./assets/screenshots/dashboard-individual-asset-analysis.png)
+*Focus on specific optical characteristics and geospatial context.*
+
+### Analysis Modes
+| Upload & Batch Mode | History & Persistence |
+| :---: | :---: |
+| ![Upload Mode](./assets/screenshots/action-zone-upload.png) | ![History Mode](./assets/screenshots/action-zone-history.png) |
 
 ---
 
