@@ -54,7 +54,9 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    overflow-x: hidden;
 }
+
 
 .hidden { display: none !important; }
 .text-sm { font-size: 0.875rem; }
@@ -380,7 +382,11 @@ input[type="checkbox"] {
     .logo h1 span {
         display: none;
     }
+    .main-container {
+        padding: 1.5rem 1rem;
+    }
 }
+
 
 @media (max-width: 640px) {
     .header-container {
