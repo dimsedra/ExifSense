@@ -1,7 +1,11 @@
 # ExifSense
 ### Professional Asset Intelligence and Forensic Visualization
 
-ExifSense is an advanced, browser-native forensic platform designed to transform raw image metadata into comprehensive investigative intelligence. Built for forensic analysts, private investigators, and digital archeologists, ExifSense bridges the gap between technical data extraction and human-readable storytelling.
+ExifSense is an advanced, browser-native forensic platform designed to transform raw image metadata into comprehensive investigative intelligence.
+
+> "Standard EXIF viewers provide a list of tags. ExifSense provides a narrative."
+
+Built for forensic analysts, private investigators, and digital archeologists, ExifSense bridges the gap between technical data extraction and human-readable storytelling.
 
 ---
 
