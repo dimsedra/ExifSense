@@ -259,6 +259,50 @@ export function exportToPdf(assets, sessionTitle) {
     doc.save(`ExifSense_Report_${Date.now()}.pdf`);
 }
 
+export function exportToJson(assets, sessionTitle) {
+    const reportData = {
+        reportInfo: {
+            title: "EXIFSENSE FORENSIC ANALYSIS REPORT",
+            session: sessionTitle,
+            generated: Utils.formatFullDate(new Date()),
+            assetCount: assets.length
+        },
+        forensicAnalysis: {
+            combined: assets.length > 1 ? Narratives.generateCombinedAnalysis(assets).map(f => ({
+                title: f.title,
+                narrative: stripHtml(f.narrative)
+            })) : null,
+            assets: assets.map((asset, idx) => {
+                const data = asset.exifData;
+                const categorized = Utils.categorizeExif(data);
+                
+                const narratives = {};
+                if (data.latitude != null) narratives.geospatial = stripHtml(Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData));
+                if (categorized['Device Hardware']) narratives.hardware = stripHtml(Narratives.generateHardwareNarrative(categorized['Device Hardware']));
+                if (categorized['Exposure Settings']) narratives.exposure = stripHtml(Narratives.generateExposureNarrative(categorized['Exposure Settings']));
+                if (categorized['Optics & Lens']) narratives.optics = stripHtml(Narratives.generateOpticsNarrative(categorized['Optics & Lens']));
+                if (categorized['Image Quality']) narratives.quality = stripHtml(Narratives.generateQualityNarrative(categorized['Image Quality']));
+                if (categorized['Timeline & Date']) narratives.timeline = stripHtml(Narratives.generateTimelineNarrative(categorized['Timeline & Date']));
+
+                return {
+                    assetId: idx + 1,
+                    fileName: asset.fileName,
+                    sourceDetails: {
+                        fileType: asset.fileType || 'Unknown',
+                        fileSizeMB: (asset.fileSize / (1024 * 1024)).toFixed(2),
+                        fileSystemDate: Utils.formatFullDate(asset.fileDate)
+                    },
+                    forensicNarratives: narratives,
+                    metadata: categorized
+                };
+            })
+        }
+    };
+
+    const jsonContent = JSON.stringify(reportData, null, 4);
+    downloadFile(jsonContent, `ExifSense_Report_${Date.now()}.json`, 'application/json');
+}
+
 function downloadFile(content, fileName, contentType) {
     const a = document.createElement('a');
     const file = new Blob([content], { type: contentType });

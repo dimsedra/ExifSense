@@ -221,6 +221,7 @@ function initExport() {
             switch(format) {
                 case 'pdf': Exporter.exportToPdf(state.assets, title); break;
                 case 'md': Exporter.exportToMd(state.assets, title); break;
+                case 'json': Exporter.exportToJson(state.assets, title); break;
                 case 'csv': Exporter.exportToCsv(state.assets); break;
                 case 'txt': Exporter.exportToTxt(state.assets, title); break;
             }
