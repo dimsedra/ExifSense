@@ -74,47 +74,36 @@ ExifSense is designed for read-only forensic analysis. It does not modify source
 
 ---
 
-*Developed for the ExifSense Project.*
-- **PDF Export**: [jsPDF](https://github.com/parallax/jsPDF) & [autoTable](https://github.com/simonbengtsson/jsPDF-AutoTable)
+## Getting Started
 
-## 📦 Getting Started
+ExifSense is a zero-server, browser-native application. To begin:
 
-Since ExifSense is built with a "Zero-Server" philosophy, getting started is as simple as:
+1.  **Clone or Download** the repository to your local machine.
+2.  **Open** `index.html` in any modern web browser.
+3.  **Drag & Drop** your assets into the investigation zone.
 
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/yourusername/exifsense.git
-   ```
-2. Open `index.html` in any modern web browser.
-3. Drag and drop your investigation assets to begin.
+*Note: An active internet connection is recommended for geospatial tile rendering and road-following path reconstruction.*
 
-*Note: An active internet connection is required for fetching map tiles and calculating driving routes.*
-
-## 📂 Project Structure
+## Project Structure
 
 ```text
 ├── index.html          # Main Entry Point
 ├── src/
-│   ├── css/            # UI System & Layouts
+│   ├── css/            # UI System & Styling
+│   ├── locales/        # i18n Dictionaries (JSON)
 │   └── js/
-│       ├── app.js      # Core Orchestrator
+│       ├── app.js      # Core Application Orchestrator
+│       ├── i18n.js     # Internationalization Engine
 │       ├── mapping.js  # Geospatial & Routing Logic
 │       ├── narratives.js # Narrative Intelligence Engine
+│       ├── export.js    # Multi-format Export Logic
 │       ├── history.js   # Local Persistence Management
-│       └── ...
-└── scratch/            # Private Developer Notes (Ignored by Git)
+│       └── utils.js     # Shared Technical Utilities
 ```
 
-## 📜 Roadmap
+## License
 
-- [ ] Street View Snapshot Integration
-- [ ] Heatmap Intelligence View
-- [ ] Video Metadata Expansion (MP4/MOV)
-- [ ] Digital Signature & Hash Verification
-
-## 📄 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
+Distributed under the MIT License.
 
 ---
 
