@@ -1,3 +1,5 @@
+import { t } from './i18n.js';
+
 export function formatValue(key, value) {
     let result = value;
     if (value instanceof Date) result = value.toLocaleString();
@@ -14,7 +16,7 @@ export function formatValue(key, value) {
 }
 
 export function formatFullDate(date) {
-    if (!date) return 'Unknown';
+    if (!date) return t('unknown', {}, 'reports');
     const d = (date instanceof Date) ? date : new Date(date);
     if (isNaN(d.getTime())) return String(date);
     
@@ -66,6 +68,20 @@ export function getCategoryIcon(category) {
         'Miscellaneous': 'database'
     };
     return icons[category] || 'info';
+}
+
+export function getCategoryKey(category) {
+    const keys = {
+        'Device Hardware': 'cat_hardware',
+        'Exposure Settings': 'cat_exposure',
+        'Optics & Lens': 'cat_optics',
+        'Image Quality': 'cat_quality',
+        'Timeline & Date': 'cat_timeline',
+        'Geospatial': 'cat_geospatial',
+        'Standards & Info': 'cat_standards',
+        'Miscellaneous': 'cat_misc'
+    };
+    return keys[category] || 'cat_misc';
 }
 
 export function truncate(str, n) {

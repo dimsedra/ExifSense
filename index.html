@@ -39,19 +39,25 @@
             <i data-lucide="sun" class="sun-icon"></i>
             <i data-lucide="moon" class="moon-icon"></i>
           </button>
+          <div class="lang-selector">
+            <button class="btn btn-secondary" id="lang-toggle" title="Switch Language">
+              <i data-lucide="languages"></i>
+              <span id="current-lang-label">EN</span>
+            </button>
+          </div>
           <div class="export-dropdown hidden" id="export-container">
-            <button class="btn btn-secondary" id="export-main-btn">
+            <button class="btn btn-secondary" id="export-main-btn" data-i18n="export_report">
                 <i data-lucide="download"></i> Export Report
             </button>
             <div class="export-menu" id="export-menu">
-                <button data-format="pdf"><i data-lucide="file-text"></i> PDF Document</button>
-                <button data-format="md"><i data-lucide="file-code"></i> Markdown File</button>
-                <button data-format="json"><i data-lucide="braces"></i> JSON Data File</button>
-                <button data-format="csv"><i data-lucide="table"></i> CSV Dataset</button>
-                <button data-format="txt"><i data-lucide="file"></i> Plain Text</button>
+                <button data-format="pdf" data-i18n="pdf_doc"><i data-lucide="file-text"></i> PDF Document</button>
+                <button data-format="md" data-i18n="md_file"><i data-lucide="file-code"></i> Markdown File</button>
+                <button data-format="json" data-i18n="json_file"><i data-lucide="braces"></i> JSON Data File</button>
+                <button data-format="csv" data-i18n="csv_dataset"><i data-lucide="table"></i> CSV Dataset</button>
+                <button data-format="txt" data-i18n="plain_text"><i data-lucide="file"></i> Plain Text</button>
             </div>
           </div>
-          <button class="btn btn-secondary hidden" id="reset-btn">
+          <button class="btn btn-secondary hidden" id="reset-btn" data-i18n="analyze_new">
             <i data-lucide="refresh-cw"></i> Analyze New
           </button>
         </div>
@@ -63,17 +69,17 @@
       <section id="intro-state" class="state-container active">
         <div class="intro-container">
           <div class="intro-hero">
-            <div class="intro-badge">
+            <div class="intro-badge" data-i18n="hero_badge">
               <i data-lucide="shield"></i>
               Forensic Standard Metadata Analysis
             </div>
-            <h1>The Gold Standard for <span>Asset Intelligence</span></h1>
-            <p>Advanced EXIF extraction and forensic intelligence reports. Process batches, track geospatial movement, and generate unified reports—all within your local browser.</p>
+            <h1><span data-i18n="hero_title_part1">The Gold Standard for</span> <span class="highlight" data-i18n="hero_title_span">Asset Intelligence</span></h1>
+            <p data-i18n="hero_desc">Advanced EXIF extraction and forensic intelligence reports. Process batches, track geospatial movement, and generate unified reports—all within your local browser.</p>
             <div class="intro-cta">
-              <button class="btn-primary-large" id="start-analysis-btn">
+              <button class="btn-primary-large" id="start-analysis-btn" data-i18n="begin_investigation">
                 <i data-lucide="play"></i> Begin Investigation
               </button>
-              <button class="btn-outline-large" id="view-history-btn">
+              <button class="btn-outline-large" id="view-history-btn" data-i18n="review_history">
                 <i data-lucide="history"></i> Review History
               </button>
             </div>
@@ -83,10 +89,10 @@
           <div class="action-zone">
             <div class="tabs-container">
               <div class="tabs">
-                <button class="tab-btn active" data-tab="upload">
+                <button class="tab-btn active" data-tab="upload" data-i18n="tab_new">
                   <i data-lucide="upload-cloud"></i> New Analysis
                 </button>
-                <button class="tab-btn" data-tab="history">
+                <button class="tab-btn" data-tab="history" data-i18n="tab_history">
                   <i data-lucide="history"></i> History
                 </button>
               </div>
@@ -96,8 +102,8 @@
                 <section id="analysis-section" class="analysis-section">
                   <div class="dropzone" id="dropzone">
                     <div class="upload-mode-toggle">
-                      <button class="mode-btn active" data-mode="single">Single Asset</button>
-                      <button class="mode-btn" data-mode="batch">Batch Analysis</button>
+                      <button class="mode-btn active" data-mode="single" data-i18n="mode_single">Single Asset</button>
+                      <button class="mode-btn" data-mode="batch" data-i18n="mode_batch">Batch Analysis</button>
                     </div>
                     <input
                       type="file"
@@ -109,8 +115,8 @@
                       <div class="dropzone-icon">
                         <i data-lucide="plus"></i>
                       </div>
-                      <p>Drop your images here or click to browse</p>
-                      <p class="text-sm text-muted">
+                      <p data-i18n="dropzone_prompt">Drop your images here or click to browse</p>
+                      <p class="text-sm text-muted" data-i18n="dropzone_hint">
                         JPG, PNG, TIFF, HEIC (Local Processing)
                       </p>
                     </div>
@@ -120,16 +126,16 @@
                   <div class="forensic-advisory mt-6">
                     <div class="advisory-header">
                       <i data-lucide="info"></i>
-                      <span>Forensic Technical Advisory</span>
+                      <span data-i18n="advisory_title">Forensic Technical Advisory</span>
                     </div>
                     <div class="advisory-body">
-                      <p>
-                        <strong>Mobile Users:</strong> Capturing photos directly via browser may result in missing 
+                      <p data-i18n="advisory_mobile_warn">
+                        Mobile Users: Capturing photos directly via browser may result in missing 
                         geospatial metadata due to browser privacy sandboxing. 
                       </p>
-                      <p class="mt-2">
+                      <p class="mt-2" data-i18n="advisory_recommend">
                         To preserve maximum forensic intelligence, we recommend using your device's 
-                        <strong>native camera app</strong> first, then selecting the file from your 
+                        native camera app first, then selecting the file from your 
                         gallery via the <strong>"Files"</strong> option.
                       </p>
                     </div>
@@ -142,9 +148,9 @@
                 <section id="history-section" class="history-section">
                   <div class="history-controls">
                     <div class="history-filters">
-                        <button class="filter-btn active" data-filter="all">All</button>
-                        <button class="filter-btn" data-filter="single">Single</button>
-                        <button class="filter-btn" data-filter="batch">Batch</button>
+                        <button class="filter-btn active" data-filter="all" data-i18n="filter_all">All</button>
+                        <button class="filter-btn" data-filter="single" data-i18n="filter_single">Single</button>
+                        <button class="filter-btn" data-filter="batch" data-i18n="filter_batch">Batch</button>
                     </div>
                     <div class="search-box">
                       <i data-lucide="search"></i>
@@ -152,9 +158,10 @@
                         type="text"
                         id="history-search"
                         placeholder="Search history..."
+                        data-i18n="search_placeholder"
                       />
                     </div>
-                    <button id="clear-history" class="btn-text" title="Clear All History">
+                    <button id="clear-history" class="btn-text" title="Clear All History" data-i18n="clear_history">
                       <i data-lucide="trash-2"></i>
                     </button>
                   </div>
@@ -169,18 +176,18 @@
           <div class="intro-features">
             <div class="feature-card">
               <div class="feature-icon"><i data-lucide="lock"></i></div>
-              <h3>Secure by Design</h3>
-              <p>100% local processing. Your sensitive evidence assets never leave your browser, ensuring absolute data privacy and chain of custody.</p>
+              <h3 data-i18n="feature_secure_title">Secure by Design</h3>
+              <p data-i18n="feature_secure_desc">100% local processing. Your sensitive evidence assets never leave your browser, ensuring absolute data privacy and chain of custody.</p>
             </div>
             <div class="feature-card">
               <div class="feature-icon"><i data-lucide="brain"></i></div>
-              <h3>Expert Intel</h3>
-              <p>Automated forensic narratives and geospatial movement tracking. Transform raw metadata into actionable investigation intelligence.</p>
+              <h3 data-i18n="feature_expert_title">Expert Intel</h3>
+              <p data-i18n="feature_expert_desc">Automated forensic narratives and geospatial movement tracking. Transform raw metadata into actionable investigation intelligence.</p>
             </div>
             <div class="feature-card">
               <div class="feature-icon"><i data-lucide="file-check"></i></div>
-              <h3>Unified Reporting</h3>
-              <p>Export cross-asset findings into industry-standard PDF, Markdown, or CSV. Professional reports ready for documentation.</p>
+              <h3 data-i18n="feature_report_title">Unified Reporting</h3>
+              <p data-i18n="feature_report_desc">Export cross-asset findings into industry-standard PDF, Markdown, or CSV. Professional reports ready for documentation.</p>
             </div>
           </div>
         </div>
@@ -190,7 +197,7 @@
       <section id="loading-state" class="state-container hidden">
         <div class="loader">
           <div class="spinner"></div>
-          <p>Extracting Metadata...</p>
+          <p data-i18n="extracting_metadata">Extracting Metadata...</p>
         </div>
       </section>
 
@@ -201,12 +208,12 @@
           <div class="card-header">
             <div class="header-group">
               <i data-lucide="map-pin"></i>
-              <h3>Geospatial Data</h3>
+              <h3 data-i18n="geospatial_data">Geospatial Data</h3>
             </div>
             <div class="map-controls">
               <label class="switch-control" title="Toggle Chronological Route">
                 <input type="checkbox" id="show-path-toggle" checked>
-                <span class="switch-label">Show Route</span>
+                <span class="switch-label" data-i18n="show_route">Show Route</span>
                 <span class="switch-slider"></span>
               </label>
             </div>
@@ -226,10 +233,10 @@
         <div class="card expert-card hidden" id="combined-analysis-card">
           <div class="card-header">
             <i data-lucide="layers"></i>
-            <h3>Combined Forensic Intel</h3>
+            <h3 data-i18n="combined_intel">Combined Forensic Intel</h3>
             <div class="forensic-badge">
               <i data-lucide="activity"></i>
-              Cross-Asset Analysis
+              <span data-i18n="cross_asset">Cross-Asset Analysis</span>
             </div>
           </div>
           <div class="card-body">
@@ -242,7 +249,7 @@
         <!-- Asset Selector (Navigation for multi-upload) -->
         <div id="asset-selector-container" class="asset-selector-wrapper hidden">
           <div class="selector-header">
-            <span>Select Asset to Inspect</span>
+            <span data-i18n="select_asset">Select Asset to Inspect</span>
             <span id="asset-count-badge" class="count-badge">0 Assets</span>
           </div>
           <div id="asset-selector-list" class="asset-selector-list">
@@ -254,10 +261,10 @@
         <div class="card expert-card hidden" id="expert-analysis-card">
           <div class="card-header">
             <i data-lucide="brain"></i>
-            <h3>Individual Asset Analysis</h3>
+            <h3 data-i18n="individual_analysis">Individual Asset Analysis</h3>
             <div class="forensic-badge">
               <i data-lucide="shield-check"></i>
-              Forensic Grade
+              <span data-i18n="forensic_grade">Forensic Grade</span>
             </div>
           </div>
           <div class="card-body">
@@ -273,7 +280,7 @@
             <div class="card image-card">
               <div class="card-header">
                 <i data-lucide="image"></i>
-                <h3>Source File</h3>
+                <h3 data-i18n="source_file">Source File</h3>
               </div>
               <div class="card-body">
                 <img id="preview-image" src="" alt="Preview" />
@@ -301,12 +308,12 @@
           <i data-lucide="help-circle"></i>
         </div>
         <div class="modal-content">
-          <h3 id="modal-title">Confirm Action</h3>
-          <p id="modal-message">Are you sure you want to proceed?</p>
+          <h3 id="modal-title" data-i18n="confirm_title">Confirm Action</h3>
+          <p id="modal-message" data-i18n="confirm_message">Are you sure you want to proceed?</p>
         </div>
         <div class="modal-actions">
-          <button class="btn btn-secondary" id="modal-cancel">Cancel</button>
-          <button class="btn btn-primary" id="modal-confirm">Confirm</button>
+          <button class="btn btn-secondary" id="modal-cancel" data-i18n="cancel">Cancel</button>
+          <button class="btn btn-primary" id="modal-confirm" data-i18n="confirm">Confirm</button>
         </div>
       </div>
     </div>

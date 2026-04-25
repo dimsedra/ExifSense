@@ -103,6 +103,28 @@ body {
 body.dark-mode .sun-icon { display: none !important; }
 body:not(.dark-mode) .moon-icon { display: none !important; }
 
+/* Language Selector */
+.lang-selector .btn {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 45px;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    text-transform: uppercase;
+}
+
+#current-lang-label {
+    line-height: 1;
+}
+
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
 .btn {
     display: inline-flex;
     align-items: center;

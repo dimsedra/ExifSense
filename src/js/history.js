@@ -1,4 +1,5 @@
 import * as Utils from './utils.js';
+import { t, getCurrentLanguage } from './i18n.js';
 
 const HISTORY_KEY = 'exif_forensic_history';
 const MAX_HISTORY = 20;
@@ -53,7 +54,7 @@ export function saveSession(assets) {
         })),
         mainThumb: firstAsset.thumbUrl,
         sessionTitle: assets.length > 1 
-            ? `${firstAsset.fileName} + ${assets.length - 1} more` 
+            ? t('history_more', {name: firstAsset.fileName, n: assets.length - 1}) 
             : firstAsset.fileName
     };
     
@@ -101,10 +102,14 @@ export function renderHistoryItems(container, query = '', filter = 'all', onLoad
     );
     
     if (filtered.length === 0) {
+        const emptyMsg = query || filter !== 'all' 
+            ? t('history_no_matches', {query: Utils.escapeHTML(query)}) 
+            : t('history_no_analyses');
+            
         container.innerHTML = `
             <div class="empty-history">
                 <i data-lucide="database"></i>
-                <p>${query || filter !== 'all' ? `No matches found for "${Utils.escapeHTML(query)}"` : 'No previous analyses found'}</p>
+                <p>${emptyMsg}</p>
             </div>
         `;
         if (window.lucide) lucide.createIcons();
@@ -124,12 +129,12 @@ export function renderHistoryItems(container, query = '', filter = 'all', onLoad
                 <div class="history-name">${Utils.escapeHTML(item.sessionTitle)}</div>
                 <div class="history-meta">
                     <span class="history-date">
-                        ${new Date(item.date).toLocaleDateString('en-GB')} • ${new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        ${new Date(item.date).toLocaleDateString(getCurrentLanguage() === 'id' ? 'id-ID' : 'en-GB')} • ${new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    <span>${item.isBatch ? `${item.assetCount} Assets` : Utils.escapeHTML(item.assets[0]?.exifData?.Make || 'Unknown')}</span>
+                    <span>${item.isBatch ? t('asset_count', {n: item.assetCount}) : Utils.escapeHTML(item.assets[0]?.exifData?.Make || t('history_unknown_device'))}</span>
                 </div>
             </div>
-            <button class="history-delete-btn" title="Delete record" data-id="${item.id}">
+            <button class="history-delete-btn" title="${t('history_delete_title')}" data-id="${item.id}">
                 <i data-lucide="trash-2"></i>
             </button>
         `;
@@ -138,9 +143,10 @@ export function renderHistoryItems(container, query = '', filter = 'all', onLoad
             if (e.target.closest('.history-delete-btn')) {
                 e.stopPropagation();
                 Utils.showConfirm({
-                    title: 'Delete Forensic Record',
-                    message: `Are you sure you want to permanently purge the record for "${item.sessionTitle}"? This action cannot be reversed.`,
-                    confirmText: 'Purge Record',
+                    title: t('history_delete_confirm_title'),
+                    message: t('history_delete_confirm_msg', {name: item.sessionTitle}),
+                    confirmText: t('history_delete_confirm_btn'),
+                    cancelText: t('cancel'),
                     type: 'danger',
                     onConfirm: () => {
                         deleteHistoryItem(item.id);

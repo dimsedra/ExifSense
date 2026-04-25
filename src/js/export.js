@@ -1,5 +1,6 @@
 import * as Utils from './utils.js';
 import * as Narratives from './narratives.js';
+import { t } from './i18n.js';
 
 function stripHtml(html) {
     if (!html) return '';
@@ -8,14 +9,14 @@ function stripHtml(html) {
 }
 
 export function exportToTxt(assets, sessionTitle) {
-    let content = `EXIFSENSE FORENSIC ANALYSIS REPORT\n`;
+    let content = `${t('title', {}, 'reports')}\n`;
     content += `===================================\n`;
-    content += `Session: ${sessionTitle}\n`;
-    content += `Generated: ${Utils.formatFullDate(new Date())}\n`;
-    content += `Asset Count: ${assets.length}\n\n`;
+    content += `${t('session', {}, 'reports')}: ${sessionTitle}\n`;
+    content += `${t('generated', {}, 'reports')}: ${Utils.formatFullDate(new Date())}\n`;
+    content += `${t('asset_count', {}, 'reports')}: ${assets.length}\n\n`;
 
     if (assets.length > 1) {
-        content += `COMBINED FORENSIC INTELLIGENCE\n`;
+        content += `${t('combined_intel', {}, 'reports')}\n`;
         content += `-----------------------------\n`;
         const combined = Narratives.generateCombinedAnalysis(assets);
         combined.forEach(f => {
@@ -26,30 +27,30 @@ export function exportToTxt(assets, sessionTitle) {
     }
 
     assets.forEach((asset, idx) => {
-        content += `ASSET ${idx + 1}: ${asset.fileName}\n`;
+        content += `${t('asset_header', {n: idx + 1}, 'reports')}: ${asset.fileName}\n`;
         content += `===================================\n\n`;
 
-        content += `[Technical Source Details]\n`;
-        content += `File Name: ${asset.fileName}\n`;
-        content += `File Type: ${asset.fileType || 'Unknown'}\n`;
-        content += `File Size: ${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB\n`;
-        content += `File System (Last Modified): ${Utils.formatFullDate(asset.fileDate)}\n\n`;
+        content += `[${t('tech_details', {}, 'reports')}]\n`;
+        content += `${t('file_name', {}, 'ui')}: ${asset.fileName}\n`;
+        content += `${t('file_type', {}, 'ui')}: ${asset.fileType || t('unknown', {}, 'reports')}\n`;
+        content += `${t('file_size', {}, 'ui')}: ${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB\n`;
+        content += `${t('file_date', {}, 'ui')}: ${Utils.formatFullDate(asset.fileDate)}\n\n`;
 
-        content += `[Forensic Analysis Narrative]\n`;
+        content += `[${t('forensic_analysis', {}, 'reports')}]\n`;
         const data = asset.exifData;
         const categorized = Utils.categorizeExif(data);
         
         if (data.latitude != null) {
-            content += `Geospatial: ${stripHtml(Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData))}\n`;
+            content += `${t('cat_geospatial', {}, 'ui')}: ${stripHtml(Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData))}\n`;
         }
-        if (categorized['Device Hardware']) content += `Hardware: ${stripHtml(Narratives.generateHardwareNarrative(categorized['Device Hardware']))}\n`;
-        if (categorized['Exposure Settings']) content += `Exposure: ${stripHtml(Narratives.generateExposureNarrative(categorized['Exposure Settings']))}\n`;
-        if (categorized['Optics & Lens']) content += `Optics: ${stripHtml(Narratives.generateOpticsNarrative(categorized['Optics & Lens']))}\n`;
-        if (categorized['Image Quality']) content += `Quality: ${stripHtml(Narratives.generateQualityNarrative(categorized['Image Quality']))}\n`;
-        if (categorized['Timeline & Date']) content += `Timeline: ${stripHtml(Narratives.generateTimelineNarrative(categorized['Timeline & Date']))}\n`;
+        if (categorized['Device Hardware']) content += `${t('cat_hardware', {}, 'ui')}: ${stripHtml(Narratives.generateHardwareNarrative(categorized['Device Hardware']))}\n`;
+        if (categorized['Exposure Settings']) content += `${t('cat_exposure', {}, 'ui')}: ${stripHtml(Narratives.generateExposureNarrative(categorized['Exposure Settings']))}\n`;
+        if (categorized['Optics & Lens']) content += `${t('cat_optics', {}, 'ui')}: ${stripHtml(Narratives.generateOpticsNarrative(categorized['Optics & Lens']))}\n`;
+        if (categorized['Image Quality']) content += `${t('cat_quality', {}, 'ui')}: ${stripHtml(Narratives.generateQualityNarrative(categorized['Image Quality']))}\n`;
+        if (categorized['Timeline & Date']) content += `${t('cat_timeline', {}, 'ui')}: ${stripHtml(Narratives.generateTimelineNarrative(categorized['Timeline & Date']))}\n`;
         content += `\n`;
 
-        content += `[Raw Metadata Properties]\n`;
+        content += `[${t('raw_metadata', {}, 'reports')}]\n`;
         for (const [cat, props] of Object.entries(categorized)) {
             content += `--- ${cat} ---\n`;
             for (const [key, val] of Object.entries(props)) {
@@ -64,14 +65,14 @@ export function exportToTxt(assets, sessionTitle) {
 }
 
 export function exportToCsv(assets) {
-    let rows = [['Asset', 'Category', 'Property', 'Value']];
+    let rows = [[t('asset_header', {n: ''}, 'reports').trim(), t('category', {}, 'reports'), t('property', {}, 'reports'), t('value', {}, 'reports')]];
     
     assets.forEach((asset) => {
         // Add technical details to CSV
-        rows.push([asset.fileName, 'Source Details', 'File Name', asset.fileName]);
-        rows.push([asset.fileName, 'Source Details', 'File Type', asset.fileType || 'Unknown']);
-        rows.push([asset.fileName, 'Source Details', 'File Size (MB)', (asset.fileSize / (1024 * 1024)).toFixed(2)]);
-        rows.push([asset.fileName, 'Source Details', 'File System (Last Modified)', Utils.formatFullDate(asset.fileDate)]);
+        rows.push([asset.fileName, t('tech_details', {}, 'reports'), t('file_name', {}, 'ui'), asset.fileName]);
+        rows.push([asset.fileName, t('tech_details', {}, 'reports'), t('file_type', {}, 'ui'), asset.fileType || t('unknown', {}, 'reports')]);
+        rows.push([asset.fileName, t('tech_details', {}, 'reports'), t('file_size', {}, 'ui'), (asset.fileSize / (1024 * 1024)).toFixed(2)]);
+        rows.push([asset.fileName, t('tech_details', {}, 'reports'), t('file_date', {}, 'ui'), Utils.formatFullDate(asset.fileDate)]);
 
         const categorized = Utils.categorizeExif(asset.exifData);
         for (const [cat, props] of Object.entries(categorized)) {
@@ -91,13 +92,13 @@ export function exportToCsv(assets) {
 }
 
 export function exportToMd(assets, sessionTitle) {
-    let content = `# ExifSense Forensic Analysis Report\n\n`;
-    content += `**Session:** ${sessionTitle}  \n`;
-    content += `**Generated:** ${Utils.formatFullDate(new Date())}  \n`;
-    content += `**Asset Count:** ${assets.length}  \n\n`;
+    let content = `# ${t('title', {}, 'reports')}\n\n`;
+    content += `**${t('session', {}, 'reports')}:** ${sessionTitle}  \n`;
+    content += `**${t('generated', {}, 'reports')}:** ${Utils.formatFullDate(new Date())}  \n`;
+    content += `**${t('asset_count', {}, 'reports')}:** ${assets.length}  \n\n`;
 
     if (assets.length > 1) {
-        content += `## Combined Forensic Intelligence\n\n`;
+        content += `## ${t('combined_intel', {}, 'reports')}\n\n`;
         const combined = Narratives.generateCombinedAnalysis(assets);
         combined.forEach(f => {
             content += `### ${f.title}\n`;
@@ -106,17 +107,17 @@ export function exportToMd(assets, sessionTitle) {
     }
 
     assets.forEach((asset, idx) => {
-        content += `## Asset ${idx + 1}: ${asset.fileName}\n\n`;
+        content += `## ${t('asset_header', {n: idx + 1}, 'reports')}: ${asset.fileName}\n\n`;
 
-        content += `### Technical Source Details\n\n`;
-        content += `| Property | Value |\n`;
+        content += `### ${t('tech_details', {}, 'reports')}\n\n`;
+        content += `| ${t('property', {}, 'reports')} | ${t('value', {}, 'reports')} |\n`;
         content += `|----------|-------|\n`;
-        content += `| File Name | ${asset.fileName} |\n`;
-        content += `| File Type | ${asset.fileType || 'Unknown'} |\n`;
-        content += `| File Size | ${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB |\n`;
-        content += `| File System (Last Modified) | ${Utils.formatFullDate(asset.fileDate)} |\n\n`;
+        content += `| ${t('file_name', {}, 'ui')} | ${asset.fileName} |\n`;
+        content += `| ${t('file_type', {}, 'ui')} | ${asset.fileType || t('unknown', {}, 'reports')} |\n`;
+        content += `| ${t('file_size', {}, 'ui')} | ${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB |\n`;
+        content += `| ${t('file_date', {}, 'ui')} | ${Utils.formatFullDate(asset.fileDate)} |\n\n`;
 
-        content += `### Forensic Analysis Narrative\n\n`;
+        content += `### ${t('forensic_analysis', {}, 'reports')}\n\n`;
         const data = asset.exifData;
         const categorized = Utils.categorizeExif(data);
         
@@ -129,10 +130,10 @@ export function exportToMd(assets, sessionTitle) {
         if (categorized['Image Quality']) content += `**Quality Analysis:**  \n${stripHtml(Narratives.generateQualityNarrative(categorized['Image Quality']))}  \n\n`;
         if (categorized['Timeline & Date']) content += `**Timeline Analysis:**  \n${stripHtml(Narratives.generateTimelineNarrative(categorized['Timeline & Date']))}  \n\n`;
 
-        content += `### Metadata Properties\n\n`;
+        content += `### ${t('raw_metadata', {}, 'reports')}\n\n`;
         for (const [cat, props] of Object.entries(categorized)) {
             content += `#### ${cat}\n`;
-            content += `| Property | Value |\n`;
+            content += `| ${t('property', {}, 'reports')} | ${t('value', {}, 'reports')} |\n`;
             content += `|----------|-------|\n`;
             for (const [key, val] of Object.entries(props)) {
                 content += `| ${Utils.formatLabel(key)} | ${Utils.formatValue(key, val)} |\n`;
@@ -151,13 +152,13 @@ export function exportToPdf(assets, sessionTitle) {
     // Header
     doc.setFontSize(22);
     doc.setTextColor(37, 99, 235);
-    doc.text('EXIFSENSE FORENSIC REPORT', 14, 22);
+    doc.text(t('title', {}, 'reports'), 14, 22);
     
     doc.setFontSize(10);
     doc.setTextColor(100);
-    doc.text(`Session: ${sessionTitle}`, 14, 30);
-    doc.text(`Generated: ${Utils.formatFullDate(new Date())}`, 14, 35);
-    doc.text(`Total Assets: ${assets.length}`, 14, 40);
+    doc.text(`${t('session', {}, 'reports')}: ${sessionTitle}`, 14, 30);
+    doc.text(`${t('generated', {}, 'reports')}: ${Utils.formatFullDate(new Date())}`, 14, 35);
+    doc.text(`${t('asset_count', {}, 'reports')}: ${assets.length}`, 14, 40);
 
     let currentY = 50;
 
@@ -165,7 +166,7 @@ export function exportToPdf(assets, sessionTitle) {
     if (assets.length > 1) {
         doc.setFontSize(16);
         doc.setTextColor(0);
-        doc.text('Combined Forensic Intelligence', 14, currentY);
+        doc.text(t('combined_intel', {}, 'reports'), 14, currentY);
         currentY += 10;
 
         const combined = Narratives.generateCombinedAnalysis(assets);
@@ -189,17 +190,17 @@ export function exportToPdf(assets, sessionTitle) {
 
         doc.setFontSize(16);
         doc.setTextColor(37, 99, 235);
-        doc.text(`Asset ${idx + 1}: ${asset.fileName}`, 14, 20);
+        doc.text(`${t('asset_header', {n: idx + 1}, 'reports')}: ${asset.fileName}`, 14, 20);
         
         // Tech Details Table
         doc.autoTable({
             startY: 25,
-            head: [['Source Property', 'Detail']],
+            head: [[t('property', {}, 'reports'), t('value', {}, 'reports')]],
             body: [
-                ['File Name', asset.fileName],
-                ['File Type', asset.fileType || 'Unknown'],
-                ['File Size', `${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB`],
-                ['File System (Last Modified)', Utils.formatFullDate(asset.fileDate)]
+                [t('file_name', {}, 'ui'), asset.fileName],
+                [t('file_type', {}, 'ui'), asset.fileType || t('unknown', {}, 'reports')],
+                [t('file_size', {}, 'ui'), `${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB`],
+                [t('file_date', {}, 'ui'), Utils.formatFullDate(asset.fileDate)]
             ],
             theme: 'grid',
             headStyles: { fillColor: [71, 85, 105] },
@@ -210,7 +211,7 @@ export function exportToPdf(assets, sessionTitle) {
         let narrativeY = doc.lastAutoTable.finalY + 10;
         doc.setFontSize(13);
         doc.setTextColor(0);
-        doc.text('Forensic Narrative Analysis', 14, narrativeY);
+        doc.text(t('forensic_analysis', {}, 'reports'), 14, narrativeY);
         narrativeY += 8;
 
         const data = asset.exifData;
@@ -247,7 +248,7 @@ export function exportToPdf(assets, sessionTitle) {
 
         doc.autoTable({
             startY: narrativeY + 5,
-            head: [['Category', 'Property', 'Value']],
+            head: [[t('category', {}, 'reports'), t('property', {}, 'reports'), t('value', {}, 'reports')]],
             body: tableData,
             theme: 'striped',
             headStyles: { fillColor: [37, 99, 235] },
@@ -262,7 +263,7 @@ export function exportToPdf(assets, sessionTitle) {
 export function exportToJson(assets, sessionTitle) {
     const reportData = {
         reportInfo: {
-            title: "EXIFSENSE FORENSIC ANALYSIS REPORT",
+            title: t('title', {}, 'reports'),
             session: sessionTitle,
             generated: Utils.formatFullDate(new Date()),
             assetCount: assets.length

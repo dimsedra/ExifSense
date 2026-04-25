@@ -1,5 +1,6 @@
 import * as Utils from './utils.js';
 import * as Narratives from './narratives.js';
+import { initI18n, setLanguage, getCurrentLanguage, t } from './i18n.js';
 import * as Mapping from './mapping.js';
 import * as History from './history.js';
 import * as Exporter from './export.js';
@@ -14,6 +15,7 @@ const elements = {
     loadingState: document.getElementById('loading-state'),
     dashboardState: document.getElementById('dashboard-state'),
     themeToggle: document.getElementById('theme-toggle'),
+    langSelector: document.getElementById('lang-selector'),
     startAnalysisBtn: document.getElementById('start-analysis-btn'),
     viewHistoryBtn: document.getElementById('view-history-btn'),
     analysisSection: document.getElementById('analysis-section'),
@@ -39,8 +41,6 @@ const elements = {
     assetCountBadge: document.getElementById('asset-count-badge'),
     modeBtns: document.querySelectorAll('.mode-btn'),
     historyFilterBtns: document.querySelectorAll('.filter-btn'),
-    tabBtns: document.querySelectorAll('.tab-btn'),
-    tabContents: document.querySelectorAll('.tab-content'),
     exportContainer: document.getElementById('export-container'),
     exportMainBtn: document.getElementById('export-main-btn'),
     exportMenu: document.getElementById('export-menu'),
@@ -61,8 +61,10 @@ let state = {
 };
 
 // Initialization
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
+    await initI18n();
     initTheme();
+    initLang();
     initTabs();
     initHistory();
     initDropzone();
@@ -346,7 +348,7 @@ async function renderMultiAssetDashboard() {
 
 function renderAssetSelector() {
     elements.assetSelectorContainer.classList.remove('hidden');
-    elements.assetCountBadge.textContent = `${state.assets.length} Assets`;
+    elements.assetCountBadge.textContent = t('asset_count', {n: state.assets.length});
     elements.assetSelectorList.innerHTML = '';
 
     state.assets.forEach((asset, index) => {
@@ -452,11 +454,14 @@ async function switchAsset(index) {
     renderMetadata(asset.exifData);
     
     if (asset.exifData?.latitude != null) {
-        elements.gpsCoords.textContent = `LAT: ${asset.exifData.latitude.toFixed(6)} | LNG: ${asset.exifData.longitude.toFixed(6)}`;
+        elements.gpsCoords.textContent = t('gps_coords', {
+            lat: asset.exifData.latitude.toFixed(6),
+            lng: asset.exifData.longitude.toFixed(6)
+        });
         Mapping.updateMapLinks(asset.exifData.latitude, asset.exifData.longitude, elements.mapActions);
         elements.mapContainerCard.classList.remove('no-gps');
     } else {
-        elements.gpsCoords.textContent = 'No GPS signatures found in this asset.';
+        elements.gpsCoords.textContent = t('no_gps');
         elements.mapActions.innerHTML = '';
         elements.mapContainerCard.classList.add('no-gps');
     }
@@ -476,21 +481,21 @@ function renderExpertAnalysis(asset) {
     elements.expertAnalysisContent.innerHTML = '';
     elements.expertAnalysisCard.classList.remove('hidden');
 
-    const geoNarrative = Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData);
-    appendExpertItem('map-pin', 'Geospatial Analysis', geoNarrative);
-
     const categories = [
-        { name: 'Device Hardware', generator: Narratives.generateHardwareNarrative, icon: 'camera' },
-        { name: 'Exposure Settings', generator: Narratives.generateExposureNarrative, icon: 'aperture' },
-        { name: 'Optics & Lens', generator: Narratives.generateOpticsNarrative, icon: 'focus' },
-        { name: 'Image Quality', generator: Narratives.generateQualityNarrative, icon: 'file-image' },
-        { name: 'Timeline & Date', generator: Narratives.generateTimelineNarrative, icon: 'clock' }
+        { name: 'Device Hardware', key: 'cat_hardware', analysis: 'analysis_hardware', generator: Narratives.generateHardwareNarrative, icon: 'camera' },
+        { name: 'Exposure Settings', key: 'cat_exposure', analysis: 'analysis_exposure', generator: Narratives.generateExposureNarrative, icon: 'aperture' },
+        { name: 'Optics & Lens', key: 'cat_optics', analysis: 'analysis_optics', generator: Narratives.generateOpticsNarrative, icon: 'focus' },
+        { name: 'Image Quality', key: 'cat_quality', analysis: 'analysis_quality', generator: Narratives.generateQualityNarrative, icon: 'file-image' },
+        { name: 'Timeline & Date', key: 'cat_timeline', analysis: 'analysis_timeline', generator: Narratives.generateTimelineNarrative, icon: 'clock' }
     ];
+
+    const geoNarrative = Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData);
+    appendExpertItem('map-pin', t('analysis_geospatial'), geoNarrative);
 
     categories.forEach(cat => {
         const props = categorized[cat.name];
         if (props && Object.keys(props).length > 0) {
-            appendExpertItem(cat.icon, `${cat.name} Analysis`, cat.generator(props));
+            appendExpertItem(cat.icon, t(cat.analysis), cat.generator(props));
         }
     });
 
@@ -524,15 +529,18 @@ function renderMetadata(data) {
         const isImportant = ['Device Hardware', 'Exposure Settings', 'Optics & Lens', 'Image Quality', 'Timeline & Date'].includes(category);
         const isSecondary = ['Standards & Info', 'Miscellaneous'].includes(category);
         
+        const catKey = Utils.getCategoryKey(category);
+        const translatedCategory = t(catKey);
+        
         card.className = `card ${isImportant ? 'important-card' : ''} ${isSecondary ? 'secondary-card' : ''}`;
         card.innerHTML = `
             <div class="card-header">
                 <i data-lucide="${Utils.getCategoryIcon(category)}"></i>
-                <h3>${category}</h3>
+                <h3>${translatedCategory}</h3>
             </div>
             <div class="card-body">
                 <details class="raw-data-toggle">
-                    <summary>View ${isImportant ? 'Technical' : category} Details</summary>
+                    <summary>${t('view_details', {cat: translatedCategory})}</summary>
                     <div class="data-grid mt-4">
                         ${keys.sort().map(key => `
                             <div class="data-item">
@@ -553,10 +561,10 @@ function renderBasicFileInfo(file) {
     const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
     const lastModified = Utils.formatFullDate(file.lastModified);
     elements.fileBasicInfo.innerHTML = `
-        <div><span>Name:</span> <span>${Utils.escapeHTML(Utils.truncate(file.name, 25))}</span></div>
-        <div><span>Type:</span> <span>${Utils.escapeHTML(file.type || 'Unknown')}</span></div>
-        <div><span>Size:</span> <span>${sizeInMB} MB</span></div>
-        <div><span>File System (Last Modified):</span> <span>${Utils.escapeHTML(lastModified)}</span></div>
+        <div><span>${t('file_name')}:</span> <span>${Utils.escapeHTML(Utils.truncate(file.name, 25))}</span></div>
+        <div><span>${t('file_type')}:</span> <span>${Utils.escapeHTML(file.type || 'Unknown')}</span></div>
+        <div><span>${t('file_size')}:</span> <span>${sizeInMB} MB</span></div>
+        <div><span>${t('file_date')}:</span> <span>${Utils.escapeHTML(lastModified)}</span></div>
     `;
 }
 
@@ -565,8 +573,8 @@ function renderNoExif() {
         <div class="card">
             <div class="no-data">
                 <i data-lucide="shield-alert"></i>
-                <h3>No EXIF Data Found</h3>
-                <p class="text-muted">This image has been stripped of its metadata or did not contain any to begin with.</p>
+                <h3 data-i18n="no_exif_title">${t('no_exif_title')}</h3>
+                <p class="text-muted" data-i18n="no_exif_desc">${t('no_exif_desc')}</p>
             </div>
         </div>
     `;
@@ -601,4 +609,32 @@ function resetApp() {
     elements.exportContainer.classList.add('hidden');
     state.assets = [];
     Router.navigate('#/');
+}
+function initLang() {
+    const langToggle = document.getElementById('lang-toggle');
+    const langLabel = document.getElementById('current-lang-label');
+    
+    if (langToggle) {
+        // Set initial label
+        langLabel.textContent = getCurrentLanguage().toUpperCase();
+        
+        langToggle.addEventListener('click', async () => {
+            const nextLang = getCurrentLanguage() === 'en' ? 'id' : 'en';
+            await setLanguage(nextLang);
+            langLabel.textContent = nextLang.toUpperCase();
+            
+            // Re-render certain parts if needed (most are handled by translatePage)
+            // But if we are in the middle of a dashboard view, we might need to refresh narratives
+            if (state.assets.length > 0) {
+                renderAssetSelector();
+                renderCombinedAnalysis();
+                switchAsset(state.activeAssetIndex);
+            }
+            
+            // Refresh history if it's open
+            if (document.querySelector('.tab-btn[data-tab="history"]').classList.contains('active')) {
+                refreshHistory();
+            }
+        });
+    }
 }
