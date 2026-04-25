@@ -61,7 +61,7 @@ ExifSense is built with a modular vanilla architecture to ensure maximum perform
 *   **Core Engine**: Vanilla JavaScript (ES6+) with a decoupled module system.
 *   **EXIF Processing**: [Exifr](https://github.com/MikeKroz/exifr) for high-performance metadata parsing.
 *   **Mapping**: [Leaflet.js](https://leafletjs.com/) with custom road-routing integration via OSRM.
-*   **Visual Interface**: Custom CSS system focusing on an Industrial-Noir aesthetic.
+*   **Visual Interface**: Custom CSS system focusing on a sleek, modern aesthetic.
 *   **Storage**: Browser-native `localStorage` for secure session persistence and history.
 
 ---
