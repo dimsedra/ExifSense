@@ -275,7 +275,11 @@ async function handleFiles(fileList) {
     }
 
     const files = incomingFiles.filter(f => {
-        if (!f.type.startsWith('image/')) return false;
+        const isImage = f.type.startsWith('image/');
+        const isForensicFormat = /\.(heic|heif|tiff|tif|dng|cr2|nef|arw|orf|srw|raw)$/i.test(f.name);
+        
+        if (!isImage && !isForensicFormat) return false;
+        
         if (f.size > MAX_FILE_SIZE) {
             console.warn(`File ${f.name} ignored: Exceeds 100MB limit.`);
             return false;
