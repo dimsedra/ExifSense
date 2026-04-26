@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' https://unpkg.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://unpkg.com https://cdnjs.cloudflare.com;">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'sha256-vvt4KWwuNr51XfE5m+hzeNEGhiOfZzG97ccfqGsPwvE=' https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; style-src 'self' https://unpkg.com https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com; connect-src 'self' https://nominatim.openstreetmap.org https://router.project-osrm.org https://unpkg.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net data: blob:;">
     <meta name="referrer" content="strict-origin-when-cross-origin">
     <title>ExifSense | Forensic Intelligence</title>
     <!-- Leaflet CSS -->
@@ -60,6 +60,9 @@
           <button class="btn btn-secondary hidden" id="reset-btn" data-i18n="analyze_new">
             <i data-lucide="refresh-cw"></i> Analyze New
           </button>
+          <button class="btn btn-primary hidden" id="sanitize-main-btn" data-i18n="sanitize_asset">
+            <i data-lucide="shield-off"></i> Sanitize Metadata
+          </button>
         </div>
       </div>
     </header>
@@ -71,13 +74,13 @@
           <div class="intro-hero">
             <div class="intro-badge" data-i18n="hero_badge">
               <i data-lucide="shield"></i>
-              Forensic Standard Metadata Analysis
+              Digital Metadata for Everyone
             </div>
-            <h1><span data-i18n="hero_title_part1">The Gold Standard for</span> <span class="highlight" data-i18n="hero_title_span">Asset Intelligence</span></h1>
-            <p data-i18n="hero_desc">Advanced EXIF extraction and forensic intelligence reports. Process batches, track geospatial movement, and generate unified reports—all within your local browser.</p>
+            <h1><span data-i18n="hero_title_part1">Reveal the Data Behind</span> <span class="highlight" data-i18n="hero_title_span">Every Image</span></h1>
+            <p data-i18n="hero_desc">You don't need to be an expert to understand the hidden information in your photos. ExifSense makes it easy for anyone to read location, device, and image history—securely and privately.</p>
             <div class="intro-cta">
               <button class="btn-primary-large" id="start-analysis-btn" data-i18n="begin_investigation">
-                <i data-lucide="play"></i> Begin Investigation
+                <i data-lucide="play"></i> Start Exploring
               </button>
               <button class="btn-outline-large" id="view-history-btn" data-i18n="review_history">
                 <i data-lucide="history"></i> Review History
@@ -101,9 +104,14 @@
                 <!-- Dropzone Section -->
                 <section id="analysis-section" class="analysis-section">
                   <div class="dropzone" id="dropzone">
-                    <div class="upload-mode-toggle">
-                      <button class="mode-btn active" data-mode="single" data-i18n="mode_single">Single Asset</button>
-                      <button class="mode-btn" data-mode="batch" data-i18n="mode_batch">Batch Analysis</button>
+                    <div class="upload-mode-container">
+                      <button class="mode-nav-btn prev-mode" id="prev-mode-btn" aria-label="Previous Mode"><i data-lucide="chevron-left"></i></button>
+                      <div class="upload-mode-toggle" id="mode-toggle">
+                        <button class="mode-btn active" data-mode="single" data-i18n="mode_single">Single Asset</button>
+                        <button class="mode-btn" data-mode="batch" data-i18n="mode_batch">Batch Analysis</button>
+                        <button class="mode-btn mode-btn-remove" data-mode="remove" data-i18n="mode_remove">Remove Metadata</button>
+                      </div>
+                      <button class="mode-nav-btn next-mode" id="next-mode-btn" aria-label="Next Mode"><i data-lucide="chevron-right"></i></button>
                     </div>
                     <input
                       type="file"
@@ -181,8 +189,8 @@
             </div>
             <div class="feature-card">
               <div class="feature-icon"><i data-lucide="brain"></i></div>
-              <h3 data-i18n="feature_expert_title">Expert Intel</h3>
-              <p data-i18n="feature_expert_desc">Automated forensic narratives and geospatial movement tracking. Transform raw metadata into actionable investigation intelligence.</p>
+              <h3 data-i18n="feature_expert_title">Smart Insights</h3>
+              <p data-i18n="feature_expert_desc">Automated narratives that explain technical data in plain language. Transform raw metadata into meaningful information.</p>
             </div>
             <div class="feature-card">
               <div class="feature-icon"><i data-lucide="file-check"></i></div>
@@ -301,7 +309,7 @@
       </section>
     </main>
 
-    <!-- Custom Modal -->
+    <!-- Custom Modal (Restore) -->
     <div id="modal-overlay" class="modal-overlay hidden">
       <div class="modal-card">
         <div class="modal-icon" id="modal-icon-container">
@@ -318,8 +326,68 @@
       </div>
     </div>
 
+    <!-- Removal Selection Modal -->
+    <div id="removal-modal-overlay" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-icon text-primary">
+          <i data-lucide="shield-off"></i>
+        </div>
+        <div class="modal-content">
+          <h3 data-i18n="removal_modal_title">Metadata Removal Options</h3>
+          <p data-i18n="removal_modal_desc">Select which information you would like to strip from this image.</p>
+          
+          <div class="removal-options mt-6">
+            <label class="removal-option-item" for="rem-type-all">
+              <input type="radio" name="removal-type" id="rem-type-all" value="all" checked>
+              <div class="option-details">
+                <span class="option-title" data-i18n="remove_all">Remove All</span>
+                <span class="option-subtitle text-xs text-muted" data-i18n="remove_all_desc">Complete sanitization (Recommended)</span>
+              </div>
+            </label>
+            
+            <label class="removal-option-item" for="rem-type-specific">
+              <input type="radio" name="removal-type" id="rem-type-specific" value="specific">
+              <div class="option-details">
+                <span class="option-title" data-i18n="remove_specific">Remove Specific</span>
+                <span class="option-subtitle text-xs text-muted" data-i18n="remove_specific_desc">Choose categories to strip</span>
+              </div>
+            </label>
+            
+            <div id="specific-options" class="specific-options-grid hidden mt-4">
+              <label class="checkbox-item">
+                <input type="checkbox" id="rem-gps" checked>
+                <span class="custom-checkbox"></span>
+                <div class="checkbox-details">
+                   <span class="checkbox-title" data-i18n="cat_gps_removal">Location Information (GPS)</span>
+                </div>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="rem-device" checked>
+                <span class="custom-checkbox"></span>
+                <div class="checkbox-details">
+                   <span class="checkbox-title" data-i18n="cat_device_removal">Device Information</span>
+                </div>
+              </label>
+              <label class="checkbox-item">
+                <input type="checkbox" id="rem-camera" checked>
+                <span class="custom-checkbox"></span>
+                <div class="checkbox-details">
+                   <span class="checkbox-title" data-i18n="cat_camera_removal">Camera Settings Information</span>
+                </div>
+              </label>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="removal-cancel" data-i18n="cancel">Cancel</button>
+          <button class="btn btn-primary" id="removal-confirm" data-i18n="confirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/piexifjs@1.0.6/piexif.min.js" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin="anonymous"></script>
     <script src="https://unpkg.com/lucide@0.408.0/dist/umd/lucide.min.js" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" crossorigin="anonymous"></script>

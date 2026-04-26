@@ -211,3 +211,135 @@ export function showConfirm(options) {
 
     overlay.classList.remove('hidden');
 }
+
+export async function stripAllMetadata(file) {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            canvas.toBlob((blob) => {
+                resolve(blob);
+            }, file.type);
+            URL.revokeObjectURL(img.src);
+        };
+        img.onerror = (err) => {
+            URL.revokeObjectURL(img.src);
+            reject(err);
+        };
+        img.src = URL.createObjectURL(file);
+    });
+}
+
+export async function stripSpecificMetadata(file, removalOptions) {
+    // If not JPEG, we fallback to Strip All via Canvas as piexif primarily handles JPEG
+    if (file.type !== 'image/jpeg' && file.type !== 'image/jpg') {
+        console.warn("Surgical removal only supported for JPEG. Falling back to total sanitization.");
+        return stripAllMetadata(file);
+    }
+
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const dataUrl = e.target.result;
+                let exifObj = piexif.load(dataUrl);
+
+                if (removalOptions.gps) exifObj["GPS"] = {};
+                if (removalOptions.device) {
+                    if (exifObj["0th"]) {
+                        delete exifObj["0th"][piexif.ImageIFD.Make];
+                        delete exifObj["0th"][piexif.ImageIFD.Model];
+                        delete exifObj["0th"][piexif.ImageIFD.Software];
+                    }
+                }
+                if (removalOptions.camera) {
+                    exifObj["Exif"] = {}; // Strip most camera settings
+                }
+
+                const exifBytes = piexif.dump(exifObj);
+                const newDataUrl = piexif.insert(exifBytes, dataUrl);
+                
+                // Manual conversion to blob to avoid connect-src CSP issues with fetch(dataUrl)
+                const parts = newDataUrl.split(',');
+                const mime = parts[0].match(/:(.*?);/)[1];
+                const bstr = atob(parts[1]);
+                let n = bstr.length;
+                const u8arr = new Uint8Array(n);
+                while (n--) {
+                    u8arr[n] = bstr.charCodeAt(n);
+                }
+                const blob = new Blob([u8arr], { type: mime });
+                resolve(blob);
+            } catch (err) {
+                console.error("Piexif error:", err);
+                // Fallback to canvas stripping if piexif fails
+                stripAllMetadata(file).then(resolve).catch(reject);
+            }
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+export function downloadBlob(blob, fileName) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `cleaned_${fileName}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
+export function showRemovalModal(options) {
+    const { onConfirm, onCancel } = options;
+    const overlay = document.getElementById('removal-modal-overlay');
+    const confirmBtn = document.getElementById('removal-confirm');
+    const cancelBtn = document.getElementById('removal-cancel');
+    const typeRadios = document.querySelectorAll('input[name="removal-type"]');
+    const specificOptions = document.getElementById('specific-options');
+
+    if (!overlay) return;
+
+    const handleTypeChange = () => {
+        const isSpecific = document.querySelector('input[name="removal-type"]:checked').value === 'specific';
+        specificOptions.classList.toggle('hidden', !isSpecific);
+    };
+
+    typeRadios.forEach(r => r.addEventListener('change', handleTypeChange));
+    handleTypeChange(); // Initialize visibility based on default checked radio
+
+    const handleConfirm = () => {
+        const removalType = document.querySelector('input[name="removal-type"]:checked').value;
+        const options = {
+            all: removalType === 'all',
+            gps: document.getElementById('rem-gps').checked,
+            device: document.getElementById('rem-device').checked,
+            camera: document.getElementById('rem-camera').checked
+        };
+        close();
+        if (onConfirm) onConfirm(options);
+    };
+
+    const handleCancel = () => {
+        close();
+        if (onCancel) onCancel();
+    };
+
+    const close = () => {
+        overlay.classList.add('hidden');
+        confirmBtn.removeEventListener('click', handleConfirm);
+        cancelBtn.removeEventListener('click', handleCancel);
+        typeRadios.forEach(r => r.removeEventListener('change', handleTypeChange));
+    };
+
+    confirmBtn.addEventListener('click', handleConfirm, { once: true });
+    cancelBtn.addEventListener('click', handleCancel, { once: true });
+    overlay.classList.remove('hidden');
+}
+

@@ -45,7 +45,10 @@ const elements = {
     exportMainBtn: document.getElementById('export-main-btn'),
     exportMenu: document.getElementById('export-menu'),
     logo: document.querySelector('.logo'),
-    showPathToggle: document.getElementById('show-path-toggle')
+    showPathToggle: document.getElementById('show-path-toggle'),
+    sanitizeMainBtn: document.getElementById('sanitize-main-btn'),
+    prevModeBtn: document.getElementById('prev-mode-btn'),
+    nextModeBtn: document.getElementById('next-mode-btn')
 };
 
 let state = {
@@ -233,13 +236,52 @@ function initExport() {
 
 function initDropzone() {
     // Mode toggle
+    const setUploadMode = (mode) => {
+        state.uploadMode = mode;
+        elements.modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+        elements.fileInput.multiple = (mode === 'batch');
+        elements.dropzone.classList.toggle('remove-mode', mode === 'remove');
+    };
+
     elements.modeBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
-            state.uploadMode = btn.dataset.mode;
-            elements.modeBtns.forEach(b => b.classList.toggle('active', b === btn));
-            elements.fileInput.multiple = (state.uploadMode === 'batch');
+            setUploadMode(btn.dataset.mode);
         });
+    });
+
+    if (elements.prevModeBtn && elements.nextModeBtn) {
+        const modes = ['single', 'batch', 'remove'];
+        
+        elements.prevModeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentIndex = modes.indexOf(state.uploadMode);
+            const prevIndex = (currentIndex - 1 + modes.length) % modes.length;
+            setUploadMode(modes[prevIndex]);
+        });
+
+        elements.nextModeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const currentIndex = modes.indexOf(state.uploadMode);
+            const nextIndex = (currentIndex + 1) % modes.length;
+            setUploadMode(modes[nextIndex]);
+        });
+    }
+    
+    elements.sanitizeMainBtn.addEventListener('click', () => {
+        const currentAsset = state.assets[state.activeAssetIndex];
+        if (currentAsset) {
+            if (currentAsset.fileObject) {
+                handleSanitization(currentAsset.fileObject);
+            } else {
+                Utils.showConfirm({
+                    title: t('reupload_required_title'),
+                    message: t('reupload_required_msg'),
+                    confirmText: t('go_to_upload'),
+                    onConfirm: () => resetApp()
+                });
+            }
+        }
     });
     elements.dropzone.addEventListener('dragover', (e) => {
         e.preventDefault();
@@ -295,6 +337,14 @@ async function handleFiles(fileList) {
         return;
     }
 
+    if (state.uploadMode === 'remove') {
+        // Just process the first file for removal in this mode
+        const file = files[0];
+        handleSanitization(file);
+        switchState('intro');
+        return;
+    }
+
     switchState('loading');
     state.assets = [];
     state.activeAssetIndex = 0;
@@ -330,6 +380,39 @@ async function handleFiles(fileList) {
         renderNoExif();
         Router.navigate('#/');
     }
+}
+
+async function handleSanitization(file) {
+    Utils.showRemovalModal({
+        onConfirm: async (options) => {
+            switchState('loading');
+            try {
+                let cleanedBlob;
+                if (options.all) {
+                    cleanedBlob = await Utils.stripAllMetadata(file);
+                } else {
+                    cleanedBlob = await Utils.stripSpecificMetadata(file, options);
+                }
+                
+                Utils.downloadBlob(cleanedBlob, file.name);
+                
+                // Show success modal
+                Utils.showConfirm({
+                    title: 'Sanitization Complete',
+                    message: 'Your image has been cleaned and the download has started.',
+                    confirmText: 'Done',
+                    type: 'info'
+                });
+            } catch (err) {
+                console.error("Sanitization failed:", err);
+                alert("Failed to sanitize image.");
+            }
+            switchState(state.assets.length > 0 ? 'dashboard' : 'intro');
+        },
+        onCancel: () => {
+            switchState(state.assets.length > 0 ? 'dashboard' : 'intro');
+        }
+    });
 }
 
 async function renderMultiAssetDashboard() {
@@ -597,6 +680,7 @@ function switchState(s) {
         elements.dashboardState.classList.remove('hidden');
         elements.resetBtn.classList.remove('hidden');
         elements.exportContainer.classList.remove('hidden');
+        elements.sanitizeMainBtn.classList.remove('hidden');
         if (state.map) setTimeout(() => state.map.invalidateSize(), 100);
     }
 }
