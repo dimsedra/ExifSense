@@ -8,7 +8,7 @@ function stripHtml(html) {
     return html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>?/gm, '');
 }
 
-export function exportToTxt(assets, sessionTitle) {
+export function copyToClipboard(assets, sessionTitle) {
     let content = `${t('title', {}, 'reports')}\n`;
     content += `===================================\n`;
     content += `${t('session', {}, 'reports')}: ${sessionTitle}\n`;
@@ -61,7 +61,12 @@ export function exportToTxt(assets, sessionTitle) {
         content += `\n\n`;
     });
 
-    downloadFile(content, `ExifSense_Report_${Date.now()}.txt`, 'text/plain');
+    navigator.clipboard.writeText(content).then(() => {
+        Utils.showToast(t('copied_to_clipboard', {}, 'ui'));
+    }).catch(err => {
+        console.error('Failed to copy: ', err);
+        alert('Failed to copy to clipboard');
+    });
 }
 
 export function exportToCsv(assets) {

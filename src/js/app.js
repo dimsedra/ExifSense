@@ -194,9 +194,9 @@ function initHistory() {
 
     elements.clearHistoryBtn.addEventListener('click', () => {
         Utils.showConfirm({
-            title: 'Delete All Records',
-            message: 'This will permanently remove all forensic sessions from your browser storage. This action cannot be reversed.',
-            confirmText: 'Purge All Records',
+            title: t('history_clear_confirm_title'),
+            message: t('history_clear_confirm_msg'),
+            confirmText: t('history_clear_confirm_btn'),
             type: 'danger',
             onConfirm: () => {
                 History.clearHistory();
@@ -220,7 +220,7 @@ function initExport() {
         btn.addEventListener('click', () => {
             const format = btn.dataset.format;
             const title = state.assets.length > 1 
-                ? `${state.assets[0].fileName} + ${state.assets.length - 1} others`
+                ? t('history_more', {name: state.assets[0].fileName, n: state.assets.length - 1})
                 : state.assets[0].fileName;
 
             switch(format) {
@@ -228,7 +228,7 @@ function initExport() {
                 case 'md': Exporter.exportToMd(state.assets, title); break;
                 case 'json': Exporter.exportToJson(state.assets, title); break;
                 case 'csv': Exporter.exportToCsv(state.assets); break;
-                case 'txt': Exporter.exportToTxt(state.assets, title); break;
+                case 'clipboard': Exporter.copyToClipboard(state.assets, title); break;
             }
         });
     });
@@ -315,7 +315,7 @@ async function handleFiles(fileList) {
     const incomingFiles = Array.from(fileList);
     
     if (incomingFiles.length > MAX_BATCH_FILES) {
-        alert(`Batch limit exceeded. Please upload a maximum of ${MAX_BATCH_FILES} files at once.`);
+        alert(t('err_batch_limit', {n: MAX_BATCH_FILES}));
         return;
     }
 
@@ -333,7 +333,7 @@ async function handleFiles(fileList) {
     });
 
     if (files.length === 0) {
-        alert('Please select valid image files (max 100MB each).');
+        alert(t('err_invalid_files'));
         return;
     }
 
@@ -398,14 +398,14 @@ async function handleSanitization(file) {
                 
                 // Show success modal
                 Utils.showConfirm({
-                    title: 'Sanitization Complete',
-                    message: 'Your image has been cleaned and the download has started.',
-                    confirmText: 'Done',
+                    title: t('sanitization_complete_title'),
+                    message: t('sanitization_complete_msg'),
+                    confirmText: t('done'),
                     type: 'info'
                 });
             } catch (err) {
                 console.error("Sanitization failed:", err);
-                alert("Failed to sanitize image.");
+                alert(t('err_sanitize_failed'));
             }
             switchState(state.assets.length > 0 ? 'dashboard' : 'intro');
         },

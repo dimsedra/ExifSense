@@ -147,10 +147,10 @@ export function categorizeExif(data) {
 
 export function showConfirm(options) {
     const { 
-        title = 'Confirm', 
-        message = 'Are you sure?', 
-        confirmText = 'Confirm', 
-        cancelText = 'Cancel', 
+        title = t('confirm_title'), 
+        message = t('confirm_message'), 
+        confirmText = t('confirm'), 
+        cancelText = t('cancel'), 
         type = 'info', // 'info' or 'danger'
         onConfirm,
         onCancel 
@@ -341,5 +341,22 @@ export function showRemovalModal(options) {
     confirmBtn.addEventListener('click', handleConfirm, { once: true });
     cancelBtn.addEventListener('click', handleCancel, { once: true });
     overlay.classList.remove('hidden');
+}
+
+export function showToast(message) {
+    let toast = document.getElementById('toast-notification');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'toast-notification';
+        toast.className = 'toast-notification';
+        document.body.appendChild(toast);
+    }
+    
+    toast.textContent = message;
+    toast.classList.add('show');
+    
+    setTimeout(() => {
+        toast.classList.remove('show');
+    }, 3000);
 }
 

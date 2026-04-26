@@ -1,4 +1,5 @@
 import { escapeHTML } from './utils.js';
+import { t, getCurrentLanguage } from './i18n.js';
 
 export function initMap(lat, lng) {
     const map = L.map('map').setView([lat, lng], 13);
@@ -17,7 +18,8 @@ export function renderMultiMarkers(assets, mapInstance) {
         if (asset.exifData?.latitude != null && asset.exifData?.longitude != null) {
             const captureDate = asset.exifData.DateTimeOriginal || asset.exifData.CreateDate || asset.exifData.ModifyDate;
             const dateObj = captureDate ? new Date(captureDate) : null;
-            const timeStr = dateObj ? dateObj.toLocaleString('en-GB', { hour12: false }) : 'Unknown';
+            const locale = getCurrentLanguage() === 'id' ? 'id-ID' : 'en-GB';
+            const timeStr = dateObj ? dateObj.toLocaleString(locale, { hour12: false }) : t('reports.unknown');
             
             const popupContent = `
                 <div class="map-popup">
