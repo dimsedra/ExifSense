@@ -1,6 +1,6 @@
-import * as Utils from './utils.js';
 import * as Narratives from './narratives.js';
 import { t } from './i18n.js';
+import * as Utils from './utils.js';
 
 function stripHtml(html) {
     if (!html) return '';
@@ -8,12 +8,14 @@ function stripHtml(html) {
     return html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>?/gm, '');
 }
 
-export function copyToClipboard(assets, sessionTitle) {
+export async function copyToClipboard(assets, sessionTitle, forensicId) {
     let content = `${t('title', {}, 'reports')}\n`;
     content += `===================================\n`;
     content += `${t('session', {}, 'reports')}: ${sessionTitle}\n`;
+    content += `${t('forensic_id', {}, 'reports')}: ${forensicId || Utils.generateForensicId()}\n`;
     content += `${t('generated', {}, 'reports')}: ${Utils.formatFullDate(new Date())}\n`;
     content += `${t('asset_count', {}, 'reports')}: ${assets.length}\n\n`;
+    content += `-----------------------------------\n\n`;
 
     if (assets.length > 1) {
         content += `${t('combined_intel', {}, 'reports')}\n`;
@@ -58,19 +60,27 @@ export function copyToClipboard(assets, sessionTitle) {
             }
             content += `\n`;
         }
-        content += `\n\n`;
+        content += `\n`;
     });
 
-    navigator.clipboard.writeText(content).then(() => {
-        Utils.showToast(t('copied_to_clipboard', {}, 'ui'));
-    }).catch(err => {
+    try {
+        await navigator.clipboard.writeText(content);
+        // Dispatch event for UI feedback
+        document.dispatchEvent(new CustomEvent('toast', { detail: { message: t('copied_to_clipboard', {}, 'ui') } }));
+    } catch (err) {
         console.error('Failed to copy: ', err);
-        alert('Failed to copy to clipboard');
-    });
+    }
 }
 
-export function exportToCsv(assets) {
-    let rows = [[t('asset_header', {n: ''}, 'reports').trim(), t('category', {}, 'reports'), t('property', {}, 'reports'), t('value', {}, 'reports')]];
+export function exportToCsv(assets, sessionTitle, forensicId) {
+    let rows = [
+        [t('title', {}, 'reports'), "", "", ""],
+        [t('session', {}, 'reports'), sessionTitle, "", ""],
+        [t('forensic_id', {}, 'reports'), forensicId || Utils.generateForensicId(), "", ""],
+        [t('generated', {}, 'reports'), Utils.formatFullDate(new Date()), "", ""],
+        ["", "", "", ""],
+        [t('asset_header', {n: ''}, 'reports').trim(), t('category', {}, 'reports'), t('property', {}, 'reports'), t('value', {}, 'reports')]
+    ];
     
     assets.forEach((asset) => {
         // Add technical details to CSV
@@ -96,11 +106,13 @@ export function exportToCsv(assets) {
     downloadFile(csvContent, `ExifSense_Data_${Date.now()}.csv`, 'text/csv');
 }
 
-export function exportToMd(assets, sessionTitle) {
+export function exportToMd(assets, sessionTitle, forensicId) {
     let content = `# ${t('title', {}, 'reports')}\n\n`;
     content += `**${t('session', {}, 'reports')}:** ${sessionTitle}  \n`;
+    content += `**${t('forensic_id', {}, 'reports')}:** ${forensicId || Utils.generateForensicId()}  \n`;
     content += `**${t('generated', {}, 'reports')}:** ${Utils.formatFullDate(new Date())}  \n`;
     content += `**${t('asset_count', {}, 'reports')}:** ${assets.length}  \n\n`;
+    content += `---\n\n`;
 
     if (assets.length > 1) {
         content += `## ${t('combined_intel', {}, 'reports')}\n\n`;
@@ -150,7 +162,7 @@ export function exportToMd(assets, sessionTitle) {
     downloadFile(content, `ExifSense_Report_${Date.now()}.md`, 'text/markdown');
 }
 
-export function exportToPdf(assets, sessionTitle) {
+export function exportToPdf(assets, sessionTitle, forensicId) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
@@ -162,10 +174,21 @@ export function exportToPdf(assets, sessionTitle) {
     doc.setFontSize(10);
     doc.setTextColor(100);
     doc.text(`${t('session', {}, 'reports')}: ${sessionTitle}`, 14, 30);
-    doc.text(`${t('generated', {}, 'reports')}: ${Utils.formatFullDate(new Date())}`, 14, 35);
-    doc.text(`${t('asset_count', {}, 'reports')}: ${assets.length}`, 14, 40);
+    
+    doc.setFont(undefined, 'bold');
+    doc.setTextColor(37, 99, 235);
+    doc.text(`${t('forensic_id', {}, 'reports')}: ${forensicId || Utils.generateForensicId()}`, 14, 35);
+    
+    doc.setFont(undefined, 'normal');
+    doc.setTextColor(100);
+    doc.text(`${t('generated', {}, 'reports')}: ${Utils.formatFullDate(new Date())}`, 14, 40);
+    doc.text(`${t('asset_count', {}, 'reports')}: ${assets.length}`, 14, 45);
+    
+    // Separator line
+    doc.setDrawColor(229, 231, 235);
+    doc.line(14, 50, 196, 50);
 
-    let currentY = 50;
+    let currentY = 60;
 
     // Combined Intelligence Page
     if (assets.length > 1) {
@@ -187,11 +210,14 @@ export function exportToPdf(assets, sessionTitle) {
             currentY += (splitText.length * 5) + 5;
         });
         doc.addPage();
+    } else {
+        // If single asset, we still want a bit of a gap or a new page
+        // Let's force a new page for assets to keep the header area clean as a "Cover"
+        doc.addPage();
     }
 
     assets.forEach((asset, idx) => {
-        if (idx > 0 && assets.length === 1) doc.addPage(); // Handle single asset page break if needed
-        else if (idx > 0) doc.addPage();
+        if (idx > 0) doc.addPage();
 
         doc.setFontSize(16);
         doc.setTextColor(37, 99, 235);
@@ -265,11 +291,12 @@ export function exportToPdf(assets, sessionTitle) {
     doc.save(`ExifSense_Report_${Date.now()}.pdf`);
 }
 
-export function exportToJson(assets, sessionTitle) {
+export function exportToJson(assets, sessionTitle, forensicId) {
     const reportData = {
         reportInfo: {
             title: t('title', {}, 'reports'),
             session: sessionTitle,
+            forensicId: forensicId || Utils.generateForensicId(),
             generated: Utils.formatFullDate(new Date()),
             assetCount: assets.length
         },
@@ -308,6 +335,7 @@ export function exportToJson(assets, sessionTitle) {
     const jsonContent = JSON.stringify(reportData, null, 4);
     downloadFile(jsonContent, `ExifSense_Report_${Date.now()}.json`, 'application/json');
 }
+
 
 function downloadFile(content, fileName, contentType) {
     const a = document.createElement('a');

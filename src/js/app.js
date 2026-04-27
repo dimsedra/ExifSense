@@ -60,7 +60,8 @@ let state = {
     assets: [],
     activeAssetIndex: 0,
     uploadMode: 'single', // 'single' or 'batch'
-    historyFilter: 'all'
+    historyFilter: 'all',
+    forensicId: null
 };
 
 // Initialization
@@ -73,6 +74,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initDropzone();
     initExport();
     initRouter();
+    initToast();
     
     elements.startAnalysisBtn.addEventListener('click', () => {
         Router.navigate('#/upload');
@@ -140,8 +142,6 @@ function initRouter() {
             path: '#/', 
             action: () => {
                 switchState('intro');
-                elements.resetBtn.classList.add('hidden');
-                elements.exportContainer.classList.add('hidden');
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         },
@@ -224,11 +224,11 @@ function initExport() {
                 : state.assets[0].fileName;
 
             switch(format) {
-                case 'pdf': Exporter.exportToPdf(state.assets, title); break;
-                case 'md': Exporter.exportToMd(state.assets, title); break;
-                case 'json': Exporter.exportToJson(state.assets, title); break;
-                case 'csv': Exporter.exportToCsv(state.assets); break;
-                case 'clipboard': Exporter.copyToClipboard(state.assets, title); break;
+                case 'pdf': Exporter.exportToPdf(state.assets, title, state.forensicId); break;
+                case 'md': Exporter.exportToMd(state.assets, title, state.forensicId); break;
+                case 'json': Exporter.exportToJson(state.assets, title, state.forensicId); break;
+                case 'csv': Exporter.exportToCsv(state.assets, title, state.forensicId); break;
+                case 'clipboard': Exporter.copyToClipboard(state.assets, title, state.forensicId); break;
             }
         });
     });
@@ -283,6 +283,10 @@ function initDropzone() {
             }
         }
     });
+    elements.dropzone.addEventListener('click', () => {
+        elements.fileInput.click();
+    });
+
     elements.dropzone.addEventListener('dragover', (e) => {
         e.preventDefault();
         elements.dropzone.classList.add('dragover');
@@ -303,6 +307,7 @@ function initDropzone() {
     elements.fileInput.addEventListener('change', (e) => {
         if (e.target.files.length) {
             handleFiles(e.target.files);
+            e.target.value = ''; // Reset input value so the same file can be picked again
         }
     });
 }
@@ -373,7 +378,8 @@ async function handleFiles(fileList) {
 
     if (state.assets.length > 0) {
         // Save the entire session
-        History.saveSession(state.assets);
+        const session = History.saveSession(state.assets);
+        state.forensicId = session.forensicId;
         renderMultiAssetDashboard();
         Router.navigate('#/dashboard');
     } else {
@@ -554,6 +560,7 @@ function loadFromHistory(session) {
     // Session structure from history.js: { assets: [...], isBatch: bool, ... }
     state.assets = session.assets;
     state.activeAssetIndex = 0;
+    state.forensicId = session.forensicId;
     renderMultiAssetDashboard();
     Router.navigate('#/dashboard');
 }
@@ -644,10 +651,22 @@ function renderBasicFileInfo(file) {
     const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
     const lastModified = Utils.formatFullDate(file.lastModified);
     elements.fileBasicInfo.innerHTML = `
-        <div><span>${t('file_name')}:</span> <span>${Utils.escapeHTML(Utils.truncate(file.name, 25))}</span></div>
-        <div><span>${t('file_type')}:</span> <span>${Utils.escapeHTML(file.type || 'Unknown')}</span></div>
-        <div><span>${t('file_size')}:</span> <span>${sizeInMB} MB</span></div>
-        <div><span>${t('file_date')}:</span> <span>${Utils.escapeHTML(lastModified)}</span></div>
+        <div class="info-item">
+            <span class="info-label">${t('file_name')}</span>
+            <span class="info-value">${Utils.escapeHTML(file.name)}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">${t('file_type')}</span>
+            <span class="info-value">${Utils.escapeHTML(file.type || 'Unknown')}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">${t('file_size')}</span>
+            <span class="info-value">${sizeInMB} MB</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">${t('file_date')}</span>
+            <span class="info-value">${Utils.escapeHTML(lastModified)}</span>
+        </div>
     `;
 }
 
@@ -673,9 +692,12 @@ function switchState(s) {
         elements.introState.classList.remove('hidden');
         elements.resetBtn.classList.add('hidden');
         elements.exportContainer.classList.add('hidden');
+        elements.sanitizeMainBtn.classList.add('hidden');
     } else if (s === 'loading') {
         elements.loadingState.classList.remove('hidden');
         elements.resetBtn.classList.add('hidden');
+        elements.exportContainer.classList.add('hidden');
+        elements.sanitizeMainBtn.classList.add('hidden');
     } else if (s === 'dashboard') {
         elements.dashboardState.classList.remove('hidden');
         elements.resetBtn.classList.remove('hidden');
@@ -691,6 +713,7 @@ function resetApp() {
     elements.expertAnalysisContent.innerHTML = '';
     elements.expertAnalysisCard.classList.add('hidden');
     elements.exportContainer.classList.add('hidden');
+    elements.sanitizeMainBtn.classList.add('hidden');
     state.assets = [];
     Router.navigate('#/');
 }
@@ -721,4 +744,22 @@ function initLang() {
             }
         });
     }
+}
+
+function initToast() {
+    document.addEventListener('toast', (e) => {
+        const container = document.getElementById('toast-container');
+        if (!container) return;
+
+        const toast = document.createElement('div');
+        toast.className = 'toast';
+        toast.textContent = e.detail.message;
+        
+        container.appendChild(toast);
+        
+        // Remove after animation
+        setTimeout(() => {
+            toast.remove();
+        }, 3000);
+    });
 }

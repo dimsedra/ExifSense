@@ -150,6 +150,7 @@
         "property": "Property",
         "value": "Value",
         "category": "Category",
-        "unknown": "Unknown"
+        "unknown": "Unknown",
+        "forensic_id": "Forensic Identifier"
     }
 }

@@ -39,6 +39,7 @@ export function saveSession(assets) {
     
     const session = {
         id: Date.now(),
+        forensicId: Utils.generateForensicId(),
         date: new Date().toISOString(),
         isBatch: assets.length > 1,
         assetCount: assets.length,
@@ -61,6 +62,7 @@ export function saveSession(assets) {
     history.unshift(session);
     if (history.length > MAX_HISTORY) history.pop();
     localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+    return session;
 }
 
 export function getHistory() {

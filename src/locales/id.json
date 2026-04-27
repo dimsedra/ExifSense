@@ -150,6 +150,7 @@
         "property": "Properti",
         "value": "Nilai",
         "category": "Kategori",
-        "unknown": "Tidak Diketahui"
+        "unknown": "Tidak Diketahui",
+        "forensic_id": "Identifier Forensik"
     }
 }

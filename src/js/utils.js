@@ -1,5 +1,11 @@
 import { t } from './i18n.js';
 
+export function generateForensicId(timestamp = Date.now()) {
+    const base = timestamp.toString(36).toUpperCase();
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase();
+    return `ES-${base}-${random}`;
+}
+
 export function formatValue(key, value) {
     let result = value;
     if (value instanceof Date) result = value.toLocaleString();
