@@ -108,9 +108,16 @@
         "err_sanitize_failed": "Forensic sanitization failed. Please try again."
     },
     "narratives": {
-        "hardware": "This asset was generated using <strong>{make} {model}</strong>{lens}.{software} Analysis indicates a standard hardware profile for this device class.",
+        "hardware": "This asset was generated using <strong>{make} {model}</strong>{lens}.",
+        "hardware_software": "The device was running <strong>{software}</strong> at the time of capture.",
+        "hardware_analysis": "Analysis indicates a standard hardware profile for this device class.",
+        "hardware_mod": "This asset was generated using <strong>{make} {model}</strong>{lens}. Note: Processing artifacts from <strong>{software}</strong> were detected, indicating potential forensic alteration or post-production.",
         "with_lens": "with a {lens} lens",
-        "exposure": "Captured at <strong>{aperture}</strong> with a shutter speed of <strong>{shutter}</strong> at <strong>{iso}</strong>{program}. The lighting environment appears to have been handled via automated compensation.",
+        "exposure": "Captured at <strong>{aperture}</strong> with a shutter speed of <strong>{shutter}</strong> at <strong>{iso}</strong>{program}.",
+        "exp_low_light": "The high ISO sensitivity suggest this asset was captured in a low-light or indoor environment.",
+        "exp_bright": "The low ISO and fast exposure indicate a well-lit environment, likely outdoors during daylight.",
+        "exp_shallow_depth": "The wide aperture suggests a shallow depth of field, likely used to isolate the subject from the background.",
+        "exp_standard": "The exposure parameters suggest a balanced lighting environment with standard automated compensation.",
         "unknown_aperture": "an unknown aperture",
         "unknown_shutter": "an unspecified shutter speed",
         "unspecified_iso": "unspecified ISO",

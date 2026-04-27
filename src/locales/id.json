@@ -108,9 +108,16 @@
         "err_sanitize_failed": "Sanitasi forensik gagal. Silakan coba lagi."
     },
     "narratives": {
-        "hardware": "Aset ini dibuat menggunakan <strong>{make} {model}</strong>{lens}.{software} Analisis menunjukkan profil perangkat keras standar untuk kelas perangkat ini.",
+        "hardware": "Aset ini dibuat menggunakan <strong>{make} {model}</strong>{lens}.",
+        "hardware_software": "Perangkat menjalankan <strong>{software}</strong> pada saat pengambilan gambar.",
+        "hardware_analysis": "Analisis menunjukkan profil perangkat keras standar untuk kelas perangkat ini.",
+        "hardware_mod": "Aset ini dibuat menggunakan <strong>{make} {model}</strong>{lens}. Catatan: Artefak pemrosesan dari <strong>{software}</strong> terdeteksi, menunjukkan potensi alterasi forensik atau pasca-produksi.",
         "with_lens": "dengan lensa {lens}",
-        "exposure": "Diambil pada <strong>{aperture}</strong> dengan kecepatan rana <strong>{shutter}</strong> pada <strong>{iso}</strong>{program}. Lingkungan pencahayaan tampaknya ditangani melalui kompensasi otomatis.",
+        "exposure": "Diambil pada <strong>{aperture}</strong> dengan kecepatan rana <strong>{shutter}</strong> pada <strong>{iso}</strong>{program}.",
+        "exp_low_light": "Sensitivitas ISO yang tinggi menunjukkan bahwa aset ini diambil di lingkungan rendah cahaya atau di dalam ruangan.",
+        "exp_bright": "ISO rendah dan eksposur cepat menunjukkan lingkungan yang terang, kemungkinan besar di luar ruangan pada siang hari.",
+        "exp_shallow_depth": "Aperture yang lebar menunjukkan kedalaman bidang yang dangkal, kemungkinan besar digunakan untuk memisahkan subjek dari latar belakang.",
+        "exp_standard": "Parameter eksposur menunjukkan lingkungan pencahayaan yang seimbang dengan kompensasi otomatis standar.",
         "unknown_aperture": "aperture tidak diketahui",
         "unknown_shutter": "kecepatan rana tidak ditentukan",
         "unspecified_iso": "ISO tidak ditentukan",

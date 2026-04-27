@@ -57,11 +57,15 @@ body {
     overflow-x: hidden;
 }
 
+strong {
+    font-weight: 600;
+}
 
 .hidden { display: none !important; }
 .text-sm { font-size: 0.875rem; }
 .text-muted { color: var(--text-muted); }
 .font-mono { font-family: var(--font-mono); }
+.info-value { font-weight: 500; }
 
 .header {
     background-color: var(--bg-card);

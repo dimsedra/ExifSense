@@ -5,9 +5,23 @@ export function generateHardwareNarrative(props) {
     const make = escapeHTML(props.Make || 'an unknown manufacturer');
     const model = escapeHTML(props.Model || 'an unspecified device');
     const lens = props.LensModel ? ` ${t('with_lens', { lens: escapeHTML(props.LensModel) }, 'narratives')}` : '';
-    const software = props.Software ? ` (Running: ${escapeHTML(props.Software)})` : '';
+    const softwareName = props.Software ? escapeHTML(props.Software) : '';
     
-    return t('hardware', { make, model, lens, software }, 'narratives');
+    // Integrity check: detect editing software
+    const editSoftware = ['adobe', 'photoshop', 'lightroom', 'gimp', 'canva', 'snapseed', 'pixlr', 'corel', 'affinity', 'picsart'];
+    const isModified = softwareName && editSoftware.some(s => softwareName.toLowerCase().includes(s));
+
+    if (isModified) {
+        return t('hardware_mod', { make, model, lens, software: softwareName }, 'narratives');
+    }
+    
+    let narrative = t('hardware', { make, model, lens }, 'narratives');
+    if (softwareName) {
+        narrative += ` ${t('hardware_software', { software: softwareName }, 'narratives')}`;
+    }
+    narrative += ` ${t('hardware_analysis', {}, 'narratives')}`;
+    
+    return narrative;
 }
 
 export function generateExposureNarrative(props) {
@@ -16,7 +30,21 @@ export function generateExposureNarrative(props) {
     const iso = props.ISO ? `ISO ${escapeHTML(props.ISO)}` : t('unspecified_iso', {}, 'narratives');
     const program = props.ExposureProgram ? ` ${t('using_program', { program: escapeHTML(props.ExposureProgram) }, 'narratives')}` : '';
     
-    return t('exposure', { aperture, shutter, iso, program }, 'narratives');
+    // Intelligent Lighting Analysis
+    let lightingKey = 'exp_standard';
+    const isoVal = parseInt(props.ISO);
+    const shutterVal = parseFloat(props.ExposureTime);
+    const fVal = parseFloat(props.FNumber);
+
+    if (fVal < 2.8) {
+        lightingKey = 'exp_shallow_depth';
+    } else if (isoVal >= 800) {
+        lightingKey = 'exp_low_light';
+    } else if (isoVal <= 200 && shutterVal <= 0.002) {
+        lightingKey = 'exp_bright';
+    }
+
+    return `${t('exposure', { aperture, shutter, iso, program }, 'narratives')} ${t(lightingKey, {}, 'narratives')}`;
 }
 
 export function generateOpticsNarrative(props) {
