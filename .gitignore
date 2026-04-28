@@ -38,6 +38,7 @@ Desktop.ini
 artifacts/
 brain/
 scratch/
+docs/
 
 # Testing
 coverage/
