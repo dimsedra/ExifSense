@@ -533,7 +533,13 @@
     margin-bottom: 1rem;
 }
 
+.tabs-wrapper {
+    position: relative;
+    width: 100%;
+}
+
 .tabs-arrow {
+    display: none; /* Desktop default: hide arrows */
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
@@ -542,7 +548,6 @@
     border-radius: 0;
     width: auto;
     height: auto;
-    display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.75rem;
@@ -551,19 +556,26 @@
     opacity: 0.7;
     z-index: 10;
     box-shadow: none;
-    pointer-events: none;
+    pointer-events: auto; /* Enable clicks */
+    cursor: pointer;
+    transition: opacity 0.2s ease, color 0.2s ease;
+}
+
+.tabs-arrow:hover {
+    opacity: 1;
+    color: var(--accent);
 }
 
 .tabs-arrow.left {
-    left: 4px;
+    left: 8px;
 }
 
 .tabs-arrow.right {
-    right: 4px;
+    right: 8px;
 }
 
 @media (max-width: 768px) {
     .tabs-arrow {
-        display: flex;
+        display: flex; /* Mobile default: show arrows */
     }
 }

@@ -101,15 +101,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.hash = '#/';
     });
 
-    window.addEventListener('resize', () => {
-        document.querySelectorAll('.expert-tabs-container').forEach(container => {
-            const activeBtn = container.querySelector('.expert-tab-btn.active');
-            if (activeBtn) {
-                updateCircularTabs(container, activeBtn.dataset.id);
-            }
-        });
-    });
-
     if (window.lucide) lucide.createIcons();
 });
 
@@ -643,80 +634,31 @@ function renderAssetSelector() {
     if (window.lucide) lucide.createIcons();
 }
 
-// FUNGSI: Mengatur perputaran sirkular tab analitik expert
-function updateCircularTabs(container, activeId) {
-    const buttons = Array.from(container.querySelectorAll('.expert-tab-btn'));
-    const N = buttons.length;
-    if (N <= 1) return;
-
-    // Temporarily remove overflow class to measure true size
-    const wasOverflowing = container.classList.contains('is-overflowing');
-    container.classList.remove('is-overflowing');
-
-    // Check for overflow
-    const isOverflowing = container.scrollWidth > container.clientWidth;
-
-    // Toggle arrows
-    const wrapper = container.parentElement;
-    if (wrapper && wrapper.classList.contains('tabs-wrapper')) {
-        const arrows = wrapper.querySelectorAll('.tabs-arrow');
-        arrows.forEach(arrow => {
-            arrow.style.display = isOverflowing ? 'flex' : 'none';
-        });
-    }
-
-    if (!isOverflowing) {
-        // Restore original order
-        const sortedButtons = buttons.sort((a, b) => parseInt(a.dataset.index) - parseInt(b.dataset.index));
-        sortedButtons.forEach(btn => container.appendChild(btn));
-        
-        // Update active class
-        buttons.forEach(b => b.classList.toggle('active', b.dataset.id === activeId));
-        
-        // Reset scroll
-        container.scrollLeft = 0;
-        return;
-    }
-
-    // Re-add overflow class
-    container.classList.add('is-overflowing');
-
-    const activeBtn = buttons.find(b => b.dataset.id === activeId);
-    if (!activeBtn) return;
-    const activeIdx = buttons.indexOf(activeBtn);
-
-    const prevIdx = (activeIdx - 1 + N) % N;
-    const nextIdx = (activeIdx + 1) % N;
-
-    const orderedIndices = [prevIdx, activeIdx, nextIdx];
-    let curr = (nextIdx + 1) % N;
-    while (curr !== prevIdx) {
-        orderedIndices.push(curr);
-        curr = (curr + 1) % N;
-    }
-
-    // Lock container height to prevent temporary layout collapse and scroll jumping
-    const currentHeight = container.getBoundingClientRect().height;
-    container.style.height = `${currentHeight}px`;
-
-    // Rearrange DOM nodes
-    orderedIndices.forEach(idx => {
-        container.appendChild(buttons[idx]);
-    });
-
-    // Clear the explicit height lock
-    container.style.height = '';
-
-    // Update active class
-    buttons.forEach(b => b.classList.toggle('active', b.dataset.id === activeId));
-
-    // Center active tab
-    requestAnimationFrame(() => {
-        const newActiveBtn = container.querySelector('.expert-tab-btn.active');
-        if (newActiveBtn) {
-            container.scrollLeft = newActiveBtn.offsetLeft - (container.clientWidth / 2) + (newActiveBtn.clientWidth / 2);
+// FUNGSI: Memasang panah navigasi statis untuk tab
+function injectTabArrows(wrapper, tabsContainer) {
+    const arrowLeft = document.createElement('div');
+    arrowLeft.className = 'tabs-arrow left';
+    arrowLeft.innerHTML = '&lt;';
+    
+    const arrowRight = document.createElement('div');
+    arrowRight.className = 'tabs-arrow right';
+    arrowRight.innerHTML = '&gt;';
+    
+    const cycleTab = (direction) => {
+        const buttons = Array.from(tabsContainer.querySelectorAll('.expert-tab-btn'));
+        const activeIndex = buttons.findIndex(b => b.classList.contains('active'));
+        if (buttons.length > 0) {
+            const nextIndex = (activeIndex + direction + buttons.length) % buttons.length;
+            buttons[nextIndex].click();
         }
-    });
+    };
+    
+    arrowLeft.addEventListener('click', () => cycleTab(-1));
+    arrowRight.addEventListener('click', () => cycleTab(1));
+    
+    wrapper.appendChild(arrowLeft);
+    wrapper.appendChild(tabsContainer);
+    wrapper.appendChild(arrowRight);
 }
 
 // FUNGSI: Menyusun data naratif gabungan banyak berkas
@@ -730,8 +672,8 @@ function renderCombinedAnalysis() {
     elements.combinedAnalysisContent.innerHTML = '';
     
     const parent = elements.combinedAnalysisContent.parentNode;
-    const existingTabs = parent.querySelector('.combined-tabs');
-    if (existingTabs) existingTabs.remove();
+    const existingWrapper = parent.querySelector('.tabs-wrapper');
+    if (existingWrapper) existingWrapper.remove();
 
     if (findings.length > 0) {
         elements.combinedAnalysisCard.classList.remove('hidden');
@@ -773,9 +715,10 @@ function renderCombinedAnalysis() {
             elements.combinedAnalysisContent.appendChild(pane);
         });
         
-        parent.insertBefore(tabsContainer, elements.combinedAnalysisContent);
-        
-        updateCircularTabs(tabsContainer, `combined-0`);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tabs-wrapper';
+        parent.insertBefore(wrapper, elements.combinedAnalysisContent);
+        injectTabArrows(wrapper, tabsContainer);
         
     } else {
         elements.combinedAnalysisCard.classList.add('hidden');
@@ -980,22 +923,9 @@ function renderExpertAnalysis(asset) {
 
         const wrapper = document.createElement('div');
         wrapper.className = 'tabs-wrapper';
-        
-        const arrowLeft = document.createElement('div');
-        arrowLeft.className = 'tabs-arrow left';
-        arrowLeft.innerHTML = '&lt;';
-        
-        const arrowRight = document.createElement('div');
-        arrowRight.className = 'tabs-arrow right';
-        arrowRight.innerHTML = '&gt;';
-        
-        wrapper.appendChild(arrowLeft);
-        wrapper.appendChild(tabsContainer);
-        wrapper.appendChild(arrowRight);
-
         parent.insertBefore(wrapper, elements.expertAnalysisContent);
         
-        updateCircularTabs(tabsContainer, items[0].id);
+        injectTabArrows(wrapper, tabsContainer);
     }
 
     if (window.lucide) lucide.createIcons();
@@ -1079,22 +1009,9 @@ function renderMetadata(data) {
 
         const wrapper = document.createElement('div');
         wrapper.className = 'tabs-wrapper';
-        
-        const arrowLeft = document.createElement('div');
-        arrowLeft.className = 'tabs-arrow left';
-        arrowLeft.innerHTML = '&lt;';
-        
-        const arrowRight = document.createElement('div');
-        arrowRight.className = 'tabs-arrow right';
-        arrowRight.innerHTML = '&gt;';
-        
-        wrapper.appendChild(arrowLeft);
-        wrapper.appendChild(tabsContainer);
-        wrapper.appendChild(arrowRight);
-
         parent.prepend(wrapper);
         
-        updateCircularTabs(tabsContainer, `meta-${items[0].key}`);
+        injectTabArrows(wrapper, tabsContainer);
     }
 
     if (window.lucide) lucide.createIcons();
