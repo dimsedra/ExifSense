@@ -48,7 +48,11 @@ const elements = {
     showPathToggle: document.getElementById('show-path-toggle'),
     sanitizeMainBtn: document.getElementById('sanitize-main-btn'),
     prevModeBtn: document.getElementById('prev-mode-btn'),
-    nextModeBtn: document.getElementById('next-mode-btn')
+    nextModeBtn: document.getElementById('next-mode-btn'),
+    stagedFilesContainer: document.getElementById('staged-files-container'),
+    stagedFilesList: document.getElementById('staged-files-list'),
+    clearStagedBtn: document.getElementById('clear-staged-btn'),
+    startStagedBtn: document.getElementById('start-staged-btn')
 };
 
 let state = {
@@ -319,12 +323,102 @@ function initDropzone() {
     elements.fileInput.addEventListener('change', (e) => {
         if (e.target.files.length) {
             handleFiles(e.target.files);
-            e.target.value = ''; // Reset input value so the same file can be picked again
+            e.target.value = ''; 
+        }
+    });
+
+    // Staging list triggers
+    elements.clearStagedBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        state.stagedFiles = [];
+        renderStagedFiles();
+    });
+
+    elements.startStagedBtn.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        if (state.stagedFiles && state.stagedFiles.length > 0) {
+            const finalFiles = [...state.stagedFiles];
+            state.stagedFiles = [];
+            renderStagedFiles();
+            await processBatchFiles(finalFiles);
         }
     });
 }
 
+function renderStagedFiles() {
+    if (!state.stagedFiles || state.stagedFiles.length === 0) {
+        elements.stagedFilesContainer.classList.add('hidden');
+        elements.stagedFilesList.innerHTML = '';
+        return;
+    }
+
+    elements.stagedFilesContainer.classList.remove('hidden');
+    elements.stagedFilesList.innerHTML = state.stagedFiles.map((file, idx) => {
+        const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
+        return `
+            <div class="staged-file-item">
+                <div class="staged-file-info">
+                    <span class="staged-file-name" title="${file.name}">${file.name}</span>
+                    <span class="staged-file-size">${sizeInMB} MB</span>
+                </div>
+                <button class="remove-staged-item" data-index="${idx}" aria-label="Remove item">
+                    <i data-lucide="trash-2"></i>
+                </button>
+            </div>
+        `;
+    }).join('');
+
+    elements.stagedFilesList.querySelectorAll('.remove-staged-item').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const index = parseInt(btn.dataset.index);
+            state.stagedFiles.splice(index, 1);
+            renderStagedFiles();
+        });
+    });
+
+    if (window.lucide) lucide.createIcons();
+}
+
 // Main Logic
+async function processBatchFiles(files) {
+    switchState('loading');
+    state.assets = [];
+    state.activeAssetIndex = 0;
+
+    for (const file of files) {
+        try {
+            const options = { tiff: true, xmp: true, icc: true, iptc: true, jfif: true, ihdr: true, gps: true };
+            const exifData = await exifr.parse(file, options);
+            const thumbUrl = await History.createThumbnail(file);
+            
+            state.assets.push({
+                id: Date.now() + Math.random(),
+                fileName: file.name,
+                fileObject: file,
+                fileSize: file.size,
+                fileType: file.type,
+                fileDate: file.lastModified,
+                exifData: exifData || {},
+                thumbUrl: thumbUrl,
+                locationData: null
+            });
+        } catch (error) {
+            console.error(`Error processing ${file.name}:`, error);
+        }
+    }
+
+    if (state.assets.length > 0) {
+        const session = History.saveSession(state.assets);
+        state.forensicId = session.forensicId;
+        renderMultiAssetDashboard();
+        Router.navigate('#/dashboard');
+    } else {
+        renderNoExif();
+        Router.navigate('#/');
+    }
+}
+
 async function handleFiles(fileList) {
     const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
     const MAX_BATCH_FILES = 50;
@@ -355,48 +449,41 @@ async function handleFiles(fileList) {
     }
 
     if (state.uploadMode === 'remove') {
-        // Just process the first file for removal in this mode
         const file = files[0];
         handleSanitization(file);
         switchState('intro');
         return;
     }
 
-    switchState('loading');
-    state.assets = [];
-    state.activeAssetIndex = 0;
+    if (state.uploadMode === 'batch') {
+        if (!state.stagedFiles) state.stagedFiles = [];
+        
+        // Avoid duplicate files in staging
+        files.forEach(f => {
+            if (!state.stagedFiles.some(sf => sf.name === f.name && sf.size === f.size)) {
+                state.stagedFiles.push(f);
+            }
+        });
 
-    for (const file of files) {
-        try {
-            const options = { tiff: true, xmp: true, icc: true, iptc: true, jfif: true, ihdr: true, gps: true };
-            const exifData = await exifr.parse(file, options);
-            const thumbUrl = await History.createThumbnail(file);
-            
-            state.assets.push({
-                id: Date.now() + Math.random(),
-                fileName: file.name,
-                fileObject: file,
-                fileSize: file.size,
-                fileType: file.type,
-                fileDate: file.lastModified,
-                exifData: exifData || {},
-                thumbUrl: thumbUrl,
-                locationData: null
-            });
-        } catch (error) {
-            console.error(`Error processing ${file.name}:`, error);
-        }
-    }
+        renderStagedFiles();
 
-    if (state.assets.length > 0) {
-        // Save the entire session
-        const session = History.saveSession(state.assets);
-        state.forensicId = session.forensicId;
-        renderMultiAssetDashboard();
-        Router.navigate('#/dashboard');
+        Utils.showConfirm({
+            title: t('batch_confirm_title') || 'Batch Analysis Staging',
+            message: t('batch_confirm_msg', {count: state.stagedFiles.length}) || `You currently have ${state.stagedFiles.length} file(s) staged. Run analysis now?`,
+            confirmText: t('process_now') || 'Process Now',
+            cancelText: t('add_more') || 'Add More',
+            onConfirm: async () => {
+                const finalFiles = [...state.stagedFiles];
+                state.stagedFiles = []; // Clear staging
+                await processBatchFiles(finalFiles);
+            },
+            onCancel: () => {
+                // Keep the files in staging
+            }
+        });
     } else {
-        renderNoExif();
-        Router.navigate('#/');
+        // Single mode
+        await processBatchFiles(files);
     }
 }
 
@@ -452,13 +539,90 @@ function renderAssetSelector() {
     elements.assetCountBadge.textContent = t('asset_count', {n: state.assets.length});
     elements.assetSelectorList.innerHTML = '';
 
+    // Check/create quick filters
+    let filterContainer = elements.assetSelectorContainer.querySelector('.asset-selector-filters');
+    if (!filterContainer) {
+        filterContainer = document.createElement('div');
+        filterContainer.className = 'asset-selector-filters';
+        elements.assetSelectorContainer.insertBefore(filterContainer, elements.assetSelectorList);
+    }
+    
+    // Initialize filter state if not present
+    if (!state.assetFilter) state.assetFilter = 'all';
+
+    const filterAllText = t('filter_all', {}, 'narratives') || 'All Assets';
+    
+    // Render filter buttons
+    filterContainer.innerHTML = `
+        <button class="asset-filter-btn ${state.assetFilter === 'all' ? 'active' : ''}" data-filter="all">
+            <i data-lucide="layers"></i><span>${filterAllText}</span>
+        </button>
+        <button class="asset-filter-btn ${state.assetFilter === 'geo' ? 'active' : ''}" data-filter="geo">
+            <i data-lucide="map-pin"></i><span>Geotagged</span>
+        </button>
+        <button class="asset-filter-btn ${state.assetFilter === 'stripped' ? 'active' : ''}" data-filter="stripped">
+            <i data-lucide="alert-triangle"></i><span>Stripped</span>
+        </button>
+    `;
+    
+    if (window.lucide) lucide.createIcons();
+
+    // Attach click listeners to filter buttons
+    filterContainer.querySelectorAll('.asset-filter-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            state.assetFilter = btn.dataset.filter;
+            renderAssetSelector();
+        });
+    });
+
+    // Populate filtered assets
     state.assets.forEach((asset, index) => {
+        const hasHW = asset.exifData?.Make || asset.exifData?.Model;
+        const hasTime = asset.exifData?.DateTimeOriginal || asset.exifData?.CreateDate || asset.exifData?.DateTime;
+        const hasGeo = asset.exifData?.latitude != null && asset.exifData?.longitude != null;
+
+        const isFullyStripped = !hasHW && !hasTime && !hasGeo;
+        const isPartiallyStripped = (hasHW || hasTime || hasGeo) && !(hasHW && hasTime && hasGeo);
+        
+        const isStripped = isFullyStripped || isPartiallyStripped;
+
+        if (state.assetFilter === 'geo' && !hasGeo) return;
+        if (state.assetFilter === 'stripped' && !isStripped) return;
+
         const btn = document.createElement('button');
         btn.className = `asset-thumb-btn ${index === state.activeAssetIndex ? 'active' : ''}`;
-        btn.innerHTML = `<img src="${asset.thumbUrl}" alt="${asset.fileName}">`;
+        btn.dataset.index = index;
+        
+        let badgesHtml = '';
+        if (hasGeo) {
+            badgesHtml += `<span class="badge-geo" title="${t('analysis_geospatial')}"><i data-lucide="map-pin"></i></span>`;
+        }
+        if (isStripped) {
+            badgesHtml += `<span class="badge-stripped" title="${t('empty_all', {}, 'narratives')}"><i data-lucide="alert-triangle"></i></span>`;
+        }
+
+        const sizeInMB = (asset.fileSize / (1024 * 1024)).toFixed(2);
+
+        btn.innerHTML = `
+            <div class="asset-card-thumb">
+                <img src="${asset.thumbUrl}" alt="${asset.fileName}">
+                <div class="asset-card-badges">${badgesHtml}</div>
+            </div>
+            <div class="asset-card-info">
+                <span class="asset-card-name">${Utils.escapeHTML(asset.fileName)}</span>
+                <span class="asset-card-size">${sizeInMB} MB</span>
+            </div>
+        `;
+
         btn.addEventListener('click', () => switchAsset(index));
         elements.assetSelectorList.appendChild(btn);
     });
+    
+    if (elements.assetSelectorList.children.length === 0) {
+        elements.assetSelectorList.innerHTML = `<div class="text-muted" style="padding: 16px; text-align: center; width: 100%;">${t('no_metadata_tags')}</div>`;
+    }
+
+    if (window.lucide) lucide.createIcons();
 }
 
 function updateCircularTabs(container, activeId) {
@@ -591,17 +755,21 @@ function renderCombinedAnalysis() {
 }
 
 async function initMultiPinMap() {
-    const firstGeo = state.assets.find(a => a.exifData?.latitude != null);
-    if (!firstGeo) {
-        elements.mapContainerCard.classList.add('hidden');
-        return;
-    }
-
     elements.mapContainerCard.classList.remove('hidden');
     
+    const firstGeo = state.assets.find(a => a.exifData?.latitude != null);
+    const startLat = firstGeo ? firstGeo.exifData.latitude : 0;
+    const startLng = firstGeo ? firstGeo.exifData.longitude : 0;
+
     if (!state.map) {
-        const { map } = Mapping.initMap(firstGeo.exifData.latitude, firstGeo.exifData.longitude);
+        const { map } = Mapping.initMap(startLat, startLng);
         state.map = map;
+    } else {
+        state.map.setView([startLat, startLng], firstGeo ? 13 : 2);
+    }
+
+    if (!firstGeo && state.map) {
+        state.map.setZoom(2);
     }
 
     if (state.markerGroup && state.map) {
@@ -626,7 +794,7 @@ async function switchAsset(index) {
     
     // Update Selector UI
     const btns = elements.assetSelectorList.querySelectorAll('.asset-thumb-btn');
-    btns.forEach((b, i) => b.classList.toggle('active', i === index));
+    btns.forEach(b => b.classList.toggle('active', parseInt(b.dataset.index) === index));
 
     // Update Dashboard UI
     if (asset.fileObject) {
@@ -689,17 +857,39 @@ function renderExpertAnalysis(asset) {
         { name: 'Timeline & Date', key: 'cat_timeline', analysis: 'analysis_timeline', generator: Narratives.generateTimelineNarrative, icon: 'clock' }
     ];
 
+    const hasAnyImportant = ['Device Hardware', 'Exposure Settings', 'Optics & Lens', 'Image Quality', 'Timeline & Date'].some(catName => {
+        const props = categorized[catName];
+        return props && Object.keys(props).length > 0;
+    });
+    const hasGeo = data.latitude != null && data.longitude != null;
+    const isCompletelyStripped = !hasAnyImportant && !hasGeo;
+
     const items = [];
     
     // Geospatial
-    const geoNarrative = Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData);
+    let geoNarrative = Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData);
+    if (!hasGeo && isCompletelyStripped) {
+        geoNarrative = `<div class="expert-empty-state" style="color: #ea580c;"><strong>${t('empty_all', {}, 'narratives')}</strong></div>`;
+    } else if (!hasGeo) {
+        geoNarrative = `<span class="text-muted">${t('empty_geospatial', {}, 'narratives')}</span>`;
+    }
     items.push({ icon: 'map-pin', title: t('analysis_geospatial'), narrative: geoNarrative, id: 'geo' });
 
     categories.forEach(cat => {
         const props = categorized[cat.name];
-        if (props && Object.keys(props).length > 0) {
-            items.push({ icon: cat.icon, title: t(cat.analysis), narrative: cat.generator(props), id: cat.key });
+        const hasData = props && Object.keys(props).length > 0;
+        
+        let narrative = '';
+        if (hasData) {
+            narrative = cat.generator(props);
+        } else if (isCompletelyStripped) {
+            narrative = `<div class="expert-empty-state" style="color: #ea580c;"><strong>${t('empty_all', {}, 'narratives')}</strong></div>`;
+        } else {
+            const fallbackKey = `empty_${cat.key.replace('cat_', '')}`;
+            narrative = `<span class="text-muted">${t(fallbackKey, {}, 'narratives')}</span>`;
         }
+            
+        items.push({ icon: cat.icon, title: t(cat.analysis), narrative, id: cat.key });
     });
 
     const parent = elements.expertAnalysisContent.parentNode;
@@ -771,20 +961,18 @@ function renderMetadata(data) {
 
     const items = [];
     for (const [category, props] of Object.entries(categorized)) {
-        if (Object.keys(props).length > 0) {
-            const catKey = Utils.getCategoryKey(category);
-            const isImportant = ['Device Hardware', 'Exposure Settings', 'Optics & Lens', 'Image Quality', 'Timeline & Date'].includes(category);
-            const isSecondary = ['Standards & Info', 'Miscellaneous'].includes(category);
-            
-            items.push({
-                category,
-                props,
-                key: catKey,
-                isImportant,
-                isSecondary,
-                icon: Utils.getCategoryIcon(category)
-            });
-        }
+        const catKey = Utils.getCategoryKey(category);
+        const isImportant = ['Device Hardware', 'Exposure Settings', 'Optics & Lens', 'Image Quality', 'Timeline & Date'].includes(category);
+        const isSecondary = ['Standards & Info', 'Miscellaneous'].includes(category);
+        
+        items.push({
+            category,
+            props,
+            key: catKey,
+            isImportant,
+            isSecondary,
+            icon: Utils.getCategoryIcon(category)
+        });
     }
 
     const parent = elements.metadataContainer;
@@ -816,14 +1004,16 @@ function renderMetadata(data) {
                     <h3>${translatedCategory}</h3>
                 </div>
                 <div class="card-body">
-                    <div class="data-grid">
-                        ${keys.sort().map(key => `
-                            <div class="data-item">
-                                <div class="data-label">${Utils.escapeHTML(Utils.formatLabel(key))}</div>
-                                <div class="data-value">${Utils.escapeHTML(Utils.formatValue(key, item.props[key]))}</div>
-                            </div>
-                        `).join('')}
-                    </div>
+                    ${keys.length > 0 ? `
+                        <div class="data-grid">
+                            ${keys.sort().map(key => `
+                                <div class="data-item">
+                                    <div class="data-label">${Utils.escapeHTML(Utils.formatLabel(key))}</div>
+                                    <div class="data-value">${Utils.escapeHTML(Utils.formatValue(key, item.props[key]))}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : `<div class="text-muted" style="padding: 24px; text-align: center; opacity: 0.7;">${t('no_metadata_tags')}</div>`}
                 </div>
             `;
             pane.appendChild(card);
@@ -939,32 +1129,69 @@ function resetApp() {
     elements.exportContainer.classList.add('hidden');
     elements.sanitizeMainBtn.classList.add('hidden');
     state.assets = [];
+    state.stagedFiles = [];
+    state.assetFilter = 'all';
+    renderStagedFiles();
+    
+    const filterContainer = elements.assetSelectorContainer ? elements.assetSelectorContainer.querySelector('.asset-selector-filters') : null;
+    if (filterContainer) filterContainer.remove();
+
     Router.navigate('#/');
 }
 function initLang() {
     const langToggle = document.getElementById('lang-toggle');
     const langLabel = document.getElementById('current-lang-label');
+    const langDropdown = document.getElementById('lang-dropdown');
+    const langContainer = document.getElementById('lang-selector-container');
     
-    if (langToggle) {
+    if (langToggle && langDropdown) {
         // Set initial label
         langLabel.textContent = getCurrentLanguage().toUpperCase();
         
-        langToggle.addEventListener('click', async () => {
-            const nextLang = getCurrentLanguage() === 'en' ? 'id' : 'en';
-            await setLanguage(nextLang);
-            langLabel.textContent = nextLang.toUpperCase();
-            
-            // Re-render certain parts if needed (most are handled by translatePage)
-            // But if we are in the middle of a dashboard view, we might need to refresh narratives
-            if (state.assets.length > 0) {
-                renderAssetSelector();
-                renderCombinedAnalysis();
-                switchAsset(state.activeAssetIndex);
-            }
-            
-            // Refresh history if it's open
-            if (document.querySelector('.tab-btn[data-tab="history"]').classList.contains('active')) {
-                refreshHistory();
+        const updateActiveOption = () => {
+            document.querySelectorAll('.lang-option').forEach(opt => {
+                if (opt.getAttribute('data-lang') === getCurrentLanguage()) {
+                    opt.classList.add('active');
+                } else {
+                    opt.classList.remove('active');
+                }
+            });
+        };
+        updateActiveOption();
+        
+        langToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            langDropdown.classList.toggle('hidden');
+            langContainer.classList.toggle('open');
+        });
+        
+        document.querySelectorAll('.lang-option').forEach(button => {
+            button.addEventListener('click', async (e) => {
+                const selectedLang = e.target.getAttribute('data-lang');
+                if (selectedLang) {
+                    await setLanguage(selectedLang);
+                    langLabel.textContent = selectedLang.toUpperCase();
+                    updateActiveOption();
+                    langDropdown.classList.add('hidden');
+                    langContainer.classList.remove('open');
+                    
+                    if (state.assets.length > 0) {
+                        renderAssetSelector();
+                        renderCombinedAnalysis();
+                        switchAsset(state.activeAssetIndex);
+                    }
+                    
+                    if (document.querySelector('.tab-btn[data-tab="history"]').classList.contains('active')) {
+                        refreshHistory();
+                    }
+                }
+            });
+        });
+        
+        document.addEventListener('click', (e) => {
+            if (!langContainer.contains(e.target)) {
+                langDropdown.classList.add('hidden');
+                langContainer.classList.remove('open');
             }
         });
     }

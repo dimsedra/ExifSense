@@ -108,6 +108,10 @@ body.dark-mode .sun-icon { display: none !important; }
 body:not(.dark-mode) .moon-icon { display: none !important; }
 
 /* Language Selector */
+.lang-selector {
+    position: relative;
+}
+
 .lang-selector .btn {
     padding: 0.4rem 0.6rem;
     font-size: 0.75rem;
@@ -119,8 +123,72 @@ body:not(.dark-mode) .moon-icon { display: none !important; }
     text-transform: uppercase;
 }
 
+.lang-selector .chevron-icon {
+    width: 12px;
+    height: 12px;
+    transition: transform 0.2s;
+}
+
+.lang-selector.open .chevron-icon {
+    transform: rotate(180deg);
+}
+
+.lang-dropdown {
+    position: absolute;
+    top: calc(100% + 5px);
+    right: 0;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-md);
+    z-index: 200;
+    min-width: 160px;
+    padding: 0.5rem 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.lang-dropdown.hidden {
+    display: none !important;
+}
+
+.lang-option {
+    background: transparent;
+    border: none;
+    color: var(--text-main);
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    font-weight: 500;
+    width: 100%;
+}
+
+.lang-option:hover {
+    background-color: var(--secondary);
+    color: var(--accent);
+}
+
+.lang-option.active {
+    color: var(--accent);
+    background-color: var(--secondary);
+    font-weight: 700;
+}
+
 #current-lang-label {
     line-height: 1;
+}
+
+/* Dropup positioning for mobile */
+@media (max-width: 640px) {
+    .lang-dropdown {
+        top: auto;
+        bottom: calc(100% + 15px);
+        right: 50%;
+        transform: translateX(50%);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    }
 }
 
 .header-actions {
@@ -351,6 +419,115 @@ body:not(.dark-mode) .moon-icon { display: none !important; }
     height: 100%;
     opacity: 0;
     cursor: pointer;
+}
+
+/* Staged Files Queue */
+.staged-files-container {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+    box-shadow: var(--shadow-sm);
+}
+
+.staged-files-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 0.75rem;
+}
+
+.staged-files-title {
+    font-weight: 600;
+    font-size: 1.1rem;
+    color: var(--text-main);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.clear-staged-btn {
+    background: transparent;
+    border: none;
+    color: var(--danger, #ef4444);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.clear-staged-btn:hover {
+    opacity: 0.8;
+}
+
+.staged-files-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 0.75rem;
+    max-height: 250px;
+    overflow-y: auto;
+    margin-bottom: 1.5rem;
+    padding-right: 0.5rem;
+}
+
+.staged-files-list::-webkit-scrollbar {
+    width: 6px;
+}
+.staged-files-list::-webkit-scrollbar-thumb {
+    background: var(--secondary-hover);
+    border-radius: 10px;
+}
+
+.staged-file-item {
+    background: var(--secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    padding: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.staged-file-info {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.staged-file-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--text-main);
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    overflow: hidden;
+}
+
+.staged-file-size {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.remove-staged-item {
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem;
+    border-radius: 50%;
+    transition: all 0.2s;
+}
+
+.remove-staged-item:hover {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger, #ef4444);
 }
 
 .loader {

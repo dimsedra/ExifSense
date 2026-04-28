@@ -20,6 +20,7 @@ async function loadLanguage(lang) {
         currentLang = lang;
         localStorage.setItem('exifsense_lang', lang);
         document.documentElement.lang = lang;
+        document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
     } catch (error) {
         console.error('i18n Error:', error);
         // Fallback to English if not already tried

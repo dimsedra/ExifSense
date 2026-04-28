@@ -67,10 +67,6 @@ export function generateQualityNarrative(props) {
     const hasHardware = props.Make || props.Model || props.LensModel;
     const hasOptics = props.FocalLength || props.FocalLengthIn35mmFormat;
     
-    if (!hasHardware && !hasOptics) {
-        narrative += `<div style="color: #ea580c; margin-top: 8px;"><strong>${t('sanitization_alert', {}, 'narratives')}</strong></div>`;
-    }
-
     return narrative;
 }
 
@@ -326,6 +322,25 @@ export function generateCombinedAnalysis(assets) {
             narrative: narrative
         });
     }
+
+    // Guarantee 4 default expert categories are shown
+    const categories = [
+        { title: t('analysis_integrity', {}, 'ui'), icon: 'shield-alert', fallback: t('empty_all', {}, 'narratives') },
+        { title: t('analysis_hardware', {}, 'ui'), icon: 'smartphone', fallback: t('empty_hardware', {}, 'narratives') },
+        { title: t('analysis_timeline', {}, 'ui'), icon: 'clock', fallback: t('empty_timeline', {}, 'narratives') },
+        { title: t('analysis_geospatial', {}, 'ui'), icon: 'map', fallback: t('empty_geospatial', {}, 'narratives') }
+    ];
+
+    categories.forEach(cat => {
+        const exists = findings.some(f => f.title === cat.title);
+        if (!exists) {
+            findings.push({
+                icon: cat.icon,
+                title: cat.title,
+                narrative: `<span class="text-muted">${cat.fallback}</span>`
+            });
+        }
+    });
 
     return findings;
 }

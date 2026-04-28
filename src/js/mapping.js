@@ -18,7 +18,7 @@ export function renderMultiMarkers(assets, mapInstance) {
         if (asset.exifData?.latitude != null && asset.exifData?.longitude != null) {
             const captureDate = asset.exifData.DateTimeOriginal || asset.exifData.CreateDate || asset.exifData.ModifyDate;
             const dateObj = parseDate(captureDate);
-            const locale = getCurrentLanguage() === 'id' ? 'id-ID' : 'en-GB';
+            const locale = getCurrentLanguage() === 'id' ? 'id-ID' : (getCurrentLanguage() === 'ar' ? 'ar-SA' : 'en-GB');
             const timeStr = (dateObj && !isNaN(dateObj.getTime())) ? dateObj.toLocaleString(locale, { hour12: false }) : t('unknown', {}, 'reports');
             
             const popupContent = `

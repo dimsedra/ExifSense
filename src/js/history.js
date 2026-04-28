@@ -131,7 +131,7 @@ export function renderHistoryItems(container, query = '', filter = 'all', onLoad
                 <div class="history-name">${Utils.escapeHTML(item.sessionTitle)}</div>
                 <div class="history-meta">
                     <span class="history-date">
-                        ${new Date(item.date).toLocaleDateString(getCurrentLanguage() === 'id' ? 'id-ID' : 'en-GB')} • ${new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        ${new Date(item.date).toLocaleDateString(getCurrentLanguage() === 'id' ? 'id-ID' : (getCurrentLanguage() === 'ar' ? 'ar-SA' : 'en-GB'))} • ${new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                     <span>${item.isBatch ? t('asset_count', {n: item.assetCount}) : Utils.escapeHTML(item.assets[0]?.exifData?.Make || t('history_unknown_device'))}</span>
                 </div>

@@ -39,11 +39,17 @@
             <i data-lucide="sun" class="sun-icon"></i>
             <i data-lucide="moon" class="moon-icon"></i>
           </button>
-          <div class="lang-selector">
+          <div class="lang-selector" id="lang-selector-container">
             <button class="btn btn-secondary" id="lang-toggle" title="Switch Language">
               <i data-lucide="languages"></i>
               <span id="current-lang-label">EN</span>
+              <i data-lucide="chevron-down" class="chevron-icon"></i>
             </button>
+            <div class="lang-dropdown hidden" id="lang-dropdown">
+              <button class="lang-option" data-lang="en">English</button>
+              <button class="lang-option" data-lang="id">Bahasa Indonesia</button>
+              <button class="lang-option" data-lang="ar">العربية</button>
+            </div>
           </div>
           <div class="export-dropdown hidden" id="export-container">
             <button class="btn btn-secondary" id="export-main-btn" data-i18n="export_report">
@@ -128,6 +134,18 @@
                         JPG, PNG, TIFF, HEIC (Local Processing)
                       </p>
                     </div>
+                  </div>
+                  
+                  <!-- Staged Files Preview Area -->
+                  <div class="staged-files-container hidden" id="staged-files-container">
+                    <div class="staged-files-header">
+                      <span class="staged-files-title"><i data-lucide="list"></i> <span data-i18n="staged_files_title">Staged Files</span></span>
+                      <button class="clear-staged-btn" id="clear-staged-btn" data-i18n="clear_staging">Clear All</button>
+                    </div>
+                    <div class="staged-files-list" id="staged-files-list"></div>
+                    <button class="btn-primary-large staged-action-btn" id="start-staged-btn">
+                      <i data-lucide="sparkles"></i> <span data-i18n="process_staged_btn">Analyze All Staged Files</span>
+                    </button>
                   </div>
 
                   <!-- Technical Advisory -->
