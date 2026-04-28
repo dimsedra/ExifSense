@@ -695,10 +695,17 @@ function updateCircularTabs(container, activeId) {
         curr = (curr + 1) % N;
     }
 
+    // Lock container height to prevent temporary layout collapse and scroll jumping
+    const currentHeight = container.getBoundingClientRect().height;
+    container.style.height = `${currentHeight}px`;
+
     // Rearrange DOM nodes
     orderedIndices.forEach(idx => {
         container.appendChild(buttons[idx]);
     });
+
+    // Clear the explicit height lock
+    container.style.height = '';
 
     // Update active class
     buttons.forEach(b => b.classList.toggle('active', b.dataset.id === activeId));
