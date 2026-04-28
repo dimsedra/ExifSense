@@ -260,6 +260,17 @@ body:not(.dark-mode) .moon-icon { display: none !important; }
     animation: slideDown 0.2s ease-out;
 }
 
+/* Dropup positioning for mobile */
+@media (max-width: 640px) {
+    .export-menu {
+        top: auto;
+        bottom: calc(100% + 15px);
+        right: 50%;
+        transform: translateX(50%);
+        box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.15);
+    }
+}
+
 .export-menu.active {
     display: flex;
 }

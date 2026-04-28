@@ -72,22 +72,29 @@ export function translatePage() {
         const key = el.getAttribute('data-i18n');
         const translated = t(key);
         
-        if (el.tagName === 'INPUT' && el.getAttribute('placeholder')) {
+        if (el.tagName === 'INPUT' && el.hasAttribute('placeholder')) {
             el.setAttribute('placeholder', translated);
-        } else if (el.hasAttribute('title') && !el.hasChildNodes()) {
-             el.setAttribute('title', translated);
-        } else {
-            // Preservation of icons (search for child <i> tags or already rendered <svg>)
-            const icon = el.querySelector('i[data-lucide], svg.lucide');
-            if (icon) {
-                // Remove all existing text nodes to avoid double text
-                Array.from(el.childNodes).forEach(node => {
-                    if (node.nodeType === 3) node.remove();
-                });
-                // Add the translated text as a single text node after the icon
-                el.appendChild(document.createTextNode(' ' + translated));
+        }
+        
+        if (el.hasAttribute('title')) {
+            el.setAttribute('title', translated);
+        }
+
+        // Only modify DOM content if it's not a pure title-only input
+        if (el.tagName !== 'INPUT' && (el.hasChildNodes() || !el.hasAttribute('title'))) {
+            const spanText = el.querySelector('span');
+            if (spanText) {
+                spanText.textContent = translated;
             } else {
-                el.innerHTML = translated;
+                const icon = el.querySelector('i[data-lucide], svg.lucide');
+                if (icon) {
+                    Array.from(el.childNodes).forEach(node => {
+                        if (node.nodeType === 3) node.remove();
+                    });
+                    el.appendChild(document.createTextNode(' ' + translated));
+                } else {
+                    el.innerHTML = translated;
+                }
             }
         }
     });
