@@ -1077,15 +1077,6 @@ function switchState(s) {
         elements.exportContainer.classList.remove('hidden');
         elements.sanitizeMainBtn.classList.remove('hidden');
         if (state.map) setTimeout(() => state.map.invalidateSize(), 100);
-        
-        setTimeout(() => {
-            document.querySelectorAll('.expert-tabs-container').forEach(container => {
-                const activeBtn = container.querySelector('.expert-tab-btn.active');
-                if (activeBtn) {
-                    updateCircularTabs(container, activeBtn.dataset.id);
-                }
-            });
-        }, 100);
     }
 }
 
