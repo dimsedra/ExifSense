@@ -1,4 +1,4 @@
-import { escapeHTML } from './utils.js';
+import { escapeHTML, parseDate } from './utils.js';
 import { t, getCurrentLanguage } from './i18n.js';
 
 export function initMap(lat, lng) {
@@ -17,9 +17,9 @@ export function renderMultiMarkers(assets, mapInstance) {
     assets.forEach(asset => {
         if (asset.exifData?.latitude != null && asset.exifData?.longitude != null) {
             const captureDate = asset.exifData.DateTimeOriginal || asset.exifData.CreateDate || asset.exifData.ModifyDate;
-            const dateObj = captureDate ? new Date(captureDate) : null;
+            const dateObj = parseDate(captureDate);
             const locale = getCurrentLanguage() === 'id' ? 'id-ID' : 'en-GB';
-            const timeStr = dateObj ? dateObj.toLocaleString(locale, { hour12: false }) : t('reports.unknown');
+            const timeStr = (dateObj && !isNaN(dateObj.getTime())) ? dateObj.toLocaleString(locale, { hour12: false }) : t('unknown', {}, 'reports');
             
             const popupContent = `
                 <div class="map-popup">
@@ -55,11 +55,14 @@ export async function renderInvestigationPath(assets, mapInstance) {
     // Filter and sort by time
     const sortedPoints = assets
         .filter(a => a.exifData?.latitude != null && a.exifData?.longitude != null)
-        .map(a => ({
-            lat: a.exifData.latitude,
-            lng: a.exifData.longitude,
-            time: new Date(a.exifData.DateTimeOriginal || a.exifData.CreateDate || a.exifData.DateTime).getTime()
-        }))
+        .map(a => {
+            const d = parseDate(a.exifData.DateTimeOriginal || a.exifData.CreateDate || a.exifData.DateTime);
+            return {
+                lat: a.exifData.latitude,
+                lng: a.exifData.longitude,
+                time: d ? d.getTime() : NaN
+            };
+        })
         .filter(p => !isNaN(p.time))
         .sort((a, b) => a.time - b.time);
 

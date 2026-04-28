@@ -21,10 +21,29 @@ export function formatValue(key, value) {
     return String(result);
 }
 
+export function parseDate(dateStr) {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date) return dateStr;
+    
+    let cleaned = String(dateStr).trim();
+    if (/^\d{4}:\d{2}:\d{2}/.test(cleaned)) {
+        cleaned = cleaned.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+    }
+    
+    const d = new Date(cleaned);
+    if (!isNaN(d.getTime())) return d;
+    
+    const tSeparated = cleaned.replace(' ', 'T');
+    const d2 = new Date(tSeparated);
+    if (!isNaN(d2.getTime())) return d2;
+    
+    return d;
+}
+
 export function formatFullDate(date) {
     if (!date) return t('unknown', {}, 'reports');
-    const d = (date instanceof Date) ? date : new Date(date);
-    if (isNaN(d.getTime())) return String(date);
+    const d = parseDate(date);
+    if (!d || isNaN(d.getTime())) return String(date);
     
     const pad = (n) => String(n).padStart(2, '0');
     const day = pad(d.getDate());

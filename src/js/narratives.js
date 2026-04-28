@@ -1,4 +1,4 @@
-import { formatValue, escapeHTML, calculateDistance } from './utils.js';
+import { formatValue, escapeHTML, calculateDistance, parseDate } from './utils.js';
 import { t } from './i18n.js';
 
 export function generateHardwareNarrative(props) {
@@ -79,9 +79,9 @@ export function generateTimelineNarrative(props) {
     const modifyDate = props.ModifyDate;
     if (!captureDate) return t('no_chrono', {}, 'narratives');
     
-    const dateObj = new Date(captureDate);
-    const dateStr = escapeHTML(dateObj.toLocaleString('en-GB', { hour12: false }));
-    const gmtStr = escapeHTML(dateObj.toUTCString());
+    const dateObj = parseDate(captureDate);
+    const dateStr = (dateObj && !isNaN(dateObj.getTime())) ? escapeHTML(dateObj.toLocaleString('en-GB', { hour12: false })) : escapeHTML(String(captureDate));
+    const gmtStr = (dateObj && !isNaN(dateObj.getTime())) ? escapeHTML(dateObj.toUTCString()) : escapeHTML(String(captureDate));
     const rawStr = escapeHTML(String(captureDate)); // Original string from EXIF
     
     let narrative = t('timeline_capture', { dateStr }, 'narratives');
@@ -90,8 +90,10 @@ export function generateTimelineNarrative(props) {
     narrative += `<div>${t('timeline_gmt', { gmtStr }, 'narratives')}</div>`;
     narrative += `</div>`;
     
-    if (modifyDate && captureDate && new Date(modifyDate).getTime() !== new Date(captureDate).getTime()) {
-        const modStr = escapeHTML(new Date(modifyDate).toLocaleString('en-GB', { hour12: false }));
+    const parsedMod = parseDate(modifyDate);
+    const parsedCap = parseDate(captureDate);
+    if (parsedMod && parsedCap && !isNaN(parsedMod.getTime()) && !isNaN(parsedCap.getTime()) && parsedMod.getTime() !== parsedCap.getTime()) {
+        const modStr = escapeHTML(parsedMod.toLocaleString('en-GB', { hour12: false }));
         narrative += `<div style="color: #ea580c; margin-top: 8px;"><strong>${t('timeline_mod_note', { modStr }, 'narratives')}</strong></div>`;
     } else {
         narrative += `<div style="margin-top: 8px; opacity: 0.9;">${t('timeline_integrity', {}, 'narratives')}</div>`;
@@ -121,21 +123,96 @@ export function generateGeospatialNarrative(lat, lng, locationData = null) {
 export function generateCombinedAnalysis(assets) {
     const findings = [];
     
+    // 0. Batch Integrity Analysis
+    const fullyStripped = assets.filter(a => 
+        !(a.exifData?.Make || a.exifData?.Model) && 
+        !(a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime) && 
+        !(a.exifData?.latitude != null && a.exifData?.longitude != null)
+    );
+
+    const partiallyStripped = assets.filter(a => {
+        const hasHW = a.exifData?.Make || a.exifData?.Model;
+        const hasTime = a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime;
+        const hasGeo = a.exifData?.latitude != null && a.exifData?.longitude != null;
+        return (hasHW || hasTime || hasGeo) && !(hasHW && hasTime && hasGeo);
+    });
+
+    const cleanAssets = assets.filter(a => {
+        const hasHW = a.exifData?.Make || a.exifData?.Model;
+        const hasTime = a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime;
+        const hasGeo = a.exifData?.latitude != null && a.exifData?.longitude != null;
+        return hasHW && hasTime && hasGeo;
+    });
+
+    if (fullyStripped.length > 0 || partiallyStripped.length > 0) {
+        let integrityNarrative = '';
+        if (fullyStripped.length > 0 && partiallyStripped.length > 0) {
+            integrityNarrative = t('combined_integrity_mix', { 
+                fully: fullyStripped.length, 
+                partially: partiallyStripped.length, 
+                clean: cleanAssets.length,
+                total: assets.length 
+            }, 'narratives');
+        } else if (fullyStripped.length > 0) {
+            integrityNarrative = t('combined_integrity_stripped_all', { 
+                count: fullyStripped.length, 
+                total: assets.length 
+            }, 'narratives');
+        } else {
+            integrityNarrative = t('combined_integrity_stripped_part', { 
+                count: partiallyStripped.length, 
+                total: assets.length 
+            }, 'narratives');
+        }
+
+        findings.push({
+            icon: 'shield-alert',
+            title: t('analysis_integrity', {}, 'ui'),
+            narrative: integrityNarrative
+        });
+    }
+    
     // 1. Hardware Consistency
-    const devices = [...new Set(assets.map(a => `${a.exifData?.Make || 'Unknown'} ${a.exifData?.Model || ''}`.trim()))];
-    if (devices.length === 1 && devices[0] !== 'Unknown') {
+    const assetsWithHardware = assets.filter(a => a.exifData?.Make || a.exifData?.Model);
+    const devices = [...new Set(assetsWithHardware.map(a => `${a.exifData?.Make || 'Unknown'} ${a.exifData?.Model || ''}`.trim()))];
+    
+    if (assetsWithHardware.length === 1 && assets.length > 1) {
         findings.push({
             icon: 'shield-check',
             title: t('analysis_hardware'),
-            narrative: t('combined_hw_consistent', { device: devices[0] }, 'narratives')
+            narrative: t('combined_hw_sparse_single', { count: 1, total: assets.length, device: devices[0] }, 'narratives')
         });
-    } else if (devices.length > 1) {
-        const deviceList = escapeHTML(devices.join(', '));
-        findings.push({
-            icon: 'alert-triangle',
-            title: t('analysis_hardware'),
-            narrative: t('combined_hw_discrepancy', { deviceList }, 'narratives')
-        });
+    } else if (assetsWithHardware.length > 1) {
+        if (devices.length === 1) {
+            if (assetsWithHardware.length === assets.length) {
+                findings.push({
+                    icon: 'shield-check',
+                    title: t('analysis_hardware'),
+                    narrative: t('combined_hw_consistent', { device: devices[0] }, 'narratives')
+                });
+            } else {
+                findings.push({
+                    icon: 'shield-check',
+                    title: t('analysis_hardware'),
+                    narrative: t('combined_hw_sparse_consistent', { count: assetsWithHardware.length, total: assets.length, device: devices[0] }, 'narratives')
+                });
+            }
+        } else if (devices.length > 1) {
+            const deviceList = escapeHTML(devices.join(', '));
+            if (assetsWithHardware.length === assets.length) {
+                findings.push({
+                    icon: 'alert-triangle',
+                    title: t('analysis_hardware'),
+                    narrative: t('combined_hw_discrepancy', { deviceList }, 'narratives')
+                });
+            } else {
+                findings.push({
+                    icon: 'alert-triangle',
+                    title: t('analysis_hardware'),
+                    narrative: t('combined_hw_sparse_discrepancy', { deviceList, missing: assets.length - assetsWithHardware.length }, 'narratives')
+                });
+            }
+        }
     }
 
     // 1.5 Physical Serial Alignment
@@ -155,19 +232,33 @@ export function generateCombinedAnalysis(assets) {
 
     // 2. Chronological Sequence
     const captureTimes = assets
-        .map(a => ({ id: a.id, time: new Date(a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime).getTime() }))
+        .map(a => {
+            const d = parseDate(a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime);
+            return { id: a.id, time: d ? d.getTime() : NaN };
+        })
         .filter(a => !isNaN(a.time))
         .sort((a, b) => a.time - b.time);
 
-    if (captureTimes.length > 1) {
+    if (captureTimes.length === 1 && assets.length > 1) {
+        findings.push({
+            icon: 'clock',
+            title: t('analysis_timeline'),
+            narrative: t('combined_timeline_sparse', { total: assets.length }, 'narratives')
+        });
+    } else if (captureTimes.length > 1) {
         const start = new Date(captureTimes[0].time).toLocaleTimeString();
         const end = new Date(captureTimes[captureTimes.length - 1].time).toLocaleTimeString();
         const diffHours = ((captureTimes[captureTimes.length - 1].time - captureTimes[0].time) / (1000 * 60 * 60)).toFixed(2);
         
+        let narrative = t('combined_timeline', { diffHours, start, end }, 'narratives');
+        if (captureTimes.length < assets.length) {
+            narrative += t('combined_timeline_sparse_note', { count: captureTimes.length }, 'narratives');
+        }
+
         findings.push({
             icon: 'clock',
             title: t('analysis_timeline'),
-            narrative: t('combined_timeline', { diffHours, start, end }, 'narratives')
+            narrative: narrative
         });
     }
 
@@ -176,7 +267,13 @@ export function generateCombinedAnalysis(assets) {
         .map(a => ({ lat: a.exifData?.latitude, lng: a.exifData?.longitude }))
         .filter(a => a.lat != null && a.lng != null);
 
-    if (locations.length > 1) {
+    if (locations.length === 1 && assets.length > 1) {
+        findings.push({
+            icon: 'map',
+            title: t('analysis_geospatial'),
+            narrative: t('combined_geo_sparse', { total: assets.length }, 'narratives')
+        });
+    } else if (locations.length > 1) {
         let maxDist = 0;
         for (let i = 0; i < locations.length; i++) {
             for (let j = i + 1; j < locations.length; j++) {
@@ -218,10 +315,15 @@ export function generateCombinedAnalysis(assets) {
             spatialNarrative = t('combined_geo_trail', { dist: maxDist.toFixed(2) }, 'narratives');
         }
 
+        let narrative = `${spatialNarrative}${velocityWarning}`;
+        if (locations.length < assets.length) {
+            narrative += t('combined_geo_sparse_note', { count: locations.length }, 'narratives');
+        }
+
         findings.push({
             icon: 'map',
             title: t('analysis_geospatial'),
-            narrative: `${spatialNarrative}${velocityWarning}`
+            narrative: narrative
         });
     }
 

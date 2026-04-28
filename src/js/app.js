@@ -473,6 +473,15 @@ function updateCircularTabs(container, activeId) {
     // Check for overflow
     const isOverflowing = container.scrollWidth > container.clientWidth;
 
+    // Toggle arrows
+    const wrapper = container.parentElement;
+    if (wrapper && wrapper.classList.contains('tabs-wrapper')) {
+        const arrows = wrapper.querySelectorAll('.tabs-arrow');
+        arrows.forEach(arrow => {
+            arrow.style.display = isOverflowing ? 'flex' : 'none';
+        });
+    }
+
     if (!isOverflowing) {
         // Restore original order
         const sortedButtons = buttons.sort((a, b) => parseInt(a.dataset.index) - parseInt(b.dataset.index));
@@ -694,8 +703,8 @@ function renderExpertAnalysis(asset) {
     });
 
     const parent = elements.expertAnalysisContent.parentNode;
-    const existingTabs = parent.querySelector('.expert-tabs');
-    if (existingTabs) existingTabs.remove();
+    const existingWrapper = parent.querySelector('.tabs-wrapper');
+    if (existingWrapper) existingWrapper.remove();
 
     if (items.length > 0) {
         const tabsContainer = document.createElement('div');
@@ -733,7 +742,22 @@ function renderExpertAnalysis(asset) {
             elements.expertAnalysisContent.appendChild(pane);
         });
 
-        parent.insertBefore(tabsContainer, elements.expertAnalysisContent);
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tabs-wrapper';
+        
+        const arrowLeft = document.createElement('div');
+        arrowLeft.className = 'tabs-arrow left';
+        arrowLeft.innerHTML = '&lt;';
+        
+        const arrowRight = document.createElement('div');
+        arrowRight.className = 'tabs-arrow right';
+        arrowRight.innerHTML = '&gt;';
+        
+        wrapper.appendChild(arrowLeft);
+        wrapper.appendChild(tabsContainer);
+        wrapper.appendChild(arrowRight);
+
+        parent.insertBefore(wrapper, elements.expertAnalysisContent);
         
         updateCircularTabs(tabsContainer, items[0].id);
     }
@@ -745,39 +769,96 @@ function renderMetadata(data) {
     elements.metadataContainer.innerHTML = '';
     const categorized = Utils.categorizeExif(data);
 
+    const items = [];
     for (const [category, props] of Object.entries(categorized)) {
-        const keys = Object.keys(props);
-        if (keys.length === 0) continue;
+        if (Object.keys(props).length > 0) {
+            const catKey = Utils.getCategoryKey(category);
+            const isImportant = ['Device Hardware', 'Exposure Settings', 'Optics & Lens', 'Image Quality', 'Timeline & Date'].includes(category);
+            const isSecondary = ['Standards & Info', 'Miscellaneous'].includes(category);
+            
+            items.push({
+                category,
+                props,
+                key: catKey,
+                isImportant,
+                isSecondary,
+                icon: Utils.getCategoryIcon(category)
+            });
+        }
+    }
 
-        const card = document.createElement('div');
-        const isImportant = ['Device Hardware', 'Exposure Settings', 'Optics & Lens', 'Image Quality', 'Timeline & Date'].includes(category);
-        const isSecondary = ['Standards & Info', 'Miscellaneous'].includes(category);
-        
-        const catKey = Utils.getCategoryKey(category);
-        const translatedCategory = t(catKey);
-        
-        card.className = `card ${isImportant ? 'important-card' : ''} ${isSecondary ? 'secondary-card' : ''}`;
-        card.innerHTML = `
-            <div class="card-header">
-                <i data-lucide="${Utils.getCategoryIcon(category)}"></i>
-                <h3>${translatedCategory}</h3>
-            </div>
-            <div class="card-body">
-                <details class="raw-data-toggle">
-                    <summary>${t('view_details', {cat: translatedCategory})}</summary>
-                    <div class="data-grid mt-4">
+    const parent = elements.metadataContainer;
+    const existingWrapper = parent.querySelector('.tabs-wrapper');
+    if (existingWrapper) existingWrapper.remove();
+
+    if (items.length > 0) {
+        const tabsContainer = document.createElement('div');
+        tabsContainer.className = 'expert-tabs-container metadata-tabs';
+
+        items.forEach((item, index) => {
+            const translatedCategory = t(item.key);
+            const btn = document.createElement('button');
+            btn.className = `expert-tab-btn ${index === 0 ? 'active' : ''}`;
+            btn.dataset.id = `meta-${item.key}`;
+            btn.dataset.index = index;
+            btn.innerHTML = `<i data-lucide="${item.icon}"></i><span>${translatedCategory}</span>`;
+            
+            const pane = document.createElement('div');
+            pane.className = `expert-tab-pane ${index === 0 ? 'active' : ''}`;
+            
+            const card = document.createElement('div');
+            card.className = `card ${item.isImportant ? 'important-card' : ''} ${item.isSecondary ? 'secondary-card' : ''}`;
+            
+            const keys = Object.keys(item.props);
+            card.innerHTML = `
+                <div class="card-header">
+                    <i data-lucide="${item.icon}"></i>
+                    <h3>${translatedCategory}</h3>
+                </div>
+                <div class="card-body">
+                    <div class="data-grid">
                         ${keys.sort().map(key => `
                             <div class="data-item">
                                 <div class="data-label">${Utils.escapeHTML(Utils.formatLabel(key))}</div>
-                                <div class="data-value">${Utils.escapeHTML(Utils.formatValue(key, props[key]))}</div>
+                                <div class="data-value">${Utils.escapeHTML(Utils.formatValue(key, item.props[key]))}</div>
                             </div>
                         `).join('')}
                     </div>
-                </details>
-            </div>
-        `;
-        elements.metadataContainer.appendChild(card);
+                </div>
+            `;
+            pane.appendChild(card);
+
+            btn.addEventListener('click', () => {
+                parent.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
+                pane.classList.add('active');
+                
+                updateCircularTabs(tabsContainer, `meta-${item.key}`);
+            });
+
+            tabsContainer.appendChild(btn);
+            parent.appendChild(pane);
+        });
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'tabs-wrapper';
+        
+        const arrowLeft = document.createElement('div');
+        arrowLeft.className = 'tabs-arrow left';
+        arrowLeft.innerHTML = '&lt;';
+        
+        const arrowRight = document.createElement('div');
+        arrowRight.className = 'tabs-arrow right';
+        arrowRight.innerHTML = '&gt;';
+        
+        wrapper.appendChild(arrowLeft);
+        wrapper.appendChild(tabsContainer);
+        wrapper.appendChild(arrowRight);
+
+        parent.prepend(wrapper);
+        
+        updateCircularTabs(tabsContainer, `meta-${items[0].key}`);
     }
+
     if (window.lucide) lucide.createIcons();
 }
 
@@ -838,6 +919,15 @@ function switchState(s) {
         elements.exportContainer.classList.remove('hidden');
         elements.sanitizeMainBtn.classList.remove('hidden');
         if (state.map) setTimeout(() => state.map.invalidateSize(), 100);
+        
+        setTimeout(() => {
+            document.querySelectorAll('.expert-tabs-container').forEach(container => {
+                const activeBtn = container.querySelector('.expert-tab-btn.active');
+                if (activeBtn) {
+                    updateCircularTabs(container, activeBtn.dataset.id);
+                }
+            });
+        }, 100);
     }
 }
 
