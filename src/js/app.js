@@ -848,9 +848,20 @@ async function switchAsset(index) {
         asset.locationData = await Mapping.reverseGeocode(asset.exifData.latitude, asset.exifData.longitude);
     }
 
+    // Lock right column height to prevent scroll jumping on wipe
+    const colRight = elements.metadataContainer.closest('.col-right');
+    if (colRight) {
+        colRight.style.minHeight = `${colRight.getBoundingClientRect().height}px`;
+    }
+
     renderExpertAnalysis(asset);
     renderMetadata(asset.exifData);
     
+    if (colRight) {
+        requestAnimationFrame(() => {
+            colRight.style.minHeight = '';
+        });
+    }
     if (asset.exifData?.latitude != null) {
         elements.gpsCoords.textContent = t('gps_coords', {
             lat: asset.exifData.latitude.toFixed(6),
