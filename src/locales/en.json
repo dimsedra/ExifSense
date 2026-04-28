@@ -142,7 +142,11 @@
         "combined_geo_concentrated": "Assets form a <strong>highly concentrated cluster</strong> within a 50m radius. This indicates a stationary capture session at a single tactical position.",
         "combined_geo_localized": "Geospatial spread shows a <strong>localized operation</strong> within a {dist}m range. The movement pattern is consistent with a pedestrian-scale investigation.",
         "combined_geo_trail": "Analysis established a <strong>geographic trail</strong> spanning <strong>{dist} km</strong>. The spatial distribution suggests a mobile capture environment or multiple transit points.",
-        "velocity_warning": "Warning: Impossible velocity detected ({speed} km/h). Potential metadata spoofing."
+        "velocity_warning": "Warning: Impossible velocity detected ({speed} km/h). Potential metadata spoofing.",
+        "sanitization_alert": "Sanitization Signature Detected: This file lacks standard hardware metadata, which frequently indicates processing via messaging apps (e.g., WhatsApp, Telegram) or metadata stripping tools.",
+        "null_island_warn": "Location Anomaly: Coordinates point to 'Null Island' (0,0). This suggests a corrupted or programmatically zeroed sensor payload.",
+        "precision_warn": "Precision Anomaly: Coordinates exhibit integer alignment. Natural GPS paths rarely map to flat decimal structures, implying potential manual spoofing.",
+        "combined_serial_match": "Physical Provenance Verified: All assets in this batch match the identical hardware serial number <strong>{serial}</strong>."
     },
     "reports": {
         "title": "EXIFSENSE FORENSIC ANALYSIS REPORT",

@@ -96,6 +96,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     elements.logo.addEventListener('click', () => {
         window.location.hash = '#/';
     });
+
+    window.addEventListener('resize', () => {
+        document.querySelectorAll('.expert-tabs-container').forEach(container => {
+            const activeBtn = container.querySelector('.expert-tab-btn.active');
+            if (activeBtn) {
+                updateCircularTabs(container, activeBtn.dataset.id);
+            }
+        });
+    });
+
     if (window.lucide) lucide.createIcons();
 });
 
@@ -283,8 +293,10 @@ function initDropzone() {
             }
         }
     });
-    elements.dropzone.addEventListener('click', () => {
-        elements.fileInput.click();
+    elements.dropzone.addEventListener('click', (e) => {
+        if (e.target !== elements.fileInput) {
+            elements.fileInput.click();
+        }
     });
 
     elements.dropzone.addEventListener('dragover', (e) => {
@@ -449,6 +461,65 @@ function renderAssetSelector() {
     });
 }
 
+function updateCircularTabs(container, activeId) {
+    const buttons = Array.from(container.querySelectorAll('.expert-tab-btn'));
+    const N = buttons.length;
+    if (N <= 1) return;
+
+    // Temporarily remove overflow class to measure true size
+    const wasOverflowing = container.classList.contains('is-overflowing');
+    container.classList.remove('is-overflowing');
+
+    // Check for overflow
+    const isOverflowing = container.scrollWidth > container.clientWidth;
+
+    if (!isOverflowing) {
+        // Restore original order
+        const sortedButtons = buttons.sort((a, b) => parseInt(a.dataset.index) - parseInt(b.dataset.index));
+        sortedButtons.forEach(btn => container.appendChild(btn));
+        
+        // Update active class
+        buttons.forEach(b => b.classList.toggle('active', b.dataset.id === activeId));
+        
+        // Reset scroll
+        container.scrollLeft = 0;
+        return;
+    }
+
+    // Re-add overflow class
+    container.classList.add('is-overflowing');
+
+    const activeBtn = buttons.find(b => b.dataset.id === activeId);
+    if (!activeBtn) return;
+    const activeIdx = buttons.indexOf(activeBtn);
+
+    const prevIdx = (activeIdx - 1 + N) % N;
+    const nextIdx = (activeIdx + 1) % N;
+
+    const orderedIndices = [prevIdx, activeIdx, nextIdx];
+    let curr = (nextIdx + 1) % N;
+    while (curr !== prevIdx) {
+        orderedIndices.push(curr);
+        curr = (curr + 1) % N;
+    }
+
+    // Rearrange DOM nodes
+    orderedIndices.forEach(idx => {
+        container.appendChild(buttons[idx]);
+    });
+
+    // Update active class
+    buttons.forEach(b => b.classList.toggle('active', b.dataset.id === activeId));
+
+    // Center active tab
+    requestAnimationFrame(() => {
+        const newActiveBtn = container.querySelector('.expert-tab-btn.active');
+        if (newActiveBtn) {
+            container.scrollLeft = newActiveBtn.offsetLeft - (container.clientWidth / 2) + (newActiveBtn.clientWidth / 2);
+        }
+    });
+}
+
 function renderCombinedAnalysis() {
     if (state.assets.length <= 1) {
         elements.combinedAnalysisCard.classList.add('hidden');
@@ -458,22 +529,52 @@ function renderCombinedAnalysis() {
     const findings = Narratives.generateCombinedAnalysis(state.assets);
     elements.combinedAnalysisContent.innerHTML = '';
     
+    const parent = elements.combinedAnalysisContent.parentNode;
+    const existingTabs = parent.querySelector('.combined-tabs');
+    if (existingTabs) existingTabs.remove();
+
     if (findings.length > 0) {
         elements.combinedAnalysisCard.classList.remove('hidden');
-        findings.forEach(f => {
-            const item = document.createElement('div');
-            item.className = 'expert-item';
-            item.innerHTML = `
-                <div class="expert-item-header">
-                    <i data-lucide="${f.icon}"></i>
-                    <span>${f.title}</span>
-                </div>
-                <div class="expert-narrative-bubble">
-                    <p>${f.narrative}</p>
+        
+        const tabsContainer = document.createElement('div');
+        tabsContainer.className = 'expert-tabs-container combined-tabs';
+        
+        findings.forEach((f, index) => {
+            const btn = document.createElement('button');
+            btn.className = `expert-tab-btn ${index === 0 ? 'active' : ''}`;
+            btn.dataset.id = `combined-${index}`;
+            btn.dataset.index = index;
+            btn.innerHTML = `<i data-lucide="${f.icon}"></i><span>${Utils.escapeHTML(f.title)}</span>`;
+            
+            const pane = document.createElement('div');
+            pane.className = `expert-tab-pane ${index === 0 ? 'active' : ''}`;
+            pane.innerHTML = `
+                <div class="expert-item">
+                    <div class="expert-item-header">
+                        <i data-lucide="${f.icon}"></i>
+                        <span>${Utils.escapeHTML(f.title)}</span>
+                    </div>
+                    <div class="expert-narrative-bubble">
+                        <p>${f.narrative}</p>
+                    </div>
                 </div>
             `;
-            elements.combinedAnalysisContent.appendChild(item);
+            
+            btn.addEventListener('click', () => {
+                elements.combinedAnalysisContent.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
+                pane.classList.add('active');
+                
+                updateCircularTabs(tabsContainer, `combined-${index}`);
+            });
+            
+            tabsContainer.appendChild(btn);
+            elements.combinedAnalysisContent.appendChild(pane);
         });
+        
+        parent.insertBefore(tabsContainer, elements.combinedAnalysisContent);
+        
+        updateCircularTabs(tabsContainer, `combined-0`);
+        
     } else {
         elements.combinedAnalysisCard.classList.add('hidden');
     }
@@ -579,32 +680,65 @@ function renderExpertAnalysis(asset) {
         { name: 'Timeline & Date', key: 'cat_timeline', analysis: 'analysis_timeline', generator: Narratives.generateTimelineNarrative, icon: 'clock' }
     ];
 
+    const items = [];
+    
+    // Geospatial
     const geoNarrative = Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData);
-    appendExpertItem('map-pin', t('analysis_geospatial'), geoNarrative);
+    items.push({ icon: 'map-pin', title: t('analysis_geospatial'), narrative: geoNarrative, id: 'geo' });
 
     categories.forEach(cat => {
         const props = categorized[cat.name];
         if (props && Object.keys(props).length > 0) {
-            appendExpertItem(cat.icon, t(cat.analysis), cat.generator(props));
+            items.push({ icon: cat.icon, title: t(cat.analysis), narrative: cat.generator(props), id: cat.key });
         }
     });
 
-    if (window.lucide) lucide.createIcons();
-}
+    const parent = elements.expertAnalysisContent.parentNode;
+    const existingTabs = parent.querySelector('.expert-tabs');
+    if (existingTabs) existingTabs.remove();
 
-function appendExpertItem(icon, title, narrative) {
-    const item = document.createElement('div');
-    item.className = 'expert-item';
-    item.innerHTML = `
-        <div class="expert-item-header">
-            <i data-lucide="${icon}"></i>
-            <span>${Utils.escapeHTML(title)}</span>
-        </div>
-        <div class="expert-narrative-bubble">
-            <p>${narrative}</p>
-        </div>
-    `;
-    elements.expertAnalysisContent.appendChild(item);
+    if (items.length > 0) {
+        const tabsContainer = document.createElement('div');
+        tabsContainer.className = 'expert-tabs-container expert-tabs';
+
+        items.forEach((item, index) => {
+            const btn = document.createElement('button');
+            btn.className = `expert-tab-btn ${index === 0 ? 'active' : ''}`;
+            btn.dataset.id = item.id;
+            btn.dataset.index = index;
+            btn.innerHTML = `<i data-lucide="${item.icon}"></i><span>${Utils.escapeHTML(item.title)}</span>`;
+            
+            const pane = document.createElement('div');
+            pane.className = `expert-tab-pane ${index === 0 ? 'active' : ''}`;
+            pane.innerHTML = `
+                <div class="expert-item">
+                    <div class="expert-item-header">
+                        <i data-lucide="${item.icon}"></i>
+                        <span>${Utils.escapeHTML(item.title)}</span>
+                    </div>
+                    <div class="expert-narrative-bubble">
+                        <p>${item.narrative}</p>
+                    </div>
+                </div>
+            `;
+            
+            btn.addEventListener('click', () => {
+                elements.expertAnalysisContent.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
+                pane.classList.add('active');
+                
+                updateCircularTabs(tabsContainer, item.id);
+            });
+            
+            tabsContainer.appendChild(btn);
+            elements.expertAnalysisContent.appendChild(pane);
+        });
+
+        parent.insertBefore(tabsContainer, elements.expertAnalysisContent);
+        
+        updateCircularTabs(tabsContainer, items[0].id);
+    }
+
+    if (window.lucide) lucide.createIcons();
 }
 
 function renderMetadata(data) {

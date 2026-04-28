@@ -117,3 +117,66 @@
         padding: 0.2rem 0.5rem;
     }
 }
+
+.expert-tabs-container {
+    display: flex;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border-color);
+    transition: padding 0.3s ease;
+}
+
+.expert-tabs-container.is-overflowing {
+    overflow-x: auto;
+    padding: 0.75rem 2rem;
+    scrollbar-width: none;
+    scroll-behavior: smooth;
+    mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 15%, black 85%, transparent);
+}
+
+.expert-tabs-container.is-overflowing::-webkit-scrollbar {
+    display: none;
+}
+
+.expert-tab-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.expert-tab-btn:hover {
+    background: var(--secondary);
+    color: var(--text-main);
+}
+
+.expert-tab-btn.active {
+    background: var(--secondary);
+    color: var(--primary);
+    border-color: var(--border-color);
+}
+
+.expert-tab-btn i {
+    width: 16px;
+    height: 16px;
+}
+
+.expert-tab-pane {
+    display: none;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.expert-tab-pane.active {
+    display: block;
+}

@@ -142,7 +142,11 @@
         "combined_geo_concentrated": "Aset membentuk <strong>kluster yang sangat terkonsentrasi</strong> dalam radius 50m. Ini menunjukkan sesi pengambilan diam pada satu posisi taktis.",
         "combined_geo_localized": "Sebaran geospasial menunjukkan <strong>operasi lokal</strong> dalam jangkauan {dist}m. Pola pergerakan konsisten dengan skala investigasi pejalan kaki.",
         "combined_geo_trail": "Analisis menetapkan <strong>jejak geografis</strong> sepanjang <strong>{dist} km</strong>. Distribusi spasial menunjukkan lingkungan pengambilan yang mobile atau beberapa titik transit.",
-        "velocity_warning": "Peringatan: Kecepatan mustahil terdeteksi ({speed} km/h). Potensi manipulasi metadata (spoofing)."
+        "velocity_warning": "Peringatan: Kecepatan mustahil terdeteksi ({speed} km/h). Potensi manipulasi metadata (spoofing).",
+        "sanitization_alert": "Tanda Sanitasi Terdeteksi: Aset ini kehilangan metadata perangkat standar, biasanya merupakan indikasi kompresi media (seperti WhatsApp/Telegram) atau penggunaan alat pembersih metadata.",
+        "null_island_warn": "Anomali Lokasi: Koordinat mengarah ke 'Null Island' (0,0). Mengindikasikan kegagalan sensor atau data lokasi yang di-nolkan secara paksa.",
+        "precision_warn": "Anomali Presisi: Koordinat memiliki struktur bilangan bulat sempurna. Titik koordinat alami jarang menghasilkan presisi bulat, mengindikasikan potensi spoofing manual.",
+        "combined_serial_match": "Asal Fisik Terverifikasi: Seluruh aset dalam batch ini cocok dengan nomor seri perangkat keras fisik yang identik: <strong>{serial}</strong>."
     },
     "reports": {
         "title": "LAPORAN ANALISIS FORENSIK EXIFSENSE",

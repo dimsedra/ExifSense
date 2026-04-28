@@ -62,7 +62,16 @@ export function generateQualityNarrative(props) {
     const sharpness = escapeHTML(props.Sharpness || 'Standard');
     const colorSpace = escapeHTML(props.ColorSpace || 'sRGB');
     
-    return t('quality', { width, height, contrast, sharpness, colorSpace }, 'narratives');
+    let narrative = t('quality', { width, height, contrast, sharpness, colorSpace }, 'narratives');
+
+    const hasHardware = props.Make || props.Model || props.LensModel;
+    const hasOptics = props.FocalLength || props.FocalLengthIn35mmFormat;
+    
+    if (!hasHardware && !hasOptics) {
+        narrative += `<div style="color: #ea580c; margin-top: 8px;"><strong>${t('sanitization_alert', {}, 'narratives')}</strong></div>`;
+    }
+
+    return narrative;
 }
 
 export function generateTimelineNarrative(props) {
@@ -95,7 +104,18 @@ export function generateGeospatialNarrative(lat, lng, locationData = null) {
         return `<span class="text-muted">${t('no_geo', {}, 'narratives')}</span>`;
     }
     let locationName = escapeHTML(locationData?.display_name || t('remote_location', {}, 'narratives'));
-    return t('geospatial', { locationName, lat: lat.toFixed(6), lng: lng.toFixed(6) }, 'narratives');
+    let narrative = t('geospatial', { locationName, lat: lat.toFixed(6), lng: lng.toFixed(6) }, 'narratives');
+
+    const isNullIsland = Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001;
+    const isIntegerPrecision = Number.isInteger(lat) && Number.isInteger(lng);
+
+    if (isNullIsland) {
+        narrative += `<div style="color: #ef4444; margin-top: 8px;"><strong>${t('null_island_warn', {}, 'narratives')}</strong></div>`;
+    } else if (isIntegerPrecision) {
+        narrative += `<div style="color: #ef4444; margin-top: 8px;"><strong>${t('precision_warn', {}, 'narratives')}</strong></div>`;
+    }
+
+    return narrative;
 }
 
 export function generateCombinedAnalysis(assets) {
@@ -106,15 +126,30 @@ export function generateCombinedAnalysis(assets) {
     if (devices.length === 1 && devices[0] !== 'Unknown') {
         findings.push({
             icon: 'shield-check',
-            title: t('metadata_hardware'),
+            title: t('analysis_hardware'),
             narrative: t('combined_hw_consistent', { device: devices[0] }, 'narratives')
         });
     } else if (devices.length > 1) {
         const deviceList = escapeHTML(devices.join(', '));
         findings.push({
             icon: 'alert-triangle',
-            title: t('metadata_hardware'),
+            title: t('analysis_hardware'),
             narrative: t('combined_hw_discrepancy', { deviceList }, 'narratives')
+        });
+    }
+
+    // 1.5 Physical Serial Alignment
+    const serials = assets
+        .map(a => a.exifData?.SerialNumber || a.exifData?.InternalSerialNumber || a.exifData?.BodySerialNumber)
+        .filter(s => s && String(s).trim() !== '');
+
+    const uniqueSerials = [...new Set(serials)];
+
+    if (uniqueSerials.length === 1 && assets.length > 1) {
+        findings.push({
+            icon: 'shield',
+            title: t('analysis_hardware'),
+            narrative: t('combined_serial_match', { serial: escapeHTML(uniqueSerials[0]) }, 'narratives')
         });
     }
 
@@ -131,7 +166,7 @@ export function generateCombinedAnalysis(assets) {
         
         findings.push({
             icon: 'clock',
-            title: t('metadata_chronology'),
+            title: t('analysis_timeline'),
             narrative: t('combined_timeline', { diffHours, start, end }, 'narratives')
         });
     }
@@ -185,7 +220,7 @@ export function generateCombinedAnalysis(assets) {
 
         findings.push({
             icon: 'map',
-            title: t('metadata_gps'),
+            title: t('analysis_geospatial'),
             narrative: `${spatialNarrative}${velocityWarning}`
         });
     }
