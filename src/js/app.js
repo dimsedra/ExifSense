@@ -762,17 +762,11 @@ function renderCombinedAnalysis() {
             
             btn.addEventListener('click', () => {
                 const contentBlock = elements.combinedAnalysisContent;
-                const currentHeight = contentBlock.getBoundingClientRect().height;
-                contentBlock.style.minHeight = `${currentHeight}px`;
-
                 contentBlock.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
                 pane.classList.add('active');
                 
-                updateCircularTabs(tabsContainer, `combined-${index}`);
-
-                requestAnimationFrame(() => {
-                    contentBlock.style.minHeight = '';
-                });
+                tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
             });
             
             tabsContainer.appendChild(btn);
@@ -962,17 +956,11 @@ function renderExpertAnalysis(asset) {
             
             btn.addEventListener('click', () => {
                 const contentBlock = elements.expertAnalysisContent;
-                const currentHeight = contentBlock.getBoundingClientRect().height;
-                contentBlock.style.minHeight = `${currentHeight}px`;
-
                 contentBlock.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
                 pane.classList.add('active');
                 
-                updateCircularTabs(tabsContainer, item.id);
-
-                requestAnimationFrame(() => {
-                    contentBlock.style.minHeight = '';
-                });
+                tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
             });
             
             tabsContainer.appendChild(btn);
@@ -1067,17 +1055,11 @@ function renderMetadata(data) {
             pane.appendChild(card);
 
             btn.addEventListener('click', () => {
-                const currentHeight = parent.getBoundingClientRect().height;
-                parent.style.minHeight = `${currentHeight}px`;
-
                 parent.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
                 pane.classList.add('active');
                 
-                updateCircularTabs(tabsContainer, `meta-${item.key}`);
-
-                requestAnimationFrame(() => {
-                    parent.style.minHeight = '';
-                });
+                tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
             });
 
             tabsContainer.appendChild(btn);
