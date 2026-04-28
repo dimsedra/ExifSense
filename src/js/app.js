@@ -113,6 +113,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (window.lucide) lucide.createIcons();
 });
 
+// MODUL: Inisialisasi Tema (Dark/Light Mode)
+// FUNGSI: Menginisialisasi tema aplikasi (dark/light) dari cache
 function initTheme() {
     const savedTheme = localStorage.getItem('forensic_theme') || 'light';
     applyTheme(savedTheme);
@@ -125,6 +127,7 @@ function initTheme() {
     });
 }
 
+// FUNGSI: Mengubah/memperbarui CSS class tema pada elemen body
 function applyTheme(theme) {
     if (theme === 'dark') {
         document.body.classList.add('dark-mode');
@@ -133,6 +136,7 @@ function applyTheme(theme) {
     }
 }
 
+// FUNGSI: Menautkan tombol navigasi atas ke router URL
 function initTabs() {
     elements.tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -143,6 +147,8 @@ function initTabs() {
     });
 }
 
+// MODUL: Kontrol Navigasi Tab Utama
+// FUNGSI: Mematikan/menghidupkan kelas visual tab yang aktif
 function switchTab(tabId) {
     elements.tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
     elements.tabContents.forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
@@ -150,6 +156,7 @@ function switchTab(tabId) {
 }
 
 
+// FUNGSI: Menentukan alur routing halaman/state antarmuka
 function initRouter() {
     const routes = [
         { 
@@ -189,10 +196,12 @@ function initRouter() {
     state.router = new Router(routes);
 }
 
+// FUNGSI: Membaca ulang daftar log riwayat ke kanvas
 function refreshHistory() {
     History.renderHistoryItems(elements.historyList, elements.historySearch.value, state.historyFilter, loadFromHistory);
 }
 
+// FUNGSI: Menyambungkan filter/pencarian teks pada log riwayat
 function initHistory() {
     elements.historySearch.addEventListener('input', (e) => {
         refreshHistory();
@@ -220,6 +229,7 @@ function initHistory() {
     });
 }
 
+// FUNGSI: Menghubungkan tombol ekspor data format (JSON/PDF/CSV)
 function initExport() {
     elements.exportMainBtn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -248,6 +258,7 @@ function initExport() {
     });
 }
 
+// FUNGSI: Menangkap peristiwa seret-lepas (drag-drop) file gambar
 function initDropzone() {
     // Mode toggle
     const setUploadMode = (mode) => {
@@ -345,6 +356,7 @@ function initDropzone() {
     });
 }
 
+// FUNGSI: Menggambar barisan antrean berkas tertunda ke UI
 function renderStagedFiles() {
     if (!state.stagedFiles || state.stagedFiles.length === 0) {
         elements.stagedFilesContainer.classList.add('hidden');
@@ -381,6 +393,7 @@ function renderStagedFiles() {
 }
 
 // Main Logic
+// FUNGSI: Memproses ekstraksi data biner untuk seluruh file batch
 async function processBatchFiles(files) {
     switchState('loading');
     state.assets = [];
@@ -419,6 +432,7 @@ async function processBatchFiles(files) {
     }
 }
 
+// FUNGSI: Mengelompokkan pemicu mode tunggal vs mode batch
 async function handleFiles(fileList) {
     const MAX_FILE_SIZE = 100 * 1024 * 1024; // 100MB
     const MAX_BATCH_FILES = 50;
@@ -487,6 +501,7 @@ async function handleFiles(fileList) {
     }
 }
 
+// FUNGSI: Mengelola alur sanitasi pembersihan metadata foto
 async function handleSanitization(file) {
     Utils.showRemovalModal({
         onConfirm: async (options) => {
@@ -520,6 +535,8 @@ async function handleSanitization(file) {
     });
 }
 
+// MODUL: Pemetaan & Visualisasi Dashboard Multi-Aset (Batch)
+// FUNGSI: Menggambar wadah dasbor komparasi multi-aset
 async function renderMultiAssetDashboard() {
     // 1. Asset Selector
     renderAssetSelector();
@@ -534,6 +551,7 @@ async function renderMultiAssetDashboard() {
     switchAsset(0);
 }
 
+// FUNGSI: Merender pemilih item gambar di panel kiri
 function renderAssetSelector() {
     elements.assetSelectorContainer.classList.remove('hidden');
     elements.assetCountBadge.textContent = t('asset_count', {n: state.assets.length});
@@ -625,6 +643,7 @@ function renderAssetSelector() {
     if (window.lucide) lucide.createIcons();
 }
 
+// FUNGSI: Mengatur perputaran sirkular tab analitik expert
 function updateCircularTabs(container, activeId) {
     const buttons = Array.from(container.querySelectorAll('.expert-tab-btn'));
     const N = buttons.length;
@@ -693,6 +712,7 @@ function updateCircularTabs(container, activeId) {
     });
 }
 
+// FUNGSI: Menyusun data naratif gabungan banyak berkas
 function renderCombinedAnalysis() {
     if (state.assets.length <= 1) {
         elements.combinedAnalysisCard.classList.add('hidden');
@@ -754,6 +774,7 @@ function renderCombinedAnalysis() {
     if (window.lucide) lucide.createIcons();
 }
 
+// FUNGSI: Menyiapkan peta beralamat dinamis (OpenStreetMap)
 async function initMultiPinMap() {
     elements.mapContainerCard.classList.remove('hidden');
     
@@ -788,6 +809,7 @@ async function initMultiPinMap() {
     }
 }
 
+// FUNGSI: Mengganti fokus aset tampilan dasar
 async function switchAsset(index) {
     state.activeAssetIndex = index;
     const asset = state.assets[index];
@@ -834,6 +856,7 @@ async function switchAsset(index) {
     }
 }
 
+// FUNGSI: Memuat log sesi forensik masa lampau
 function loadFromHistory(session) {
     // Session structure from history.js: { assets: [...], isBatch: bool, ... }
     state.assets = session.assets;
@@ -843,6 +866,7 @@ function loadFromHistory(session) {
     Router.navigate('#/dashboard');
 }
 
+// FUNGSI: Menampilkan analisis forensik pintar individu
 function renderExpertAnalysis(asset) {
     const data = asset.exifData;
     const categorized = Utils.categorizeExif(data);
@@ -955,6 +979,7 @@ function renderExpertAnalysis(asset) {
     if (window.lucide) lucide.createIcons();
 }
 
+// FUNGSI: Melakukan parsing tabel raw metadata asli
 function renderMetadata(data) {
     elements.metadataContainer.innerHTML = '';
     const categorized = Utils.categorizeExif(data);
@@ -1052,6 +1077,7 @@ function renderMetadata(data) {
     if (window.lucide) lucide.createIcons();
 }
 
+// FUNGSI: Memasang informasi file dasar (Name, Size, Type)
 function renderBasicFileInfo(file) {
     const sizeInMB = (file.size / (1024 * 1024)).toFixed(2);
     const lastModified = Utils.formatFullDate(file.lastModified);
@@ -1075,6 +1101,7 @@ function renderBasicFileInfo(file) {
     `;
 }
 
+// FUNGSI: Memberikan pesan peringatan jika tag EXIF kosong
 function renderNoExif() {
     elements.metadataContainer.innerHTML = `
         <div class="card">
@@ -1088,6 +1115,7 @@ function renderNoExif() {
     if (window.lucide) lucide.createIcons();
 }
 
+// FUNGSI: Mengubah mode tampilan halaman kerja aplikasi
 function switchState(s) {
     elements.introState.classList.add('hidden');
     elements.loadingState.classList.add('hidden');
@@ -1121,6 +1149,7 @@ function switchState(s) {
     }
 }
 
+// FUNGSI: Mengembalikan status variabel ke titik nol (Awal)
 function resetApp() {
     elements.fileInput.value = '';
     elements.metadataContainer.innerHTML = '';
@@ -1138,6 +1167,7 @@ function resetApp() {
 
     Router.navigate('#/');
 }
+// FUNGSI: Mengelola pilihan multibahasa (ID/EN/AR)
 function initLang() {
     const langToggle = document.getElementById('lang-toggle');
     const langLabel = document.getElementById('current-lang-label');
@@ -1197,6 +1227,7 @@ function initLang() {
     }
 }
 
+// FUNGSI: Memunculkan notifikasi ringkas pop-up ke layar
 function initToast() {
     document.addEventListener('toast', (e) => {
         const container = document.getElementById('toast-container');

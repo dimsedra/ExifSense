@@ -1,13 +1,14 @@
 import { formatValue, escapeHTML, calculateDistance, parseDate } from './utils.js';
 import { t } from './i18n.js';
 
+// LOGIKA: Membangun narasi perangkat keras & mendeteksi manipulasi software pihak ketiga
 export function generateHardwareNarrative(props) {
     const make = escapeHTML(props.Make || 'an unknown manufacturer');
     const model = escapeHTML(props.Model || 'an unspecified device');
     const lens = props.LensModel ? ` ${t('with_lens', { lens: escapeHTML(props.LensModel) }, 'narratives')}` : '';
     const softwareName = props.Software ? escapeHTML(props.Software) : '';
     
-    // Integrity check: detect editing software
+    // Validasi Integritas: Tandai jika gambar diproses ulang lewat editor manipulasi
     const editSoftware = ['adobe', 'photoshop', 'lightroom', 'gimp', 'canva', 'snapseed', 'pixlr', 'corel', 'affinity', 'picsart'];
     const isModified = softwareName && editSoftware.some(s => softwareName.toLowerCase().includes(s));
 
@@ -24,13 +25,14 @@ export function generateHardwareNarrative(props) {
     return narrative;
 }
 
+// LOGIKA: Merangkum konfigurasi pencahayaan optik (Aperture, Shutter, ISO)
 export function generateExposureNarrative(props) {
     const aperture = props.FNumber ? `f/${escapeHTML(props.FNumber)}` : t('unknown_aperture', {}, 'narratives');
     const shutter = escapeHTML(formatValue('ExposureTime', props.ExposureTime) || t('unknown_shutter', {}, 'narratives'));
     const iso = props.ISO ? `ISO ${escapeHTML(props.ISO)}` : t('unspecified_iso', {}, 'narratives');
     const program = props.ExposureProgram ? ` ${t('using_program', { program: escapeHTML(props.ExposureProgram) }, 'narratives')}` : '';
     
-    // Intelligent Lighting Analysis
+    // Klasifikasi Pencahayaan Pintar (Algoritma Penentu Kondisi Capture)
     let lightingKey = 'exp_standard';
     const isoVal = parseInt(props.ISO);
     const shutterVal = parseFloat(props.ExposureTime);
@@ -47,6 +49,7 @@ export function generateExposureNarrative(props) {
     return `${t('exposure', { aperture, shutter, iso, program }, 'narratives')} ${t(lightingKey, {}, 'narratives')}`;
 }
 
+// LOGIKA: Menyusun struktur konfigurasi focal length dan zoom digital
 export function generateOpticsNarrative(props) {
     const focal = props.FocalLength ? `${escapeHTML(props.FocalLength)}mm` : t('unknown_focal', {}, 'narratives');
     const focal35 = props.FocalLengthIn35mmFormat ? ` ${t('equivalent_35mm', { mm: escapeHTML(props.FocalLengthIn35mmFormat) }, 'narratives')}` : '';
@@ -55,6 +58,7 @@ export function generateOpticsNarrative(props) {
     return t('optics', { focal, focal35, zoom }, 'narratives');
 }
 
+// LOGIKA: Merangkum konfigurasi dimensi piksel, ketajaman, dan ruang warna (Color Space)
 export function generateQualityNarrative(props) {
     const width = escapeHTML(props.ImageWidth || props.PixelXDimension || 'unknown');
     const height = escapeHTML(props.ImageHeight || props.PixelYDimension || 'unknown');
@@ -70,6 +74,7 @@ export function generateQualityNarrative(props) {
     return narrative;
 }
 
+// LOGIKA: Membangun rentang waktu pengambilan gambar & komparasi stempel metadata
 export function generateTimelineNarrative(props) {
     const captureDate = props.DateTimeOriginal || props.CreateDate || props.DateTime;
     const modifyDate = props.ModifyDate;
@@ -97,6 +102,7 @@ export function generateTimelineNarrative(props) {
     return narrative;
 }
 
+// LOGIKA: Menghitung koordinat latitude/longitude beserta deteksi anomali spoofing
 export function generateGeospatialNarrative(lat, lng, locationData = null) {
     if (lat == null || lng == null) {
         return `<span class="text-muted">${t('no_geo', {}, 'narratives')}</span>`;
@@ -116,10 +122,11 @@ export function generateGeospatialNarrative(lat, lng, locationData = null) {
     return narrative;
 }
 
+// LOGIKA: Menghitung kluster intelijen forensik antar banyak file secara kolektif
 export function generateCombinedAnalysis(assets) {
     const findings = [];
     
-    // 0. Batch Integrity Analysis
+    // EVALUASI 0: Analisis Kebersihan Integritas Metadata Batch
     const fullyStripped = assets.filter(a => 
         !(a.exifData?.Make || a.exifData?.Model) && 
         !(a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime) && 
@@ -168,7 +175,7 @@ export function generateCombinedAnalysis(assets) {
         });
     }
     
-    // 1. Hardware Consistency
+    // EVALUASI 1: Konsistensi Profil Perangkat Kamera
     const assetsWithHardware = assets.filter(a => a.exifData?.Make || a.exifData?.Model);
     const devices = [...new Set(assetsWithHardware.map(a => `${a.exifData?.Make || 'Unknown'} ${a.exifData?.Model || ''}`.trim()))];
     
@@ -211,6 +218,7 @@ export function generateCombinedAnalysis(assets) {
         }
     }
 
+    // EVALUASI 1.5: Validasi kecocokan Serial Number fisik kamera (Identitas Unik)
     // 1.5 Physical Serial Alignment
     const serials = assets
         .map(a => a.exifData?.SerialNumber || a.exifData?.InternalSerialNumber || a.exifData?.BodySerialNumber)
@@ -226,7 +234,7 @@ export function generateCombinedAnalysis(assets) {
         });
     }
 
-    // 2. Chronological Sequence
+    // EVALUASI 2: Kronologi Urutan Waktu & Estimasi Kecepatan Anomali
     const captureTimes = assets
         .map(a => {
             const d = parseDate(a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime);
@@ -258,6 +266,7 @@ export function generateCombinedAnalysis(assets) {
         });
     }
 
+    // EVALUASI 3: Proksimasi kluster lokasi geografis & estimasi batas pergerakan
     // 3. Geospatial Proximity
     const locations = assets
         .map(a => ({ lat: a.exifData?.latitude, lng: a.exifData?.longitude }))
