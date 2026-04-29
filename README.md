@@ -182,8 +182,6 @@ ExifSense is a zero-server, browser-native application. To begin:
 │       ├── router.js       # Hash-based Client-Side Router
 │       ├── ui.js           # UI Rendering & Asset Selector Logic
 │       └── utils.js        # Shared Utilities & Sanitization Engine
-├── docs/
-│   └── narrative_intelligence.md  # Expert system logic documentation
 └── assets/
     └── screenshots/        # README visual assets
 ```
