@@ -2,6 +2,8 @@
     "ui": {
         "title": "ExifSense | الاستخبارات الجنائية",
         "logo_sense": "سينس",
+        "yes": "نعم",
+        "no": "لا",
         "export_report": "تصدير التقرير",
         "pdf_doc": "مستند PDF",
         "md_file": "ملف ماركداون",

@@ -2,6 +2,8 @@
     "ui": {
         "title": "ExifSense | Forensic Intelligence",
         "logo_sense": "SENSE",
+        "yes": "Yes",
+        "no": "No",
         "export_report": "Export Report",
         "pdf_doc": "PDF Document",
         "md_file": "Markdown File",

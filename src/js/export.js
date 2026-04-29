@@ -2,9 +2,44 @@ import * as Narratives from './narratives.js';
 import { t } from './i18n.js';
 import * as Utils from './utils.js';
 
-function stripHtml(html) {
+function stripHtml(html, preserveTables = true) {
     if (!html) return '';
     let text = html;
+    
+    // Use DOMParser to safely unwrap details blocks while maintaining inner elements
+    if (typeof DOMParser !== 'undefined') {
+        try {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(text, 'text/html');
+
+            // If graphical interfaces generate native grids, remove the HTML tables
+            if (!preserveTables) {
+                const tables = doc.querySelectorAll('table');
+                tables.forEach(el => el.remove());
+            }
+            
+            // Unwrap <details> blocks to preserve nested analysis data
+            const details = doc.querySelectorAll('details');
+            details.forEach(el => {
+                const children = Array.from(el.childNodes).filter(node => node.nodeName !== 'SUMMARY');
+                children.forEach(child => el.parentNode.insertBefore(child, el));
+                el.remove();
+            });
+
+            // Strip out operational event handler attributes that confuse regex rules
+            const allElements = doc.querySelectorAll('*');
+            allElements.forEach(el => el.removeAttribute('onwheel'));
+            
+            text = doc.body.innerHTML;
+        } catch (e) {
+            console.error('Error stripping HTML:', e);
+        }
+    } else {
+        // Fallback for non-browser environments
+        text = text.replace(/<summary[^>]*>[\s\S]*?<\/summary>/gi, '');
+        text = text.replace(/<details[^>]*>/gi, '');
+        text = text.replace(/<\/details>/gi, '');
+    }
     
     // Convert HTML tables to Markdown tables for cleaner export representations
     text = text.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, function(match, tableContent) {
@@ -245,7 +280,9 @@ export function exportToPdf(assets, sessionTitle, forensicId) {
     doc.setDrawColor(229, 231, 235);
     doc.line(14, 50, 196, 50);
 
-    let currentY = 60;
+    // Force all analytical details onto Page 2 onwards
+    doc.addPage();
+    let currentY = 20;
 
     // Combined Intelligence Page
     if (assets.length > 1) {
@@ -256,20 +293,164 @@ export function exportToPdf(assets, sessionTitle, forensicId) {
 
         const combined = Narratives.generateCombinedAnalysis(assets);
         combined.forEach(f => {
+            if (currentY > 220) {
+                doc.addPage();
+                currentY = 20;
+            }
             doc.setFontSize(11);
             doc.setFont(undefined, 'bold');
             doc.text(f.title, 14, currentY);
             currentY += 6;
             doc.setFont(undefined, 'normal');
             doc.setFontSize(10);
-            const splitText = doc.splitTextToSize(stripHtml(f.narrative), 180);
+            
+            // proseText will safely clear dynamic layout wrappers
+            const proseText = stripHtml(f.narrative, false);
+            const splitText = doc.splitTextToSize(proseText, 180);
             doc.text(splitText, 14, currentY);
             currentY += (splitText.length * 5) + 5;
+
+            // Render tables if context references verification metrics
+            if (f.title === t('analysis_integrity', {}, 'ui')) {
+                const categories = [
+                    { name: 'Device Hardware', key: 'cat_hardware' },
+                    { name: 'Timeline & Date', key: 'cat_timeline' },
+                    { name: 'Geospatial', key: 'cat_geospatial' },
+                    { name: 'Exposure Settings', key: 'cat_exposure' },
+                    { name: 'Optics & Lens', key: 'cat_optics' },
+                    { name: 'Image Quality', key: 'cat_quality' }
+                ];
+                const integrityRows = assets.map(a => {
+                    const categorized = Utils.categorizeExif(a.exifData || {});
+                    const row = [a.fileName];
+                    categories.forEach(c => {
+                        const props = categorized[c.name];
+                        row.push(!!(props && Object.keys(props).length > 0) ? t('yes', {}, 'ui') : t('no', {}, 'ui'));
+                    });
+                    return row;
+                });
+
+                if (currentY > 220) { doc.addPage(); currentY = 20; }
+                doc.autoTable({
+                    startY: currentY + 2,
+                    head: [[t('file_name', {}, 'ui'), ...categories.map(c => t(c.key, {}, 'ui'))]],
+                    body: integrityRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [71, 85, 105] },
+                    styles: { fontSize: 8 },
+                    margin: { bottom: 10 }
+                });
+                currentY = doc.lastAutoTable.finalY + 12;
+            } else if (f.title === t('analysis_hardware', {}, 'ui')) {
+                const hwProps = [
+                    { name: 'Make', label: 'Make' },
+                    { name: 'Model', label: 'Model' },
+                    { name: 'Software', label: 'Software' },
+                    { name: 'LensModel', label: 'Lens Model' },
+                    { name: 'LensMake', label: 'Lens Make' },
+                    { name: 'BodySerialNumber', label: 'Body Serial' },
+                    { name: 'LensSerialNumber', label: 'Lens Serial' }
+                ];
+                const hwRows = assets.map(a => {
+                    const row = [a.fileName];
+                    hwProps.forEach(p => {
+                        let val = a.exifData?.[p.name];
+                        if (!val && p.name === 'BodySerialNumber') {
+                            val = a.exifData?.SerialNumber || a.exifData?.InternalSerialNumber;
+                        }
+                        row.push((val != null && String(val).trim() !== '') ? String(val).trim() : '-');
+                    });
+                    return row;
+                });
+
+                if (currentY > 220) { doc.addPage(); currentY = 20; }
+                doc.autoTable({
+                    startY: currentY + 2,
+                    head: [[t('file_name', {}, 'ui'), ...hwProps.map(p => p.label)]],
+                    body: hwRows,
+                    theme: 'grid',
+                    headStyles: { fillColor: [71, 85, 105] },
+                    styles: { fontSize: 8 },
+                    margin: { bottom: 10 }
+                });
+                currentY = doc.lastAutoTable.finalY + 12;
+            } else if (f.title === t('analysis_timeline', {}, 'ui') || f.title === t('analysis_timeline', {}, 'narratives')) {
+                const captureTimes = assets
+                    .map(a => {
+                        const d = Utils.parseDate(a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime);
+                        return { asset: a, time: d ? d.getTime() : NaN };
+                    })
+                    .filter(item => !isNaN(item.time))
+                    .sort((a, b) => a.time - b.time);
+
+                if (captureTimes.length > 1) {
+                    const jumps = [];
+                    for (let i = 0; i < captureTimes.length - 1; i++) {
+                        const curr = captureTimes[i];
+                        const next = captureTimes[i+1];
+                        const diffMs = next.time - curr.time;
+                        const dSec = Math.floor(diffMs / 1000) % 60;
+                        const dMin = Math.floor(diffMs / (1000 * 60)) % 60;
+                        const dHrs = Math.floor(diffMs / (1000 * 60 * 60));
+                        const dDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                        
+                        let jumpStr = '';
+                        if (dDays > 0) jumpStr += `${dDays} ${t('time_day', {}, 'narratives')} `;
+                        if (dHrs % 24 > 0) jumpStr += `${dHrs % 24} ${t('time_hour', {}, 'narratives')} `;
+                        if (dMin > 0) jumpStr += `${dMin} ${t('time_minute', {}, 'narratives')} `;
+                        jumpStr += `${dSec} ${t('time_second', {}, 'narratives')}`;
+                        
+                        jumps.push([curr.asset.fileName, `➔ (+${jumpStr.trim()})`, next.asset.fileName]);
+                    }
+
+                    if (jumps.length > 0) {
+                        if (currentY > 220) { doc.addPage(); currentY = 20; }
+                        doc.autoTable({
+                            startY: currentY + 2,
+                            head: [[t('file_name', {}, 'ui'), t('reconstruct_jumps', {}, 'narratives'), t('file_name', {}, 'ui')]],
+                            body: jumps,
+                            theme: 'grid',
+                            headStyles: { fillColor: [71, 85, 105] },
+                            styles: { fontSize: 8 },
+                            margin: { bottom: 10 }
+                        });
+                        currentY = doc.lastAutoTable.finalY + 12;
+                    }
+                }
+            } else if (f.title === t('analysis_geospatial', {}, 'ui') || f.title === t('analysis_geospatial', {}, 'narratives')) {
+                const points = assets
+                    .map(a => {
+                        const d = Utils.parseDate(a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime);
+                        return { asset: a, lat: a.exifData?.latitude, lng: a.exifData?.longitude, time: d ? d.getTime() : NaN };
+                    })
+                    .filter(p => p.lat != null && p.lng != null && !isNaN(p.time))
+                    .sort((a, b) => a.time - b.time);
+
+                if (points.length > 1) {
+                    const geoJumps = [];
+                    for (let i = 0; i < points.length - 1; i++) {
+                        const distKm = Utils.calculateDistance(points[i].lat, points[i].lng, points[i+1].lat, points[i+1].lng);
+                        const distM = distKm * 1000;
+                        const distStr = distM >= 1000 ? `${(distM / 1000).toFixed(2)} km` : `${distM.toFixed(0)} m`;
+                        geoJumps.push([points[i].asset.fileName, `➔ (+${distStr})`, points[i+1].asset.fileName]);
+                    }
+
+                    if (geoJumps.length > 0) {
+                        if (currentY > 220) { doc.addPage(); currentY = 20; }
+                        doc.autoTable({
+                            startY: currentY + 2,
+                            head: [[t('file_name', {}, 'ui'), t('geo_reconstruct_jumps', {}, 'narratives'), t('file_name', {}, 'ui')]],
+                            body: geoJumps,
+                            theme: 'grid',
+                            headStyles: { fillColor: [71, 85, 105] },
+                            styles: { fontSize: 8 },
+                            margin: { bottom: 10 }
+                        });
+                        currentY = doc.lastAutoTable.finalY + 12;
+                    }
+                }
+            }
         });
-        doc.addPage();
-    } else {
-        // If single asset, we still want a bit of a gap or a new page
-        // Let's force a new page for assets to keep the header area clean as a "Cover"
         doc.addPage();
     }
 
@@ -319,7 +500,7 @@ export function exportToPdf(assets, sessionTitle, forensicId) {
             doc.setFont(undefined, 'bold');
             doc.text(`${item.t}:`, 14, narrativeY);
             doc.setFont(undefined, 'normal');
-            const splitNarrative = doc.splitTextToSize(stripHtml(item.n), 170);
+            const splitNarrative = doc.splitTextToSize(stripHtml(item.n, false), 170);
             doc.text(splitNarrative, 25, narrativeY + 4);
             narrativeY += (splitNarrative.length * 4) + 8;
         });
@@ -360,19 +541,44 @@ export function exportToJson(assets, sessionTitle, forensicId) {
         forensicAnalysis: {
             combined: assets.length > 1 ? Narratives.generateCombinedAnalysis(assets).map(f => ({
                 title: f.title,
-                narrative: stripHtml(f.narrative)
+                narrative: stripHtml(f.narrative, false)
             })) : null,
+            
+            // Structured Cross-References for multi-asset investigations
+            crossReferences: assets.length > 1 ? {
+                integrityVerification: assets.map(a => {
+                    const categorized = Utils.categorizeExif(a.exifData || {});
+                    const metrics = {};
+                    const categories = ['Device Hardware', 'Timeline & Date', 'Geospatial', 'Exposure Settings', 'Optics & Lens', 'Image Quality'];
+                    categories.forEach(cat => {
+                        const props = categorized[cat];
+                        metrics[cat.toLowerCase().replace(/ & /g, '_').replace(/ /g, '_')] = !!(props && Object.keys(props).length > 0);
+                    });
+                    return { fileName: a.fileName, presence: metrics };
+                }),
+                hardwareComparison: assets.map(a => {
+                    const hw = {};
+                    const hwProps = ['Make', 'Model', 'Software', 'LensModel', 'LensMake', 'BodySerialNumber', 'LensSerialNumber'];
+                    hwProps.forEach(p => {
+                        let val = a.exifData?.[p];
+                        if (!val && p === 'BodySerialNumber') val = a.exifData?.SerialNumber || a.exifData?.InternalSerialNumber;
+                        hw[p.charAt(0).toLowerCase() + p.slice(1)] = (val != null && String(val).trim() !== '') ? String(val).trim() : null;
+                    });
+                    return { fileName: a.fileName, hardware: hw };
+                })
+            } : null,
+
             assets: assets.map((asset, idx) => {
                 const data = asset.exifData;
                 const categorized = Utils.categorizeExif(data);
                 
                 const narratives = {};
-                if (data.latitude != null) narratives.geospatial = stripHtml(Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData));
-                if (categorized['Device Hardware']) narratives.hardware = stripHtml(Narratives.generateHardwareNarrative(categorized['Device Hardware']));
-                if (categorized['Exposure Settings']) narratives.exposure = stripHtml(Narratives.generateExposureNarrative(categorized['Exposure Settings']));
-                if (categorized['Optics & Lens']) narratives.optics = stripHtml(Narratives.generateOpticsNarrative(categorized['Optics & Lens']));
-                if (categorized['Image Quality']) narratives.quality = stripHtml(Narratives.generateQualityNarrative(categorized['Image Quality']));
-                if (categorized['Timeline & Date']) narratives.timeline = stripHtml(Narratives.generateTimelineNarrative(categorized['Timeline & Date']));
+                if (data.latitude != null) narratives.geospatial = stripHtml(Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData), false);
+                if (categorized['Device Hardware']) narratives.hardware = stripHtml(Narratives.generateHardwareNarrative(categorized['Device Hardware']), false);
+                if (categorized['Exposure Settings']) narratives.exposure = stripHtml(Narratives.generateExposureNarrative(categorized['Exposure Settings']), false);
+                if (categorized['Optics & Lens']) narratives.optics = stripHtml(Narratives.generateOpticsNarrative(categorized['Optics & Lens']), false);
+                if (categorized['Image Quality']) narratives.quality = stripHtml(Narratives.generateQualityNarrative(categorized['Image Quality']), false);
+                if (categorized['Timeline & Date']) narratives.timeline = stripHtml(Narratives.generateTimelineNarrative(categorized['Timeline & Date']), false);
 
                 return {
                     assetId: idx + 1,

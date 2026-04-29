@@ -2,6 +2,8 @@
     "ui": {
         "title": "ExifSense | Intelijen Forensik",
         "logo_sense": "SENSE",
+        "yes": "Ya",
+        "no": "Tidak",
         "export_report": "Ekspor Laporan",
         "pdf_doc": "Dokumen PDF",
         "md_file": "File Markdown",
