@@ -52,7 +52,7 @@ export function getCurrentLanguage() {
 export function t(key, params = {}, category = 'ui') {
     if (!currentDictionary) return key;
     
-    let text = currentDictionary[category]?.[key] || key;
+    let text = currentDictionary[category]?.[key] || currentDictionary['ui']?.[key] || currentDictionary['reports']?.[key] || key;
     
     // Replace placeholders {key} with params
     Object.keys(params).forEach(param => {

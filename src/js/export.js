@@ -4,8 +4,65 @@ import * as Utils from './utils.js';
 
 function stripHtml(html) {
     if (!html) return '';
-    // Replace <br/> with newline, then strip other tags
-    return html.replace(/<br\s*\/?>/gi, '\n').replace(/<[^>]*>?/gm, '');
+    let text = html;
+    
+    // Convert HTML tables to Markdown tables for cleaner export representations
+    text = text.replace(/<table[^>]*>([\s\S]*?)<\/table>/gi, function(match, tableContent) {
+        let mdTable = '\n\n';
+        const rows = [];
+        const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+        let rowMatch;
+        while ((rowMatch = rowRegex.exec(tableContent)) !== null) {
+            const cells = [];
+            const cellRegex = /<(th|td)[^>]*>([\s\S]*?)<\/\1>/gi;
+            let cellMatch;
+            while ((cellMatch = cellRegex.exec(rowMatch[1])) !== null) {
+                let cellText = cellMatch[2].trim();
+                if (cellText.includes('data-lucide="check-circle"') || cellText.includes('data-lucide="check"')) {
+                    cellText = '✓';
+                } else if (cellText.includes('data-lucide="x-circle"') || cellText.includes('data-lucide="x"')) {
+                    cellText = '✗';
+                } else {
+                    cellText = cellText.replace(/<[^>]*>?/gm, '').trim();
+                }
+                cells.push(cellText);
+            }
+            if (cells.length > 0) rows.push(cells);
+        }
+        if (rows.length === 0) return '';
+        
+        const header = rows[0];
+        mdTable += '| ' + header.join(' | ') + ' |\n';
+        mdTable += '| ' + header.map(() => '---').join(' | ') + ' |\n';
+        
+        for (let i = 1; i < rows.length; i++) {
+            mdTable += '| ' + rows[i].join(' | ') + ' |\n';
+        }
+        return mdTable + '\n';
+    });
+
+    // Replace block-level tags with newlines
+    text = text.replace(/<\/p>/gi, '\n\n');
+    text = text.replace(/<\/div>/gi, '\n');
+    text = text.replace(/<\/li>/gi, '\n');
+    text = text.replace(/<\/summary>/gi, '\n');
+    
+    // Clean up summary button text in exports
+    text = text.replace(/<summary[^>]*>[\s\S]*?<\/summary>/gi, '\n');
+
+    // Replace <br/> with newline
+    text = text.replace(/<br\s*\/?>/gi, '\n');
+    
+    // Add spaces for inline elements to avoid mashing text
+    text = text.replace(/<\/span>/gi, ' ');
+    
+    // Strip all remaining tags
+    text = text.replace(/<[^>]*>?/gm, '');
+    
+    // Collapse multiple empty lines
+    text = text.replace(/\n\s*\n\s*\n/g, '\n\n');
+    
+    return text.trim();
 }
 
 export async function copyToClipboard(assets, sessionTitle, forensicId) {
@@ -139,13 +196,13 @@ export function exportToMd(assets, sessionTitle, forensicId) {
         const categorized = Utils.categorizeExif(data);
         
         if (data.latitude != null) {
-            content += `**Geospatial Analysis:**  \n${stripHtml(Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData))}  \n\n`;
+            content += `**${t('analysis_geospatial', {}, 'ui')}:**  \n${stripHtml(Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData))}  \n\n`;
         }
-        if (categorized['Device Hardware']) content += `**Hardware Analysis:**  \n${stripHtml(Narratives.generateHardwareNarrative(categorized['Device Hardware']))}  \n\n`;
-        if (categorized['Exposure Settings']) content += `**Exposure Analysis:**  \n${stripHtml(Narratives.generateExposureNarrative(categorized['Exposure Settings']))}  \n\n`;
-        if (categorized['Optics & Lens']) content += `**Optics Analysis:**  \n${stripHtml(Narratives.generateOpticsNarrative(categorized['Optics & Lens']))}  \n\n`;
-        if (categorized['Image Quality']) content += `**Quality Analysis:**  \n${stripHtml(Narratives.generateQualityNarrative(categorized['Image Quality']))}  \n\n`;
-        if (categorized['Timeline & Date']) content += `**Timeline Analysis:**  \n${stripHtml(Narratives.generateTimelineNarrative(categorized['Timeline & Date']))}  \n\n`;
+        if (categorized['Device Hardware']) content += `**${t('analysis_hardware', {}, 'ui')}:**  \n${stripHtml(Narratives.generateHardwareNarrative(categorized['Device Hardware']))}  \n\n`;
+        if (categorized['Exposure Settings']) content += `**${t('analysis_exposure', {}, 'ui')}:**  \n${stripHtml(Narratives.generateExposureNarrative(categorized['Exposure Settings']))}  \n\n`;
+        if (categorized['Optics & Lens']) content += `**${t('analysis_optics', {}, 'ui')}:**  \n${stripHtml(Narratives.generateOpticsNarrative(categorized['Optics & Lens']))}  \n\n`;
+        if (categorized['Image Quality']) content += `**${t('analysis_quality', {}, 'ui')}:**  \n${stripHtml(Narratives.generateQualityNarrative(categorized['Image Quality']))}  \n\n`;
+        if (categorized['Timeline & Date']) content += `**${t('analysis_timeline', {}, 'ui')}:**  \n${stripHtml(Narratives.generateTimelineNarrative(categorized['Timeline & Date']))}  \n\n`;
 
         content += `### ${t('raw_metadata', {}, 'reports')}\n\n`;
         for (const [cat, props] of Object.entries(categorized)) {
@@ -249,18 +306,18 @@ export function exportToPdf(assets, sessionTitle, forensicId) {
         const categorized = Utils.categorizeExif(data);
         const narrativeItems = [];
 
-        if (data.latitude != null) narrativeItems.push({ t: 'Geospatial', n: Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData) });
-        if (categorized['Device Hardware']) narrativeItems.push({ t: 'Hardware', n: Narratives.generateHardwareNarrative(categorized['Device Hardware']) });
-        if (categorized['Exposure Settings']) narrativeItems.push({ t: 'Exposure', n: Narratives.generateExposureNarrative(categorized['Exposure Settings']) });
-        if (categorized['Optics & Lens']) narrativeItems.push({ t: 'Optics', n: Narratives.generateOpticsNarrative(categorized['Optics & Lens']) });
-        if (categorized['Image Quality']) narrativeItems.push({ t: 'Quality', n: Narratives.generateQualityNarrative(categorized['Image Quality']) });
-        if (categorized['Timeline & Date']) narrativeItems.push({ t: 'Timeline', n: Narratives.generateTimelineNarrative(categorized['Timeline & Date']) });
+        if (data.latitude != null) narrativeItems.push({ t: t('analysis_geospatial', {}, 'ui'), n: Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData) });
+        if (categorized['Device Hardware']) narrativeItems.push({ t: t('analysis_hardware', {}, 'ui'), n: Narratives.generateHardwareNarrative(categorized['Device Hardware']) });
+        if (categorized['Exposure Settings']) narrativeItems.push({ t: t('analysis_exposure', {}, 'ui'), n: Narratives.generateExposureNarrative(categorized['Exposure Settings']) });
+        if (categorized['Optics & Lens']) narrativeItems.push({ t: t('analysis_optics', {}, 'ui'), n: Narratives.generateOpticsNarrative(categorized['Optics & Lens']) });
+        if (categorized['Image Quality']) narrativeItems.push({ t: t('analysis_quality', {}, 'ui'), n: Narratives.generateQualityNarrative(categorized['Image Quality']) });
+        if (categorized['Timeline & Date']) narrativeItems.push({ t: t('analysis_timeline', {}, 'ui'), n: Narratives.generateTimelineNarrative(categorized['Timeline & Date']) });
 
         doc.setFontSize(9);
         narrativeItems.forEach(item => {
             if (narrativeY > 270) { doc.addPage(); narrativeY = 20; }
             doc.setFont(undefined, 'bold');
-            doc.text(`${item.t} Analysis:`, 14, narrativeY);
+            doc.text(`${item.t}:`, 14, narrativeY);
             doc.setFont(undefined, 'normal');
             const splitNarrative = doc.splitTextToSize(stripHtml(item.n), 170);
             doc.text(splitNarrative, 25, narrativeY + 4);

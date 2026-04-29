@@ -39,6 +39,8 @@ artifacts/
 brain/
 scratch/
 docs/
+.agent/
+graphify-out
 
 # Testing
 coverage/

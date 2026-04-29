@@ -1,4 +1,4 @@
-import { t } from './i18n.js';
+import { t, getCurrentLanguage } from './i18n.js';
 
 export function generateForensicId(timestamp = Date.now()) {
     const base = timestamp.toString(36).toUpperCase();
@@ -8,7 +8,11 @@ export function generateForensicId(timestamp = Date.now()) {
 
 export function formatValue(key, value) {
     let result = value;
-    if (value instanceof Date) result = value.toLocaleString();
+    if (value instanceof Date) {
+        const lang = getCurrentLanguage();
+        const localeStr = lang === 'id' ? 'id-ID' : (lang === 'ar' ? 'ar-SA' : 'en-GB');
+        result = value.toLocaleString(localeStr);
+    }
     else if (key === 'ExposureTime' && typeof value === 'number' && value < 1) {
         result = `1/${Math.round(1/value)}`;
     }
@@ -30,14 +34,19 @@ export function parseDate(dateStr) {
         cleaned = cleaned.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
     }
     
-    const d = new Date(cleaned);
-    if (!isNaN(d.getTime())) return d;
+    if (/^\d+$/.test(cleaned)) {
+        const d = new Date(Number(cleaned));
+        if (!isNaN(d.getTime())) return d;
+    }
+    
+    const dDefault = new Date(cleaned);
+    if (!isNaN(dDefault.getTime())) return dDefault;
     
     const tSeparated = cleaned.replace(' ', 'T');
     const d2 = new Date(tSeparated);
     if (!isNaN(d2.getTime())) return d2;
     
-    return d;
+    return dDefault;
 }
 
 export function formatFullDate(date) {

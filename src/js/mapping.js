@@ -33,6 +33,8 @@ export function renderMultiMarkers(assets, mapInstance) {
 
             const marker = L.marker([asset.exifData.latitude, asset.exifData.longitude])
                 .bindPopup(popupContent, { maxWidth: 280, minWidth: 200, className: 'forensic-popup' });
+            marker.assetId = asset.id;
+            if (marker.getIcon) marker.originalIcon = marker.getIcon();
             markers.push(marker);
         }
     });
@@ -47,6 +49,50 @@ export function renderMultiMarkers(assets, mapInstance) {
     });
 
     return group;
+}
+
+export function highlightMarker(assetId, group, mapInstance) {
+    if (!group || !mapInstance) return;
+    
+    const highlightIcon = L.divIcon({
+        className: 'highlighted-forensic-marker',
+        html: `
+            <div style="
+                background: #ef4444; 
+                width: 24px; 
+                height: 24px; 
+                border-radius: 50%; 
+                border: 4px solid white; 
+                box-shadow: 0 0 10px rgba(0,0,0,0.5); 
+                animation: forensicPulse 1.5s infinite;
+                position: relative;
+                left: -4px;
+                top: -4px;
+            "></div>
+            <style>
+                @keyframes forensicPulse {
+                    0% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+                    70% { transform: scale(1.1); box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+                    100% { transform: scale(0.9); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+                }
+            </style>
+        `,
+        iconSize: [24, 24],
+        iconAnchor: [12, 12]
+    });
+
+    const layers = group.getLayers();
+    layers.forEach(layer => {
+        if (layer.assetId === assetId) {
+            if (layer.setIcon) layer.setIcon(highlightIcon);
+            layer.openPopup();
+            mapInstance.setView(layer.getLatLng(), mapInstance.getZoom() < 14 ? 14 : mapInstance.getZoom());
+        } else {
+            if (layer.setIcon && layer.originalIcon) {
+                layer.setIcon(layer.originalIcon);
+            }
+        }
+    });
 }
 
 export async function renderInvestigationPath(assets, mapInstance) {
