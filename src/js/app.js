@@ -361,7 +361,7 @@ function renderStagedFiles() {
         return `
             <div class="staged-file-item">
                 <div class="staged-file-info">
-                    <span class="staged-file-name" title="${file.name}">${file.name}</span>
+                    <span class="staged-file-name" title="${Utils.escapeHTML(file.name)}">${Utils.escapeHTML(file.name)}</span>
                     <span class="staged-file-size">${sizeInMB} MB</span>
                 </div>
                 <button class="remove-staged-item" data-index="${idx}" aria-label="Remove item">
@@ -614,7 +614,7 @@ function renderAssetSelector() {
 
         btn.innerHTML = `
             <div class="asset-card-thumb">
-                <img src="${asset.thumbUrl}" alt="${asset.fileName}">
+                <img src="${asset.thumbUrl}" alt="${Utils.escapeHTML(asset.fileName)}">
                 <div class="asset-card-badges">${badgesHtml}</div>
             </div>
             <div class="asset-card-info">
@@ -628,7 +628,7 @@ function renderAssetSelector() {
     });
     
     if (elements.assetSelectorList.children.length === 0) {
-        elements.assetSelectorList.innerHTML = `<div class="text-muted" style="padding: 16px; text-align: center; width: 100%;">${t('no_metadata_tags')}</div>`;
+        elements.assetSelectorList.innerHTML = `<div class="text-muted" style="padding: 16px; text-align: center; width: 100%;">${t('no_metadata_tags', {}, 'narratives')}</div>`;
     }
 
     if (window.lucide) lucide.createIcons();
@@ -795,6 +795,14 @@ async function switchAsset(index) {
     const colRight = elements.metadataContainer.closest('.col-right');
     if (colRight) {
         colRight.style.minHeight = `${colRight.getBoundingClientRect().height}px`;
+    }
+
+    // Dynamically update Expert Analysis header with active filename
+    const expertHeaderTitle = document.querySelector('#expert-analysis-card .card-header h3');
+    if (expertHeaderTitle) {
+        expertHeaderTitle.setAttribute('data-i18n', 'dynamic_asset_analysis');
+        expertHeaderTitle.setAttribute('data-i18n-param-name', asset.fileName);
+        expertHeaderTitle.textContent = t('dynamic_asset_analysis', { name: asset.fileName });
     }
 
     renderExpertAnalysis(asset);
@@ -990,7 +998,7 @@ function renderMetadata(data) {
                                 </div>
                             `).join('')}
                         </div>
-                    ` : `<div class="text-muted" style="padding: 24px; text-align: center; opacity: 0.7;">${t('no_metadata_tags')}</div>`}
+                    ` : `<div class="text-muted" style="padding: 24px; text-align: center; opacity: 0.7;">${t('no_metadata_tags', {}, 'narratives')}</div>`}
                 </div>
             `;
             pane.appendChild(card);

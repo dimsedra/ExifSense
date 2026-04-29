@@ -177,7 +177,7 @@ export function generateCombinedAnalysis(assets) {
     
     // EVALUASI 1: Konsistensi Profil Perangkat Kamera
     const assetsWithHardware = assets.filter(a => a.exifData?.Make || a.exifData?.Model);
-    const devices = [...new Set(assetsWithHardware.map(a => `${a.exifData?.Make || 'Unknown'} ${a.exifData?.Model || ''}`.trim()))];
+    const devices = [...new Set(assetsWithHardware.map(a => escapeHTML(`${a.exifData?.Make || 'Unknown'} ${a.exifData?.Model || ''}`.trim())))];
     
     if (assetsWithHardware.length === 1 && assets.length > 1) {
         findings.push({

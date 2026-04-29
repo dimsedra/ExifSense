@@ -64,6 +64,7 @@
         "select_asset": "Select Asset to Inspect",
         "asset_count": "{n} Assets",
         "individual_analysis": "Individual Asset Analysis",
+        "dynamic_asset_analysis": "{name} Analysis",
         "forensic_grade": "Forensic Grade",
         "source_file": "Source File",
         "confirm_title": "Confirm Action",

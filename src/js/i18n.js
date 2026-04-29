@@ -70,7 +70,17 @@ export function translatePage() {
 
     document.querySelectorAll('[data-i18n]').forEach(el => {
         const key = el.getAttribute('data-i18n');
-        const translated = t(key);
+        
+        // Extract dynamic parameters from data-i18n-param-* attributes
+        const params = {};
+        Array.from(el.attributes).forEach(attr => {
+            if (attr.name.startsWith('data-i18n-param-')) {
+                const paramName = attr.name.replace('data-i18n-param-', '');
+                params[paramName] = attr.value;
+            }
+        });
+        
+        const translated = t(key, params);
         
         if (el.tagName === 'INPUT' && el.hasAttribute('placeholder')) {
             el.setAttribute('placeholder', translated);

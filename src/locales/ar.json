@@ -64,6 +64,7 @@
         "select_asset": "اختر ملفاً لفحصه",
         "asset_count": "{n} ملفات",
         "individual_analysis": "تحليل الملف الفردي",
+        "dynamic_asset_analysis": "تحليل {name}",
         "forensic_grade": "درجة جنائية",
         "source_file": "الملف المصدر",
         "confirm_title": "تأكيد الإجراء",

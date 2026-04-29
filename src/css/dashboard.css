@@ -238,12 +238,11 @@
 
 /* Asset Selector Styles */
 .asset-selector-wrapper {
-    margin-bottom: 2rem;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius);
-    padding: 1.25rem;
-    box-shadow: var(--shadow-sm);
+    background: var(--secondary);
+    padding: 1rem 1.5rem 0.75rem 1.5rem;
+    border-bottom: 1px solid var(--border-color);
+    position: relative;
+    z-index: 2;
 }
 
 .selector-header {

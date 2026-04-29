@@ -64,6 +64,7 @@
         "select_asset": "Pilih Aset untuk Diperiksa",
         "asset_count": "{n} Aset",
         "individual_analysis": "Analisis Aset Individu",
+        "dynamic_asset_analysis": "Analisis {name}",
         "forensic_grade": "Kelas Forensik",
         "source_file": "File Sumber",
         "confirm_title": "Konfirmasi Tindakan",

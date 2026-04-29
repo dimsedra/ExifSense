@@ -7,15 +7,38 @@
     overflow: hidden;
 }
 
-.expert-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 4px;
-    height: 100%;
-    background: var(--primary);
+/* ── Combined Analysis: Blue Accent Header ── */
+#combined-analysis-card .card-header {
+    background: linear-gradient(120deg, var(--primary) 0%, var(--accent) 100%);
+    border-bottom: 1px solid transparent;
 }
+
+#combined-analysis-card .card-header i,
+#combined-analysis-card .card-header svg {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+#combined-analysis-card .card-header h3 {
+    color: #ffffff !important;
+    font-weight: 700;
+}
+
+#combined-analysis-card .card-header .forensic-badge {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+#combined-analysis-card .card-header .forensic-badge i,
+#combined-analysis-card .card-header .forensic-badge svg {
+    color: rgba(255, 255, 255, 0.85) !important;
+}
+
+/* Dark mode: deepen the gradient slightly for better contrast */
+body.dark-mode #combined-analysis-card .card-header {
+    background: linear-gradient(120deg, var(--primary) 0%, #0060a8 100%);
+}
+
 
 .expert-card .card-header {
     background: var(--secondary);
