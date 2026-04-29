@@ -358,6 +358,9 @@ async function processBatchFiles(files) {
     state.assets = [];
     state.activeAssetIndex = 0;
 
+    // Introduce a quick loading screen gimmick
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
     for (const file of files) {
         try {
             const options = { tiff: true, xmp: true, icc: true, iptc: true, jfif: true, ihdr: true, gps: true };

@@ -62,11 +62,11 @@ export function renderAssetSelector(state, elements, onAssetSelect) {
         <button class="asset-filter-btn ${state.assetFilter === 'all' ? 'active' : ''}" data-filter="all">
             <i data-lucide="layers"></i><span>${filterAllText}</span>
         </button>
-        <button class="asset-filter-btn ${state.assetFilter === 'geo' ? 'active' : ''}" data-filter="geo">
-            <i data-lucide="map-pin"></i><span>Geotagged</span>
+        <button class="asset-filter-btn ${state.assetFilter === 'complete' ? 'active' : ''}" data-filter="complete">
+            <i data-lucide="check-circle"></i><span>${t('filter_complete', {}, 'narratives') || 'Complete'}</span>
         </button>
         <button class="asset-filter-btn ${state.assetFilter === 'stripped' ? 'active' : ''}" data-filter="stripped">
-            <i data-lucide="alert-triangle"></i><span>Stripped</span>
+            <i data-lucide="alert-triangle"></i><span>${t('filter_stripped', {}, 'narratives') || 'Stripped'}</span>
         </button>
     `;
     
@@ -91,7 +91,7 @@ export function renderAssetSelector(state, elements, onAssetSelect) {
         
         const isStripped = isFullyStripped || isPartiallyStripped;
 
-        if (state.assetFilter === 'geo' && !hasGeo) return;
+        if (state.assetFilter === 'complete' && isStripped) return;
         if (state.assetFilter === 'stripped' && !isStripped) return;
 
         const btn = document.createElement('button');
