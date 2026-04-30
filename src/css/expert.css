@@ -326,3 +326,72 @@ body.dark-mode #combined-analysis-card .card-header {
 .expert-narrative-bubble .forensic-scroll-container {
     max-width: 100%;
 }
+
+/* ── Forensic Reconstruction Panel Components ── */
+
+/* Stats grid: uses auto columns so content determines width, no collapsing to fractions */
+.forensic-stats-grid {
+    display: grid;
+    grid-template-columns: auto auto; /* auto = sized to content, not fractions */
+    gap: 10px;
+    font-size: 13px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 10px;
+    min-width: max-content; /* force container width = content width → triggers scroll */
+    white-space: nowrap;
+}
+
+.forensic-stats-full-row {
+    grid-column: 1 / -1;
+}
+
+/* Jump list: height-limited scrollable list of rows */
+.timeline-jumps-list {
+    max-height: 200px;
+    overflow-y: auto;
+    overflow-x: visible;
+    padding-right: 4px;
+    min-width: max-content; /* grows to fit widest row */
+}
+
+/* Individual jump row: three-column flex layout, never wraps */
+.forensic-jump-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 8px 0;
+    border-bottom: 1px dashed var(--border-color);
+    font-size: 13px;
+    min-width: max-content; /* each row stays on one line */
+    white-space: nowrap;
+}
+
+/* Filename in jump row: fixed width, never clips with max-width: 40% */
+.jump-filename {
+    color: var(--text-muted);
+    min-width: 120px;
+    max-width: 240px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Arrow + delta label in the middle */
+.jump-delta {
+    color: var(--primary);
+    font-weight: 500;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* Section heading above the jump list */
+.forensic-jumps-heading {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-main);
+    margin-bottom: 6px;
+    white-space: nowrap;
+}

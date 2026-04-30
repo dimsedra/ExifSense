@@ -419,10 +419,10 @@ export function generateCombinedAnalysis(assets) {
             jumpStr += `${dSec} ${t('time_second', {}, 'narratives')}`;
             
             jumpsHtml += `
-                <div style="padding: 8px 0; border-bottom: 1px dashed var(--border-color); display: flex; justify-content: space-between; gap: 8px; font-size: 13px;">
-                    <span style="color: var(--text-muted); max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHTML(curr.asset.fileName)}</span>
-                    <span style="color: var(--primary); font-weight: 500; text-align: center; white-space: nowrap;">➔ (+${jumpStr})</span>
-                    <span style="color: var(--text-muted); max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right;">${escapeHTML(next.asset.fileName)}</span>
+                <div class="forensic-jump-row">
+                    <span class="jump-filename">${escapeHTML(curr.asset.fileName)}</span>
+                    <span class="jump-delta">&#x27A1; (+${jumpStr})</span>
+                    <span class="jump-filename" style="text-align: right;">${escapeHTML(next.asset.fileName)}</span>
                 </div>
             `;
         }
@@ -445,15 +445,15 @@ export function generateCombinedAnalysis(assets) {
                     <span style="border-bottom: 1px dashed var(--primary); padding-bottom: 2px;">${t('reconstruct_btn', {}, 'narratives')}</span>
                 </summary>
                 <div class="forensic-scroll-container">
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                    <div class="forensic-stats-grid">
                         <div><strong style="color: var(--text-main);">${t('reconstruct_start', {}, 'narratives')}</strong><br><span style="color: var(--text-muted);">${startTimeStr}</span></div>
                         <div><strong style="color: var(--text-main);">${t('reconstruct_end', {}, 'narratives')}</strong><br><span style="color: var(--text-muted);">${endTimeStr}</span></div>
-                        <div style="grid-column: 1 / -1;"><strong style="color: var(--text-main);">${t('reconstruct_total', {}, 'narratives')}</strong><br><span style="color: #22c55e; font-weight: 600;">${totalDurationStr}</span></div>
+                        <div class="forensic-stats-full-row"><strong style="color: var(--text-main);">${t('reconstruct_total', {}, 'narratives')}</strong><br><span style="color: #22c55e; font-weight: 600;">${totalDurationStr}</span></div>
                     </div>
                     
                     ${jumpsHtml ? `
-                        <div style="font-size: 13px; font-weight: 500; color: var(--text-main); margin-bottom: 6px;">${t('reconstruct_jumps', {}, 'narratives')}</div>
-                        <div class="timeline-jumps-list" style="max-height: 200px; overflow-y: auto; padding-right: 4px;">
+                        <div class="forensic-jumps-heading">${t('reconstruct_jumps', {}, 'narratives')}</div>
+                        <div class="timeline-jumps-list">
                             ${jumpsHtml}
                         </div>
                     ` : ''}
@@ -542,10 +542,10 @@ export function generateCombinedAnalysis(assets) {
                 let distStr = distM >= 1000 ? `${(distM / 1000).toFixed(2)} km` : `${distM.toFixed(0)} m`;
                 
                 jumpsGeoHtml += `
-                    <div style="padding: 8px 0; border-bottom: 1px dashed var(--border-color); display: flex; justify-content: space-between; gap: 8px; font-size: 13px;">
-                        <span style="color: var(--text-muted); max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${escapeHTML(points[i].asset.fileName)}</span>
-                        <span style="color: var(--primary); font-weight: 500; text-align: center; white-space: nowrap;">➔ (+${distStr})</span>
-                        <span style="color: var(--text-muted); max-width: 40%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: right;">${escapeHTML(points[i+1].asset.fileName)}</span>
+                    <div class="forensic-jump-row">
+                        <span class="jump-filename">${escapeHTML(points[i].asset.fileName)}</span>
+                        <span class="jump-delta">&#x27A1; (+${distStr})</span>
+                        <span class="jump-filename" style="text-align: right;">${escapeHTML(points[i+1].asset.fileName)}</span>
                     </div>
                 `;
             }
@@ -560,7 +560,7 @@ export function generateCombinedAnalysis(assets) {
                         <span style="border-bottom: 1px dashed var(--primary); padding-bottom: 2px;">${t('geo_reconstruct_btn', {}, 'narratives')}</span>
                     </summary>
                     <div class="forensic-scroll-container">
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                        <div class="forensic-stats-grid">
                             <div>
                                 <strong style="color: var(--text-main);">${t('geo_max_spread', {}, 'narratives')}</strong><br>
                                 <span style="color: var(--text-main); font-weight: 600;">${maxDistStr}</span>
@@ -569,14 +569,14 @@ export function generateCombinedAnalysis(assets) {
                                 <strong style="color: var(--text-main);">${t('geo_reconstruct_range', {}, 'narratives')}</strong><br>
                                 <span style="color: #22c55e; font-weight: 600;">${totalDistStr}</span>
                             </div>
-                            <div style="grid-column: 1 / -1; color: var(--text-muted); font-size: 11px; margin-top: 2px;">
+                            <div class="forensic-stats-full-row" style="color: var(--text-muted); font-size: 11px;">
                                 ${t('geo_reconstruct_note', {}, 'narratives')}
                             </div>
                         </div>
                         
                         ${jumpsGeoHtml ? `
-                            <div style="font-size: 13px; font-weight: 500; color: var(--text-main); margin-bottom: 6px;">${t('geo_reconstruct_jumps', {}, 'narratives')}</div>
-                            <div class="timeline-jumps-list" style="max-height: 200px; overflow-y: auto; padding-right: 4px;">
+                            <div class="forensic-jumps-heading">${t('geo_reconstruct_jumps', {}, 'narratives')}</div>
+                            <div class="timeline-jumps-list">
                                 ${jumpsGeoHtml}
                             </div>
                         ` : ''}
