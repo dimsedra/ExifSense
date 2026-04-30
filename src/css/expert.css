@@ -4,7 +4,7 @@
     margin-bottom: 2rem;
     box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05);
     position: relative;
-    overflow: hidden;
+    overflow: clip; /* clip visually like hidden, but does NOT create a scroll container — critical for touch scroll to reach children */
 }
 
 /* ── Combined Analysis: Blue Accent Header ── */
@@ -247,11 +247,82 @@ body.dark-mode #combined-analysis-card .card-header {
     background: transparent;
 }
 
+/* ── Mobile: Scroll Affordance (make scrollability discoverable) ── */
+@media (max-width: 768px) {
+    .forensic-scroll-container::-webkit-scrollbar {
+        height: 4px;
+        display: block; /* force visible on iOS/Android */
+    }
+
+    .forensic-scroll-container::-webkit-scrollbar-thumb {
+        background: var(--primary);
+        border-radius: 10px;
+        opacity: 1;
+    }
+
+    /* Right-edge gradient shadow: stays fixed while content scrolls,
+       acting as a persistent indicator that content continues to the right.
+       Uses the scroll-shadow technique with background-attachment:local/scroll. */
+    .forensic-scroll-container {
+        background:
+            /* Fade-in mask on left when scrolled away from start */
+            linear-gradient(to right, var(--bg-surface) 0%, transparent 24px),
+            /* Persistent right-edge fade showing more content exists */
+            linear-gradient(to left,  var(--bg-surface) 0%, transparent 40px),
+            /* Actual content shadows for scroll position feedback */
+            radial-gradient(farthest-side at 0%   50%, rgba(0,0,0,0.10), transparent) 0   50%,
+            radial-gradient(farthest-side at 100% 50%, rgba(0,0,0,0.10), transparent) 100% 50%,
+            var(--bg-surface);
+        background-repeat: no-repeat;
+        background-size:
+            24px 100%,
+            40px 100%,
+            14px 100%,
+            14px 100%,
+            auto;
+        /* local = scroll with content (appears/disappears naturally)
+           scroll = fixed relative to container (always visible) */
+        background-attachment: local, local, scroll, scroll, local;
+    }
+
+    /* Swipe hint text shown at the bottom-right of open details on mobile */
+    .expert-narrative-bubble details[open]::after {
+        content: '\2194  swipe';
+        display: block;
+        text-align: right;
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--primary);
+        opacity: 0.6;
+        margin-top: 4px;
+        pointer-events: none;
+    }
+}
+
 .expert-tab-pane {
     display: none;
     animation: fadeIn 0.3s ease-out;
+    min-width: 0;    /* prevent content from forcing pane to overflow parent */
+    overflow: visible; /* allow children to scroll horizontally */
 }
 
 .expert-tab-pane.active {
     display: block;
+}
+
+/* Allow narrative bubble to contain scrollable tables without clipping */
+.expert-narrative-bubble {
+    overflow: visible;
+    min-width: 0;
+}
+
+/* Ensure details/summary inside narrative never clip on mobile */
+.expert-narrative-bubble details {
+    overflow: visible;
+}
+
+.expert-narrative-bubble .forensic-scroll-container {
+    max-width: 100%;
 }

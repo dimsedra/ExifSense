@@ -23,7 +23,7 @@
     background-color: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: var(--radius);
-    overflow: hidden;
+    overflow: clip; /* clip like hidden but does NOT create a scroll container — lets touch scroll pass through to children */
     box-shadow: var(--shadow-sm);
     margin-bottom: 1.5rem;
 }

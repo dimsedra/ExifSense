@@ -103,6 +103,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     if (window.lucide) lucide.createIcons();
+
+    // MOBILE: Scroll nudge — when a forensic <details> expands on a narrow viewport,
+    // briefly animate the inner table right-then-back so users discover it's swipeable.
+    document.addEventListener('toggle', (e) => {
+        if (!e.target.matches('details') || !e.target.open) return;
+        if (window.innerWidth > 768) return; // desktop doesn't need the hint
+        const scrollEl = e.target.querySelector('.forensic-scroll-container');
+        if (!scrollEl) return;
+        // Wait for the <details> to finish opening and paint
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                if (scrollEl.scrollWidth <= scrollEl.clientWidth) return; // not overflowing, skip
+                const nudge = Math.min(60, scrollEl.scrollWidth - scrollEl.clientWidth);
+                scrollEl.scrollTo({ left: nudge, behavior: 'smooth' });
+                setTimeout(() => scrollEl.scrollTo({ left: 0, behavior: 'smooth' }), 500);
+            });
+        });
+    }, true); // capture phase so it fires even if event stops propagating
 });
 
 // MODUL: Inisialisasi Tema (Dark/Light Mode)
