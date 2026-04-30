@@ -13,6 +13,8 @@
     --radius: 8px;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --primary-rgb: 37, 99, 235;
+    --bg-card-rgb: 255, 255, 255;
     --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
 }
@@ -29,6 +31,8 @@ body.dark-mode {
     --secondary: #2a2a2a;    /* Neutral secondary */
     --secondary-hover: #3a3a3a;
     --accent: #0078d4;
+    --primary-rgb: 0, 74, 153;
+    --bg-card-rgb: 30, 30, 30;
     --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
     --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
 }

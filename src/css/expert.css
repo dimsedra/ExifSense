@@ -201,7 +201,7 @@ body.dark-mode #combined-analysis-card .card-header {
         background: transparent;
         font-size: 0.9rem;
         margin: 0 auto;
-        pointer-events: none;
+        pointer-events: auto; /* Changed from none to allow interaction */
     }
 
     .expert-tab-btn:hover {
@@ -214,6 +214,37 @@ body.dark-mode #combined-analysis-card .card-header {
         background: transparent;
         border-color: transparent;
     }
+}
+
+/* ── Reusable Horizontal Scroll Container for Forensic Data ── */
+.forensic-scroll-container {
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch; /* Momentum scrolling for older iOS */
+    overscroll-behavior-x: contain;   /* Prevent swipe-to-back browser gestures */
+    scrollbar-width: thin;
+    scrollbar-color: var(--primary) transparent;
+    touch-action: pan-x;               /* Explicitly allow horizontal touch, pass vertical to parent */
+    position: relative;
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    margin-top: 8px;
+    will-change: scroll-position;      /* Hint for hardware acceleration */
+}
+
+.forensic-scroll-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.forensic-scroll-container::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 10px;
+}
+
+.forensic-scroll-container::-webkit-scrollbar-track {
+    background: transparent;
 }
 
 .expert-tab-pane {

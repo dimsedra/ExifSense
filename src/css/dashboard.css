@@ -576,5 +576,22 @@
 @media (max-width: 768px) {
     .tabs-arrow {
         display: flex; /* Mobile default: show arrows */
+        width: 40px;
+        height: 100%;
+        background: rgba(var(--bg-card-rgb), 0.8);
+        backdrop-filter: blur(4px);
+        opacity: 0.9;
+        font-weight: 600;
+        font-size: 1.25rem;
+    }
+    
+    .tabs-arrow.left {
+        left: 0;
+        border-right: 1px solid var(--border-color);
+    }
+    
+    .tabs-arrow.right {
+        right: 0;
+        border-left: 1px solid var(--border-color);
     }
 }

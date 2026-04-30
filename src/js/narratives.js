@@ -202,7 +202,7 @@ export function generateCombinedAnalysis(assets) {
                 <summary style="cursor: pointer; color: var(--primary); font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 4px; outline: none;">
                     <span style="border-bottom: 1px dashed var(--primary); padding-bottom: 2px;">${t('integrity_reconstruct_btn', {}, 'narratives')}</span>
                 </summary>
-                <div onwheel="if (this.scrollWidth > this.clientWidth) { const isAtLeft = this.scrollLeft === 0; const isAtRight = this.scrollLeft + this.clientWidth >= this.scrollWidth; if ((event.deltaY > 0 && !isAtRight) || (event.deltaY < 0 && !isAtLeft)) { this.scrollLeft += event.deltaY; event.preventDefault(); } }" style="padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 8px; overflow-x: auto; scroll-behavior: smooth;">
+                <div class="forensic-scroll-container">
                     <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px;">
                         <thead>
                             <tr style="background: rgba(var(--primary-rgb), 0.05); color: var(--text-main);">
@@ -311,7 +311,7 @@ export function generateCombinedAnalysis(assets) {
             <summary style="cursor: pointer; color: var(--primary); font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 4px; outline: none;">
                 <span style="border-bottom: 1px dashed var(--primary); padding-bottom: 2px;">${t('hw_reconstruct_btn', {}, 'narratives') || 'Click for Detailed Hardware Verification'}</span>
             </summary>
-            <div onwheel="if (this.scrollWidth > this.clientWidth) { const isAtLeft = this.scrollLeft === 0; const isAtRight = this.scrollLeft + this.clientWidth >= this.scrollWidth; if ((event.deltaY > 0 && !isAtRight) || (event.deltaY < 0 && !isAtLeft)) { this.scrollLeft += event.deltaY; event.preventDefault(); } }" style="padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 8px; overflow-x: auto; scroll-behavior: smooth;">
+            <div class="forensic-scroll-container">
                 <table style="width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px;">
                     <thead>
                         <tr style="background: rgba(var(--primary-rgb), 0.05); color: var(--text-main);">
@@ -444,7 +444,7 @@ export function generateCombinedAnalysis(assets) {
                 <summary style="cursor: pointer; color: var(--primary); font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 4px; outline: none;">
                     <span style="border-bottom: 1px dashed var(--primary); padding-bottom: 2px;">${t('reconstruct_btn', {}, 'narratives')}</span>
                 </summary>
-                <div onwheel="if (this.scrollWidth > this.clientWidth) { const isAtLeft = this.scrollLeft === 0; const isAtRight = this.scrollLeft + this.clientWidth >= this.scrollWidth; if ((event.deltaY > 0 && !isAtRight) || (event.deltaY < 0 && !isAtLeft)) { this.scrollLeft += event.deltaY; event.preventDefault(); } }" style="padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 8px; overflow-x: auto; scroll-behavior: smooth;">
+                <div class="forensic-scroll-container">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
                         <div><strong style="color: var(--text-main);">${t('reconstruct_start', {}, 'narratives')}</strong><br><span style="color: var(--text-muted);">${startTimeStr}</span></div>
                         <div><strong style="color: var(--text-main);">${t('reconstruct_end', {}, 'narratives')}</strong><br><span style="color: var(--text-muted);">${endTimeStr}</span></div>
@@ -559,7 +559,7 @@ export function generateCombinedAnalysis(assets) {
                     <summary style="cursor: pointer; color: var(--primary); font-weight: 500; font-size: 13px; display: flex; align-items: center; gap: 4px; outline: none;">
                         <span style="border-bottom: 1px dashed var(--primary); padding-bottom: 2px;">${t('geo_reconstruct_btn', {}, 'narratives')}</span>
                     </summary>
-                    <div onwheel="if (this.scrollWidth > this.clientWidth) { const isAtLeft = this.scrollLeft === 0; const isAtRight = this.scrollLeft + this.clientWidth >= this.scrollWidth; if ((event.deltaY > 0 && !isAtRight) || (event.deltaY < 0 && !isAtLeft)) { this.scrollLeft += event.deltaY; event.preventDefault(); } }" style="padding: 12px; background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 8px; margin-top: 8px; overflow-x: auto; scroll-behavior: smooth;">
+                    <div class="forensic-scroll-container">
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 13px; margin-bottom: 12px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
                             <div>
                                 <strong style="color: var(--text-main);">${t('geo_max_spread', {}, 'narratives')}</strong><br>
