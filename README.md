@@ -78,6 +78,7 @@ ExifSense includes a dedicated metadata removal workflow. Analysts can selective
 * **Staged File Queue**: In Batch mode, assets accumulate in a visible staging list before analysis, allowing investigators to build their evidence set incrementally.
 * **Smart Deduplication**: Prevents the same file from being added to the staging queue twice.
 * **Animated Loading Screen**: A visual analysis buffer screen displays during processing for a polished, professional experience.
+* **Interactive Constellation Network**: A global background canvas rendering dynamic floating forensic nodes that connect, react, and glow when they interact with the user's cursor, adapting colors on-the-fly to theme shifts.
 
 ### Asset Navigation & Filtering
 
@@ -194,6 +195,7 @@ ExifSense is a zero-server, browser-native application. To begin:
 │       ├── narratives.js   # Narrative Intelligence Engine (616 lines)
 │       ├── export.js       # Multi-format Export Logic (PDF/MD/JSON/CSV/Clipboard)
 │       ├── history.js      # Local Persistence & Session Management
+│       ├── particles.js    # Interactive Constellation Network background animation
 │       ├── router.js       # Hash-based Client-Side Router
 │       ├── ui.js           # UI Rendering & Asset Selector Logic
 │       └── utils.js        # Shared Utilities & Sanitization Engine

@@ -56,6 +56,12 @@ h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-sans);
 }
 
+html, body {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+}
+
 body {
     background-color: var(--bg-main);
     background-image: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.08) 0%, transparent 60%),
@@ -68,11 +74,21 @@ body {
     min-height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow-x: hidden;
 }
 
 strong {
     font-weight: 600;
+}
+
+#bg-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.85;
 }
 
 .hidden { display: none !important; }
@@ -646,6 +662,9 @@ input[type="checkbox"] {
     }
     .main-container {
         padding: 1.5rem 1rem;
+        width: 100%;
+        max-width: 100%;
+        overflow-x: hidden;
     }
     .dropzone {
         min-height: 280px;

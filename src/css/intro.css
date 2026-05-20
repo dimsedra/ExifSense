@@ -225,12 +225,12 @@ body.dark-mode .intro-hero {
 
 .feature-card {
     padding: 2.5rem;
-    background: rgba(var(--bg-card-rgb), 0.4);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: rgba(var(--bg-card-rgb), 0.45);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
     border: 1px solid var(--border-color);
     border-radius: 1.5rem;
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
@@ -238,9 +238,11 @@ body.dark-mode .intro-hero {
 }
 
 .feature-card:hover {
-    border-color: var(--primary);
-    transform: translateY(-4px);
-    box-shadow: 0 12px 30px -10px rgba(37, 99, 235, 0.15);
+    border-color: var(--primary-light);
+    transform: translateY(-5px);
+    background: rgba(var(--bg-card-rgb), 0.75);
+    box-shadow: 0 16px 36px -12px rgba(var(--primary-rgb), 0.18),
+                0 0 0 1px rgba(var(--primary-rgb), 0.08);
 }
 
 .feature-card.col-span-2 {
@@ -271,6 +273,14 @@ body.dark-mode .intro-hero {
     justify-content: center;
     border-radius: 0.75rem;
     margin-bottom: 1.5rem;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.feature-card:hover .feature-icon {
+    background: var(--primary);
+    color: white;
+    transform: scale(1.1) rotate(6deg);
+    box-shadow: 0 0 15px rgba(var(--primary-rgb), 0.35);
 }
 
 .feature-card h3 {
@@ -292,11 +302,15 @@ body.dark-mode .intro-hero {
     .intro-container {
         margin: 1rem auto;
         padding: 0;
+        width: 100%;
+        max-width: 100%;
     }
     .intro-hero {
         padding: 3.5rem 1.25rem;
         margin-bottom: 2.5rem;
         border-radius: 1.5rem;
+        width: 100%;
+        max-width: 100%;
     }
     .intro-hero h1 {
         font-size: 1.85rem;
@@ -322,6 +336,8 @@ body.dark-mode .intro-hero {
     }
     .tabs-container {
         border-radius: 1.25rem;
+        width: 100%;
+        max-width: 100%;
     }
     .tab-content {
         padding: 1.5rem 1rem;
@@ -342,6 +358,8 @@ body.dark-mode .intro-hero {
         margin: 3rem 0;
         gap: 0.75rem;
         grid-template-columns: 1fr !important;
+        width: 100%;
+        max-width: 100%;
     }
     .feature-card.col-span-2 {
         grid-column: span 1 !important;

@@ -7,6 +7,7 @@ import * as Exporter from './export.js';
 import * as UI from './ui.js';
 import { Router } from './router.js';
 import * as Crypto from './crypto.js';
+import { initParticles } from './particles.js';
 
 // DOM Elements
 const elements = {
@@ -90,6 +91,7 @@ let state = {
 document.addEventListener('DOMContentLoaded', async () => {
     await initI18n();
     initTheme();
+    initParticles();
     initLang();
     initTabs();
     initHistory();
