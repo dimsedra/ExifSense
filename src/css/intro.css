@@ -291,7 +291,7 @@ body.dark-mode .intro-hero {
 @media (max-width: 768px) {
     .intro-container {
         margin: 1rem auto;
-        padding: 0 1rem;
+        padding: 0;
     }
     .intro-hero {
         padding: 3.5rem 1.25rem;
@@ -299,12 +299,12 @@ body.dark-mode .intro-hero {
         border-radius: 1.5rem;
     }
     .intro-hero h1 {
-        font-size: 2.25rem;
+        font-size: 1.85rem;
         margin-bottom: 1rem;
     }
     .intro-hero p {
-        font-size: 1rem;
-        margin-bottom: 2rem;
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
     }
     .intro-cta {
         flex-direction: column;
@@ -313,10 +313,15 @@ body.dark-mode .intro-hero {
     .intro-cta button {
         justify-content: center;
         width: 100%;
+        padding: 0.8rem 1.5rem;
+        font-size: 1rem;
     }
     .action-zone {
         margin-top: 3rem;
         padding-top: 2rem;
+    }
+    .tabs-container {
+        border-radius: 1.25rem;
     }
     .tab-content {
         padding: 1.5rem 1rem;
@@ -327,7 +332,9 @@ body.dark-mode .intro-hero {
         padding-bottom: 0.25rem;
     }
     .tab-btn {
-        min-width: 140px;
+        flex: none !important;
+        flex-shrink: 0 !important;
+        min-width: 130px;
         padding: 0.75rem;
         font-size: 0.8rem;
     }
