@@ -595,3 +595,40 @@
         border-left: 1px solid var(--border-color);
     }
 }
+
+/* Hash Value Container & Copy Button */
+.hash-value-container {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
+}
+
+.hash-text {
+    font-family: var(--font-mono);
+    word-break: break-all;
+    flex-grow: 1;
+}
+
+.btn-copy-hash {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--text-muted);
+    padding: 2px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background-color 0.15s;
+}
+
+.btn-copy-hash:hover {
+    color: var(--primary);
+    background-color: var(--secondary);
+}
+
+.btn-copy-hash i, .btn-copy-hash svg {
+    width: 13px;
+    height: 13px;
+}

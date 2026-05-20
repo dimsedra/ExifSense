@@ -219,6 +219,24 @@ export function renderExpertAnalysis(asset, elements) {
 
     const items = [];
     
+    // Digital Integrity Analysis
+    const integrityNarrative = Narratives.generateIntegrityNarrative(asset);
+    const alerts = asset.integrityAlerts || [];
+    const hasWarning = alerts.some(a => a.severity === 'warning');
+    const hasInfo = alerts.some(a => a.severity === 'info');
+    let badgeClass = '';
+    if (hasWarning) badgeClass = 'badge-warning';
+    else if (hasInfo) badgeClass = 'badge-info';
+
+    items.push({
+        icon: 'shield-alert',
+        title: t('analysis_integrity'),
+        narrative: integrityNarrative,
+        id: 'integrity',
+        badge: (hasWarning || hasInfo) ? ' ' : null,
+        badgeClass: badgeClass
+    });
+    
     // Geospatial
     let geoNarrative = Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData);
     if (!hasGeo && isCompletelyStripped) {
@@ -258,7 +276,11 @@ export function renderExpertAnalysis(asset, elements) {
             btn.className = `expert-tab-btn ${index === 0 ? 'active' : ''}`;
             btn.dataset.id = item.id;
             btn.dataset.index = index;
-            btn.innerHTML = `<i data-lucide="${item.icon}"></i><span>${Utils.escapeHTML(item.title)}</span>`;
+            btn.innerHTML = `
+                <i data-lucide="${item.icon}"></i>
+                <span>${Utils.escapeHTML(item.title)}</span>
+                ${item.badge ? `<span class="tab-badge ${item.badgeClass}"></span>` : ''}
+            `;
             
             const pane = document.createElement('div');
             pane.className = `expert-tab-pane ${index === 0 ? 'active' : ''}`;
@@ -269,7 +291,7 @@ export function renderExpertAnalysis(asset, elements) {
                         <span>${Utils.escapeHTML(item.title)}</span>
                     </div>
                     <div class="expert-narrative-bubble">
-                        <p>${item.narrative}</p>
+                        <div>${item.narrative}</div>
                     </div>
                 </div>
             `;
@@ -404,7 +426,30 @@ export function renderBasicFileInfo(file, elements) {
             <span class="info-label">${t('file_date')}</span>
             <span class="info-value">${Utils.escapeHTML(lastModified)}</span>
         </div>
+        ${file.sha256 ? `
+        <div class="info-item">
+            <span class="info-label">SHA-256</span>
+            <span class="info-value font-mono hash-value-container">
+                <span class="hash-text" title="${Utils.escapeHTML(file.sha256)}">${Utils.escapeHTML(file.sha256)}</span>
+                <button class="btn-copy-hash" data-hash="${Utils.escapeHTML(file.sha256)}" title="${t('copy_clipboard')}">
+                    <i data-lucide="copy"></i>
+                </button>
+            </span>
+        </div>
+        ` : ''}
+        ${file.sha1 ? `
+        <div class="info-item">
+            <span class="info-label">SHA-1</span>
+            <span class="info-value font-mono hash-value-container">
+                <span class="hash-text" title="${Utils.escapeHTML(file.sha1)}">${Utils.escapeHTML(file.sha1)}</span>
+                <button class="btn-copy-hash" data-hash="${Utils.escapeHTML(file.sha1)}" title="${t('copy_clipboard')}">
+                    <i data-lucide="copy"></i>
+                </button>
+            </span>
+        </div>
+        ` : ''}
     `;
+    if (window.lucide) lucide.createIcons();
 }
 
 // FUNGSI: Memberikan pesan peringatan jika tag EXIF kosong
@@ -446,4 +491,146 @@ export function injectTabArrows(wrapper, tabsContainer) {
     wrapper.appendChild(arrowLeft);
     wrapper.appendChild(tabsContainer);
     wrapper.appendChild(arrowRight);
+}
+
+export function renderManifestVerification(resultCard, manifest, verificationResult, matchedAssets, onEvidenceDrop) {
+    if (!manifest) {
+        resultCard.classList.add('hidden');
+        resultCard.innerHTML = '';
+        return;
+    }
+
+    resultCard.classList.remove('hidden');
+
+    const statusClass = verificationResult ? 'success' : 'error';
+    const statusIcon = verificationResult ? 'shield-check' : 'shield-alert';
+    const statusMsg = verificationResult 
+        ? t('verify_success') 
+        : t('verify_invalid_signature');
+
+    let html = `
+        <div class="verify-result-header ${statusClass}">
+            <i data-lucide="${statusIcon}"></i>
+            <span>${statusMsg}</span>
+        </div>
+    `;
+
+    if (verificationResult) {
+        const signedByText = t('verify_signed_by', {
+            id: manifest.investigatorId,
+            date: manifest.signedAt
+        });
+
+        html += `
+            <div class="verify-result-details">
+                <div><strong>${t('chain_custody')}:</strong></div>
+                <div>${signedByText}</div>
+                <div><strong>Forensic Session ID:</strong> <span class="font-mono">${manifest.payload.reportInfo.forensicId}</span></div>
+                <div><strong>Session Name:</strong> ${Utils.escapeHTML(manifest.payload.reportInfo.session)}</div>
+            </div>
+            
+            <div class="evidence-verification-section mt-4">
+                <h4>${t('evidence_verification')}</h4>
+                <div class="verify-evidence-dropzone mt-2" id="verify-evidence-dropzone">
+                    <input type="file" id="verify-evidence-input" multiple class="hidden-input" />
+                    <div class="dropzone-content">
+                        <i data-lucide="upload" style="width: 24px; height: 24px; color: var(--primary);"></i>
+                        <p class="text-sm mt-1">${t('evidence_verify_prompt')}</p>
+                        <p class="text-xs text-muted mt-1">${t('evidence_verify_hint')}</p>
+                    </div>
+                </div>
+                
+                <div class="verify-evidence-list mt-3" id="verify-evidence-list">
+                    ${renderEvidenceListHtml(manifest.payload.assets, matchedAssets)}
+                </div>
+            </div>
+        `;
+    }
+
+    resultCard.innerHTML = html;
+    
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons({
+            attrs: {
+                class: 'lucide'
+            },
+            nameAttr: 'data-lucide',
+            nodeList: resultCard.querySelectorAll('[data-lucide]')
+        });
+    }
+
+    if (verificationResult && onEvidenceDrop) {
+        const dropzone = resultCard.querySelector('#verify-evidence-dropzone');
+        const fileInput = resultCard.querySelector('#verify-evidence-input');
+
+        if (dropzone && fileInput) {
+            dropzone.addEventListener('click', (e) => {
+                if (e.target !== fileInput) {
+                    fileInput.click();
+                }
+            });
+
+            dropzone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropzone.classList.add('dragover');
+            });
+
+            dropzone.addEventListener('dragleave', () => {
+                dropzone.classList.remove('dragover');
+            });
+
+            dropzone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropzone.classList.remove('dragover');
+                if (e.dataTransfer.files.length) {
+                    onEvidenceDrop(e.dataTransfer.files);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length) {
+                    onEvidenceDrop(e.target.files);
+                    e.target.value = '';
+                }
+            });
+        }
+    }
+}
+
+function renderEvidenceListHtml(manifestAssets, matchedAssets) {
+    if (!manifestAssets || manifestAssets.length === 0) return '';
+
+    return manifestAssets.map(asset => {
+        const name = asset.fileName;
+        const expectedHash = asset.sourceDetails.sha256;
+        
+        let status = 'missing'; // 'match', 'mismatch', 'missing'
+        let icon = 'help-circle';
+        let statusText = t('manifest_asset_missing', { name: Utils.escapeHTML(name) });
+
+        if (matchedAssets && matchedAssets[name]) {
+            const matchInfo = matchedAssets[name];
+            if (matchInfo.sha256 === expectedHash) {
+                status = 'match';
+                icon = 'check-circle';
+                statusText = t('manifest_asset_match', { name: Utils.escapeHTML(name) });
+            } else {
+                status = 'mismatch';
+                icon = 'x-circle';
+                statusText = t('manifest_asset_mismatch', { name: Utils.escapeHTML(name) });
+            }
+        }
+
+        return `
+            <div class="verify-evidence-item ${status}">
+                <div class="verify-evidence-item-left">
+                    <i data-lucide="${icon}" class="${status}"></i>
+                    <span>${statusText}</span>
+                </div>
+                <div class="verify-evidence-item-right">
+                    SHA-256: ${expectedHash.substring(0, 16)}...
+                </div>
+            </div>
+        `;
+    }).join('');
 }

@@ -1,6 +1,7 @@
 import * as Narratives from './narratives.js';
 import { t } from './i18n.js';
 import * as Utils from './utils.js';
+import { signPayload } from './crypto.js';
 
 function stripHtml(html, preserveTables = true) {
     if (!html) return '';
@@ -128,12 +129,16 @@ export async function copyToClipboard(assets, sessionTitle, forensicId) {
         content += `${t('file_name', {}, 'ui')}: ${asset.fileName}\n`;
         content += `${t('file_type', {}, 'ui')}: ${asset.fileType || t('unknown', {}, 'reports')}\n`;
         content += `${t('file_size', {}, 'ui')}: ${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB\n`;
-        content += `${t('file_date', {}, 'ui')}: ${Utils.formatFullDate(asset.fileDate)}\n\n`;
+        content += `${t('file_date', {}, 'ui')}: ${Utils.formatFullDate(asset.fileDate)}\n`;
+        if (asset.sha256) content += `SHA-256: ${asset.sha256}\n`;
+        if (asset.sha1) content += `SHA-1: ${asset.sha1}\n`;
+        content += `\n`;
 
         content += `[${t('forensic_analysis', {}, 'reports')}]\n`;
         const data = asset.exifData;
         const categorized = Utils.categorizeExif(data);
         
+        content += `${t('analysis_integrity', {}, 'ui')}: ${stripHtml(Narratives.generateIntegrityNarrative(asset))}\n`;
         if (data.latitude != null) {
             content += `${t('cat_geospatial', {}, 'ui')}: ${stripHtml(Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData))}\n`;
         }
@@ -175,11 +180,15 @@ export function exportToCsv(assets, sessionTitle, forensicId) {
     ];
     
     assets.forEach((asset) => {
-        // Add technical details to CSV
         rows.push([asset.fileName, t('tech_details', {}, 'reports'), t('file_name', {}, 'ui'), asset.fileName]);
         rows.push([asset.fileName, t('tech_details', {}, 'reports'), t('file_type', {}, 'ui'), asset.fileType || t('unknown', {}, 'reports')]);
         rows.push([asset.fileName, t('tech_details', {}, 'reports'), t('file_size', {}, 'ui'), (asset.fileSize / (1024 * 1024)).toFixed(2)]);
         rows.push([asset.fileName, t('tech_details', {}, 'reports'), t('file_date', {}, 'ui'), Utils.formatFullDate(asset.fileDate)]);
+        if (asset.sha256) rows.push([asset.fileName, t('tech_details', {}, 'reports'), 'SHA-256', asset.sha256]);
+        if (asset.sha1) rows.push([asset.fileName, t('tech_details', {}, 'reports'), 'SHA-1', asset.sha1]);
+
+        const integrityText = stripHtml(Narratives.generateIntegrityNarrative(asset));
+        rows.push([asset.fileName, t('forensic_analysis', {}, 'reports'), t('analysis_integrity', {}, 'ui'), integrityText.replace(/\n/g, ' | ')]);
 
         const categorized = Utils.categorizeExif(asset.exifData);
         for (const [cat, props] of Object.entries(categorized)) {
@@ -224,12 +233,16 @@ export function exportToMd(assets, sessionTitle, forensicId) {
         content += `| ${t('file_name', {}, 'ui')} | ${asset.fileName} |\n`;
         content += `| ${t('file_type', {}, 'ui')} | ${asset.fileType || t('unknown', {}, 'reports')} |\n`;
         content += `| ${t('file_size', {}, 'ui')} | ${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB |\n`;
-        content += `| ${t('file_date', {}, 'ui')} | ${Utils.formatFullDate(asset.fileDate)} |\n\n`;
+        content += `| ${t('file_date', {}, 'ui')} | ${Utils.formatFullDate(asset.fileDate)} |\n`;
+        if (asset.sha256) content += `| SHA-256 | \`${asset.sha256}\` |\n`;
+        if (asset.sha1) content += `| SHA-1 | \`${asset.sha1}\` |\n`;
+        content += `\n`;
 
         content += `### ${t('forensic_analysis', {}, 'reports')}\n\n`;
         const data = asset.exifData;
         const categorized = Utils.categorizeExif(data);
         
+        content += `**${t('analysis_integrity', {}, 'ui')}:**  \n${stripHtml(Narratives.generateIntegrityNarrative(asset))}  \n\n`;
         if (data.latitude != null) {
             content += `**${t('analysis_geospatial', {}, 'ui')}:**  \n${stripHtml(Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData))}  \n\n`;
         }
@@ -462,15 +475,19 @@ export function exportToPdf(assets, sessionTitle, forensicId) {
         doc.text(`${t('asset_header', {n: idx + 1}, 'reports')}: ${asset.fileName}`, 14, 20);
         
         // Tech Details Table
+        const techBody = [
+            [t('file_name', {}, 'ui'), asset.fileName],
+            [t('file_type', {}, 'ui'), asset.fileType || t('unknown', {}, 'reports')],
+            [t('file_size', {}, 'ui'), `${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB`],
+            [t('file_date', {}, 'ui'), Utils.formatFullDate(asset.fileDate)]
+        ];
+        if (asset.sha256) techBody.push(['SHA-256', asset.sha256]);
+        if (asset.sha1) techBody.push(['SHA-1', asset.sha1]);
+
         doc.autoTable({
             startY: 25,
             head: [[t('property', {}, 'reports'), t('value', {}, 'reports')]],
-            body: [
-                [t('file_name', {}, 'ui'), asset.fileName],
-                [t('file_type', {}, 'ui'), asset.fileType || t('unknown', {}, 'reports')],
-                [t('file_size', {}, 'ui'), `${(asset.fileSize / (1024 * 1024)).toFixed(2)} MB`],
-                [t('file_date', {}, 'ui'), Utils.formatFullDate(asset.fileDate)]
-            ],
+            body: techBody,
             theme: 'grid',
             headStyles: { fillColor: [71, 85, 105] },
             margin: { bottom: 10 }
@@ -487,6 +504,7 @@ export function exportToPdf(assets, sessionTitle, forensicId) {
         const categorized = Utils.categorizeExif(data);
         const narrativeItems = [];
 
+        narrativeItems.push({ t: t('analysis_integrity', {}, 'ui'), n: Narratives.generateIntegrityNarrative(asset) });
         if (data.latitude != null) narrativeItems.push({ t: t('analysis_geospatial', {}, 'ui'), n: Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData) });
         if (categorized['Device Hardware']) narrativeItems.push({ t: t('analysis_hardware', {}, 'ui'), n: Narratives.generateHardwareNarrative(categorized['Device Hardware']) });
         if (categorized['Exposure Settings']) narrativeItems.push({ t: t('analysis_exposure', {}, 'ui'), n: Narratives.generateExposureNarrative(categorized['Exposure Settings']) });
@@ -573,6 +591,7 @@ export function exportToJson(assets, sessionTitle, forensicId) {
                 const categorized = Utils.categorizeExif(data);
                 
                 const narratives = {};
+                narratives.integrity = stripHtml(Narratives.generateIntegrityNarrative(asset), false);
                 if (data.latitude != null) narratives.geospatial = stripHtml(Narratives.generateGeospatialNarrative(data.latitude, data.longitude, asset.locationData), false);
                 if (categorized['Device Hardware']) narratives.hardware = stripHtml(Narratives.generateHardwareNarrative(categorized['Device Hardware']), false);
                 if (categorized['Exposure Settings']) narratives.exposure = stripHtml(Narratives.generateExposureNarrative(categorized['Exposure Settings']), false);
@@ -586,7 +605,9 @@ export function exportToJson(assets, sessionTitle, forensicId) {
                     sourceDetails: {
                         fileType: asset.fileType || 'Unknown',
                         fileSizeMB: (asset.fileSize / (1024 * 1024)).toFixed(2),
-                        fileSystemDate: Utils.formatFullDate(asset.fileDate)
+                        fileSystemDate: Utils.formatFullDate(asset.fileDate),
+                        sha256: asset.sha256 || null,
+                        sha1: asset.sha1 || null
                     },
                     forensicNarratives: narratives,
                     metadata: categorized
@@ -597,6 +618,60 @@ export function exportToJson(assets, sessionTitle, forensicId) {
 
     const jsonContent = JSON.stringify(reportData, null, 4);
     downloadFile(jsonContent, `ExifSense_Report_${Date.now()}.json`, 'application/json');
+}
+
+export async function exportSignedManifest(assets, sessionTitle, forensicId, investigatorIdentity) {
+    // Generate the standard report data structure
+    const reportData = {
+        reportInfo: {
+            title: t('title', {}, 'reports'),
+            session: sessionTitle,
+            forensicId: forensicId || Utils.generateForensicId(),
+            generated: Utils.formatFullDate(new Date()),
+            assetCount: assets.length
+        },
+        assets: assets.map((asset, idx) => {
+            return {
+                assetId: idx + 1,
+                fileName: asset.fileName,
+                sourceDetails: {
+                    fileType: asset.fileType || 'Unknown',
+                    fileSizeMB: (asset.fileSize / (1024 * 1024)).toFixed(2),
+                    fileSystemDate: Utils.formatFullDate(asset.fileDate),
+                    sha256: asset.sha256 || null,
+                    sha1: asset.sha1 || null
+                }
+            };
+        })
+    };
+
+    // Calculate signature
+    const signaturePayload = JSON.stringify(reportData);
+    let signature = null;
+    let investigatorId = "UNKNOWN";
+    let publicKeyJwk = null;
+
+    if (investigatorIdentity && investigatorIdentity.privateKey) {
+        try {
+            signature = await signPayload(investigatorIdentity.privateKey, signaturePayload);
+            investigatorId = investigatorIdentity.stampId;
+            publicKeyJwk = investigatorIdentity.jwkPublic;
+        } catch (e) {
+            console.error("Failed to sign manifest payload:", e);
+        }
+    }
+
+    const manifest = {
+        manifestVersion: "1.0",
+        investigatorId: investigatorId,
+        signedAt: Utils.formatFullDate(new Date()),
+        publicKey: publicKeyJwk,
+        signature: signature,
+        payload: reportData
+    };
+
+    const jsonContent = JSON.stringify(manifest, null, 4);
+    downloadFile(jsonContent, `ExifSense_Manifest_${forensicId || 'session'}.json`, 'application/json');
 }
 
 

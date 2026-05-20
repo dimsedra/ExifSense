@@ -51,7 +51,10 @@ export function saveSession(assets) {
             fileType: a.fileType,
             fileDate: a.fileDate,
             exifData: a.exifData,
-            thumbUrl: a.thumbUrl
+            thumbUrl: a.thumbUrl,
+            sha256: a.sha256,
+            sha1: a.sha1,
+            integrityAlerts: a.integrityAlerts
         })),
         mainThumb: firstAsset.thumbUrl,
         sessionTitle: assets.length > 1 

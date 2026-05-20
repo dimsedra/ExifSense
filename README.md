@@ -18,15 +18,19 @@ Built for forensic analysts, private investigators, and digital archeologists, E
 
 Metadata is sensitive evidence. ExifSense ensures 100% of the extraction, processing, and narrative generation happens locally in your browser. No assets or metadata are ever uploaded to a server, maintaining an air-tight Chain of Custody and data privacy.
 
-### 2. Forensic Storytelling (Narrative Engine)
+### 2. Cryptographic Chain of Custody & Audit Trails
+
+To establish non-repudiation, ExifSense generates a local ECDSA P-256 investigator key pair. Sessions can be exported as signed JSON manifests containing cryptographic signatures of all evidence files (SHA-256/SHA-1), binding the investigator's identity to the verified metadata state.
+
+### 3. Forensic Storytelling (Narrative Engine)
 
 Standard EXIF viewers provide a list of tags. ExifSense provides a narrative. Our specialized engine analyzes technical parameters (shutter speed, aperture, focal length, and geolocation) to generate human-readable expert deductions — identifying hardware consistencies, potential metadata spoofing, and optical characteristics.
 
-### 3. Geospatial Movement Intelligence
+### 4. Geospatial Movement Intelligence
 
 Beyond simple pins on a map, ExifSense utilizes the OSRM (Open Source Routing Machine) to calculate realistic road-based movement between assets. It reconstructs the subject's path across the globe, revealing travel patterns that simple coordinates cannot show.
 
-### 4. Metadata Sanitization (Privacy Shield)
+### 5. Metadata Sanitization (Privacy Shield)
 
 ExifSense includes a dedicated metadata removal workflow. Analysts can selectively strip specific EXIF categories — or perform a full wipe — and download a forensically clean copy of the asset without altering the original.
 
@@ -41,6 +45,14 @@ ExifSense includes a dedicated metadata removal workflow. Analysts can selective
 * **Optic & Exposure Intelligence**: Deep technical extraction of internal camera settings such as Aperture (F-Stop), ISO Sensitivity, Shutter Speed, and Focal Length. The system classifies the lighting environment (Low-Light, Bright Daylight, Shallow Depth of Field) based on these parameters.
 * **Chronological Verification**: Sophisticated cross-referencing between the external file system's "Last Modified" time and the internal EXIF `DateTimeOriginal` tag, detecting potential timestamp manipulation.
 * **Coordinate Spoofing Detection**: Flags two classes of anomalous GPS data — Null Island coordinates (near 0°, 0°) and integer-precision coordinates — both of which commonly indicate fabricated or manually entered location data.
+
+### Cryptographic Security & Evidence Verification
+
+* **Investigator Identity Management**: Local client-side generation of ECDSA P-256 private/public key pairs representing the investigator. Supports encrypted key backups (JSON file download) and key restoration to ensure identity persistence.
+* **Binary Spoofing Protection**: Real-time analysis of file headers (Magic Bytes) to verify the actual mime type of files (JPEG, PNG, HEIC, etc.) against their extension, protecting against disguised malicious payloads or spoofed files. Auto-recovers correct extensions when mismatches are detected.
+* **Cryptographic Hashing**: Automatic computation of SHA-256 and SHA-1 hashes for every analyzed file, serving as immutable evidence fingerprints.
+* **Signed Forensic Manifests**: Exports analysis results, file hashes, metadata parameters, and investigator public keys as a signed JSON manifest. The manifest contains a cryptographic signature validating the integrity of the evidence list.
+* **Manifest Verification Dropzone**: A dedicated validation tab where users can drop a signed forensic manifest along with the corresponding source images to calculate and verify evidence integrity and sign matching authenticity in real-time.
 
 ### Geospatial Dashboard
 
@@ -81,13 +93,13 @@ ExifSense includes a dedicated metadata removal workflow. Analysts can selective
 
 ### Unified Reporting Suite
 
-Generate professional, investigation-ready reports in five standardized formats:
+Generate professional, investigation-ready reports in five standardized formats, complete with SHA-256/SHA-1 evidence fingerprints and investigator public keys to preserve audit records:
 
-* **PDF**: A formatted, print-ready document featuring the full forensic narrative, integrity overview, and detailed metadata tables — structured across pages with clear section headers.
-* **Markdown**: A lightweight, version-control-friendly format with full narrative text and structured metadata sections, suitable for technical documentation repositories.
-* **JSON**: An industry-standard structured object export containing discrete metadata categories, forensic narrative strings, cross-reference matrices (integrity verification + hardware comparison), and source details — optimized for automated parsing by other security or GIS tools.
-* **CSV**: A tabular raw dataset export, tailored for spreadsheet-based correlation and auditing by data analysts.
-* **Clipboard (Plain Text)**: A clean, human-readable summary of forensic narratives and key metadata, copied directly to the system clipboard for rapid sharing.
+* **PDF**: A formatted, print-ready document featuring the full forensic narrative, integrity overview, and detailed metadata tables — structured across pages with clear section headers and signed references.
+* **Markdown**: A lightweight, version-control-friendly format with full narrative text, cryptographic hash checklists, and structured metadata sections.
+* **JSON (Signed Manifest)**: An industry-standard structured object export containing file hashes, metadata, and investigator public keys, cryptographically sealed with an ECDSA P-256 signature for verification.
+* **CSV**: A tabular raw dataset export including SHA-256 and SHA-1 evidence fingerprints, tailored for spreadsheet-based correlation and auditing.
+* **Clipboard (Plain Text)**: A clean, human-readable summary of forensic narratives, hashes, and key metadata, copied directly to the system clipboard for rapid sharing.
 
 ### Session Persistence & History
 
@@ -113,10 +125,12 @@ ExifSense is built with a modular vanilla architecture for maximum performance a
 ## Usage Workflow
 
 1. **Launch**: Open `index.html` in a modern browser.
-2. **Select Mode**: Choose between Single, Batch, or Remove (sanitization) mode.
-3. **Import**: Drag and drop assets into the investigation zone, or click to browse.
-4. **Analyze**: Review individual forensic narratives, the cross-asset intelligence matrix, and the geospatial movement map.
-5. **Export**: Download findings in PDF, Markdown, JSON, CSV, or copy to clipboard.
+2. **Setup Identity**: Confirm or regenerate your **Investigator Identity** in the header. Download an encrypted key backup for future session signatures.
+3. **Select Mode**: Choose between Single, Batch, or Remove (sanitization) mode.
+4. **Import**: Drag and drop assets into the investigation zone. Binary magic bytes are immediately audited to detect extension tampering.
+5. **Analyze**: Review individual forensic narratives, file SHA signatures, the cross-asset comparison matrix, and the geospatial map.
+6. **Export & Sign**: Export findings in PDF, Markdown, CSV, or download the **Signed JSON Manifest** sealed with your P-256 investigator signature.
+7. **Verify Evidence**: Use the **Verify Manifest** tab to drag and drop a previously signed manifest and its source assets to instantly verify integrity.
 
 ---
 
@@ -174,6 +188,7 @@ ExifSense is a zero-server, browser-native application. To begin:
 │   │   └── ar.json         # Arabic (RTL)
 │   └── js/
 │       ├── app.js          # Core Application Orchestrator & Router
+│       ├── crypto.js       # Client-side ECDSA Key Management, Signing, & Hashing
 │       ├── i18n.js         # Internationalization Engine
 │       ├── mapping.js      # Geospatial, Routing & Geocoding Logic
 │       ├── narratives.js   # Narrative Intelligence Engine (616 lines)

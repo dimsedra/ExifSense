@@ -613,3 +613,33 @@ export function generateCombinedAnalysis(assets) {
 
     return findings;
 }
+
+/**
+ * Generates natural language narrative for the Digital Integrity analysis of a single asset.
+ * @param {object} asset The asset data object.
+ * @returns {string} HTML narrative string.
+ */
+export function generateIntegrityNarrative(asset) {
+    const alerts = asset.integrityAlerts || [];
+    if (alerts.length === 0) {
+        return `<p class="narrative-p text-success">${t('integrity_clean', {}, 'narratives')}</p>`;
+    }
+
+    let narrative = '<ul class="integrity-alerts-list">';
+    alerts.forEach(alert => {
+        let key = 'integrity_clean'; // fallback
+        if (alert.type === 'editing_software') key = 'integrity_edit_software';
+        else if (alert.type === 'future_capture_date') key = 'integrity_future_date';
+        else if (alert.type === 'capture_after_file_modification') key = 'integrity_capture_after_file';
+        else if (alert.type === 'missing_original_metadata') key = 'integrity_missing_original';
+
+        const localizedText = t(key, alert.messageParam || {}, 'narratives');
+        const alertClass = alert.severity === 'warning' ? 'integrity-alert-warning' : 'integrity-alert-info';
+        const icon = alert.severity === 'warning' ? '⚠️' : 'ℹ️';
+        
+        narrative += `<li class="${alertClass}">${icon} ${localizedText}</li>`;
+    });
+    narrative += '</ul>';
+    
+    return narrative;
+}

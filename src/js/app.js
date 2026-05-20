@@ -6,6 +6,7 @@ import * as History from './history.js';
 import * as Exporter from './export.js';
 import * as UI from './ui.js';
 import { Router } from './router.js';
+import * as Crypto from './crypto.js';
 
 // DOM Elements
 const elements = {
@@ -53,7 +54,20 @@ const elements = {
     stagedFilesContainer: document.getElementById('staged-files-container'),
     stagedFilesList: document.getElementById('staged-files-list'),
     clearStagedBtn: document.getElementById('clear-staged-btn'),
-    startStagedBtn: document.getElementById('start-staged-btn')
+    startStagedBtn: document.getElementById('start-staged-btn'),
+    // Identity elements
+    identityToggle: document.getElementById('identity-settings-toggle'),
+    identityBadge: document.getElementById('investigator-id-badge'),
+    identityDropdown: document.getElementById('identity-dropdown'),
+    identityIdDisplay: document.getElementById('identity-id-display'),
+    backupIdentityBtn: document.getElementById('backup-identity-btn'),
+    restoreIdentityBtn: document.getElementById('restore-identity-btn'),
+    restoreIdentityFile: document.getElementById('restore-identity-file'),
+    resetIdentityBtn: document.getElementById('reset-identity-btn'),
+    // Verify tab elements
+    verifyDropzone: document.getElementById('verify-dropzone'),
+    verifyFileInput: document.getElementById('verify-file-input'),
+    verifyResultCard: document.getElementById('verify-result-card')
 };
 
 let state = {
@@ -66,7 +80,10 @@ let state = {
     activeAssetIndex: 0,
     uploadMode: 'single', // 'single' or 'batch'
     historyFilter: 'all',
-    forensicId: null
+    forensicId: null,
+    investigatorIdentity: null,
+    verifiedManifest: null,
+    verifiedMatchedAssets: {}
 };
 
 // Initialization
@@ -80,6 +97,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     initExport();
     initRouter();
     initToast();
+    initCopyHash();
+    await initIdentity();
+    initVerification();
     
     elements.startAnalysisBtn.addEventListener('click', () => {
         Router.navigate('#/upload');
@@ -102,6 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.hash = '#/';
     });
 
+    initGlobalBackground();
     if (window.lucide) lucide.createIcons();
 
     // MOBILE: Scroll nudge — when a forensic <details> expands on a narrow viewport,
@@ -122,6 +143,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }, true); // capture phase so it fires even if event stops propagating
 });
+
+// FUNGSI: Menginisialisasi dynamic mouse-glow background pada body secara global
+function initGlobalBackground() {
+    window.addEventListener('mousemove', (e) => {
+        const x = (e.clientX / window.innerWidth) * 100;
+        const y = (e.clientY / window.innerHeight) * 100;
+        document.body.style.setProperty('--mouse-x', `${x}%`);
+        document.body.style.setProperty('--mouse-y', `${y}%`);
+    });
+}
 
 // MODUL: Inisialisasi Tema (Dark/Light Mode)
 // FUNGSI: Menginisialisasi tema aplikasi (dark/light) dari cache
@@ -193,6 +224,15 @@ function initRouter() {
             }
         },
         { 
+            path: '#/verify', 
+            action: () => {
+                switchState('intro');
+                switchTab('verify');
+                const verifySec = document.getElementById('verify-section');
+                if (verifySec) verifySec.scrollIntoView({ behavior: 'smooth' });
+            }
+        },
+        { 
             path: '#/dashboard', 
             guard: () => state.assets && state.assets.length > 0,
             action: () => {
@@ -261,6 +301,7 @@ function initExport() {
                 case 'pdf': Exporter.exportToPdf(state.assets, title, state.forensicId); break;
                 case 'md': Exporter.exportToMd(state.assets, title, state.forensicId); break;
                 case 'json': Exporter.exportToJson(state.assets, title, state.forensicId); break;
+                case 'manifest': Exporter.exportSignedManifest(state.assets, title, state.forensicId, state.investigatorIdentity); break;
                 case 'csv': Exporter.exportToCsv(state.assets, title, state.forensicId); break;
                 case 'clipboard': Exporter.copyToClipboard(state.assets, title, state.forensicId); break;
             }
@@ -385,7 +426,11 @@ async function processBatchFiles(files) {
             const exifData = await exifr.parse(file, options);
             const thumbUrl = await History.createThumbnail(file);
             
-            state.assets.push({
+            // Calculate cryptographic hashes locally
+            const sha256 = await Utils.calculateFileHash(file, 'SHA-256');
+            const sha1 = await Utils.calculateFileHash(file, 'SHA-1');
+
+            const asset = {
                 id: Date.now() + Math.random(),
                 fileName: file.name,
                 fileObject: file,
@@ -394,8 +439,15 @@ async function processBatchFiles(files) {
                 fileDate: file.lastModified,
                 exifData: exifData || {},
                 thumbUrl: thumbUrl,
-                locationData: null
-            });
+                locationData: null,
+                sha256,
+                sha1
+            };
+
+            // Run integrity heuristics
+            asset.integrityAlerts = Utils.analyzeFileIntegrity(asset);
+
+            state.assets.push(asset);
         } catch (error) {
             console.error(`Error processing ${file.name}:`, error);
         }
@@ -424,20 +476,52 @@ async function handleFiles(fileList) {
         return;
     }
 
-    const files = incomingFiles.filter(f => {
-        const isImage = f.type.startsWith('image/');
-        const isForensicFormat = /\.(heic|heif|tiff|tif|dng|cr2|nef|arw|orf|srw|raw)$/i.test(f.name);
-        
-        if (!isImage && !isForensicFormat) return false;
-        
+    const extensionEquivalents = {
+        'jpg': ['jpg', 'jpeg'],
+        'jpeg': ['jpg', 'jpeg'],
+        'tif': ['tif', 'tiff'],
+        'tiff': ['tif', 'tiff'],
+        'heic': ['heic', 'heif'],
+        'heif': ['heic', 'heif']
+    };
+
+    const files = [];
+    for (const f of incomingFiles) {
         if (f.size > MAX_FILE_SIZE) {
             console.warn(`File ${f.name} ignored: Exceeds 100MB limit.`);
-            return false;
+            continue;
         }
-        return true;
-    });
+
+        const detection = await Utils.detectFileType(f);
+        if (!detection.isValid) {
+            console.warn(`File ${f.name} rejected: Unrecognized file signature.`);
+            Utils.showToast(t('err_invalid_signature', { name: f.name }));
+            continue;
+        }
+
+        const originalExt = f.name.includes('.') ? f.name.split('.').pop().toLowerCase() : '';
+        const isEquivalent = originalExt === detection.extension || 
+            (extensionEquivalents[detection.extension] && extensionEquivalents[detection.extension].includes(originalExt));
+
+        let processedFile = f;
+        if (!isEquivalent) {
+            console.warn(`File ${f.name} has extension mismatch/missing. Expected: .${detection.extension}, Found: .${originalExt || 'none'}`);
+            
+            const baseName = f.name.includes('.') ? f.name.substring(0, f.name.lastIndexOf('.')) : f.name;
+            const newName = `${baseName}.${detection.extension}`;
+            processedFile = new File([f], newName, { type: detection.mimeType });
+            
+            Utils.showToast(t('warn_extension_mismatch', { name: f.name, detected: detection.detectedFormat }));
+        }
+
+        files.push(processedFile);
+    }
 
     if (files.length === 0) {
+        if (incomingFiles.length > 0) {
+            // Already toasted individual unrecognized signature / size errors
+            return;
+        }
         alert(t('err_invalid_files'));
         return;
     }
@@ -597,7 +681,9 @@ async function switchAsset(index) {
         name: asset.fileName, 
         size: asset.fileSize || 0, 
         lastModified: asset.fileDate || Date.now(), 
-        type: asset.fileType || 'image/jpeg' 
+        type: asset.fileType || 'image/jpeg',
+        sha256: asset.sha256,
+        sha1: asset.sha1
     }, elements);
     
     // Handle reverse geocoding if needed
@@ -786,4 +872,219 @@ function initToast() {
             toast.remove();
         }, 3000);
     });
+}
+
+// FUNGSI: Menginisialisasi handler penyalinan hash ke clipboard
+function initCopyHash() {
+    document.addEventListener('click', async (e) => {
+        const btn = e.target.closest('.btn-copy-hash');
+        if (btn) {
+            const hash = btn.dataset.hash;
+            if (hash) {
+                try {
+                    await navigator.clipboard.writeText(hash);
+                    document.dispatchEvent(new CustomEvent('toast', { detail: { message: t('hash_copied', {}, 'ui') } }));
+                } catch (err) {
+                    console.error('Failed to copy hash:', err);
+                }
+            }
+        }
+    });
+}
+
+function showToast(message) {
+    document.dispatchEvent(new CustomEvent('toast', { detail: { message } }));
+}
+
+async function initIdentity() {
+    state.investigatorIdentity = await Crypto.initInvestigatorIdentity();
+    
+    if (elements.identityBadge) {
+        elements.identityBadge.textContent = state.investigatorIdentity.stampId;
+    }
+    if (elements.identityIdDisplay) {
+        elements.identityIdDisplay.textContent = state.investigatorIdentity.stampId;
+    }
+
+    if (elements.identityToggle) {
+        elements.identityToggle.addEventListener('click', (e) => {
+            e.stopPropagation();
+            elements.identityDropdown.classList.toggle('hidden');
+        });
+    }
+
+    document.addEventListener('click', (e) => {
+        if (elements.identityDropdown && !elements.identityDropdown.classList.contains('hidden')) {
+            const container = document.getElementById('identity-settings-container');
+            if (container && !container.contains(e.target)) {
+                elements.identityDropdown.classList.add('hidden');
+            }
+        }
+    });
+
+    if (elements.backupIdentityBtn) {
+        elements.backupIdentityBtn.addEventListener('click', () => {
+            const stampId = state.investigatorIdentity.stampId;
+            const keyData = {
+                stampId: stampId,
+                jwkPublic: state.investigatorIdentity.jwkPublic,
+                jwkPrivate: state.investigatorIdentity.jwkPrivate
+            };
+            const json = JSON.stringify(keyData, null, 4);
+            const a = document.createElement('a');
+            const file = new Blob([json], { type: 'application/octet-stream' });
+            a.href = URL.createObjectURL(file);
+            a.download = `ExifSense_${stampId}.key`;
+            a.click();
+            URL.revokeObjectURL(a.href);
+            showToast(t('key_backup_success') || 'Identity Key Backup downloaded successfully.');
+        });
+    }
+
+    if (elements.restoreIdentityBtn && elements.restoreIdentityFile) {
+        elements.restoreIdentityBtn.addEventListener('click', (e) => {
+            if (e.target !== elements.restoreIdentityFile) {
+                elements.restoreIdentityFile.click();
+            }
+        });
+
+        elements.restoreIdentityFile.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const keyData = JSON.parse(event.target.result);
+                    if (!keyData.stampId || !keyData.jwkPublic || !keyData.jwkPrivate) {
+                        throw new Error("Invalid key file structure.");
+                    }
+                    const restored = await Crypto.restoreIdentity(keyData.jwkPrivate, keyData.jwkPublic);
+                    if (restored) {
+                        state.investigatorIdentity = restored;
+                        if (elements.identityBadge) elements.identityBadge.textContent = restored.stampId;
+                        if (elements.identityIdDisplay) elements.identityIdDisplay.textContent = restored.stampId;
+                        showToast(t('key_restore_success') || 'Investigator identity successfully restored!');
+                    } else {
+                        throw new Error("Crypto restore failed.");
+                    }
+                } catch (err) {
+                    console.error(err);
+                    showToast(t('key_restore_error') || 'Failed to restore identity key. Invalid file.');
+                }
+                e.target.value = '';
+            };
+            reader.readAsText(file);
+        });
+    }
+
+    if (elements.resetIdentityBtn) {
+        elements.resetIdentityBtn.addEventListener('click', () => {
+            Utils.showConfirm({
+                title: t('confirm_regenerate_title') || 'Regenerate Identity',
+                message: t('confirm_regenerate') || 'Are you sure you want to regenerate your identity? Your current key will be replaced.',
+                confirmText: t('regenerate_btn') || 'Regenerate',
+                type: 'danger',
+                onConfirm: async () => {
+                    localStorage.removeItem('exifsense_inv_priv_jwk');
+                    localStorage.removeItem('exifsense_inv_pub_jwk');
+                    localStorage.removeItem('exifsense_inv_stamp');
+                    state.investigatorIdentity = await Crypto.initInvestigatorIdentity();
+                    if (elements.identityBadge) elements.identityBadge.textContent = state.investigatorIdentity.stampId;
+                    if (elements.identityIdDisplay) elements.identityIdDisplay.textContent = state.investigatorIdentity.stampId;
+                    showToast(t('key_regenerate_success') || 'New cryptographic identity generated successfully!');
+                }
+            });
+        });
+    }
+}
+
+function initVerification() {
+    if (!elements.verifyDropzone || !elements.verifyFileInput) return;
+
+    elements.verifyDropzone.addEventListener('click', (e) => {
+        if (e.target !== elements.verifyFileInput) {
+            elements.verifyFileInput.click();
+        }
+    });
+
+    elements.verifyDropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        elements.verifyDropzone.classList.add('dragover');
+    });
+
+    elements.verifyDropzone.addEventListener('dragleave', () => {
+        elements.verifyDropzone.classList.remove('dragover');
+    });
+
+    elements.verifyDropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        elements.verifyDropzone.classList.remove('dragover');
+        if (e.dataTransfer.files.length) {
+            handleManifestFile(e.dataTransfer.files[0]);
+        }
+    });
+
+    elements.verifyFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length) {
+            handleManifestFile(e.target.files[0]);
+            e.target.value = '';
+        }
+    });
+}
+
+async function handleManifestFile(file) {
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            const manifest = JSON.parse(e.target.result);
+            if (!manifest.manifestVersion || !manifest.signature || !manifest.payload) {
+                showToast(t('verify_invalid_manifest') || "Invalid forensic manifest format.");
+                return;
+            }
+
+            const payloadStr = JSON.stringify(manifest.payload);
+            const isValid = await Crypto.verifyPayload(manifest.publicKey, manifest.signature, payloadStr);
+            
+            state.verifiedManifest = manifest;
+            state.verifiedMatchedAssets = {};
+            
+            UI.renderManifestVerification(
+                elements.verifyResultCard, 
+                manifest, 
+                isValid, 
+                state.verifiedMatchedAssets,
+                handleEvidenceFilesForVerification
+            );
+
+        } catch (err) {
+            console.error("Error reading manifest:", err);
+            showToast(t('verify_invalid_manifest') || "Failed to read manifest file. Ensure it is valid JSON.");
+        }
+    };
+    reader.readAsText(file);
+}
+
+async function handleEvidenceFilesForVerification(files) {
+    if (!files || files.length === 0 || !state.verifiedManifest) return;
+
+    for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const sha256 = await Utils.calculateFileHash(file, 'SHA-256');
+        state.verifiedMatchedAssets[file.name] = {
+            sha256: sha256
+        };
+    }
+
+    UI.renderManifestVerification(
+        elements.verifyResultCard, 
+        state.verifiedManifest, 
+        true,
+        state.verifiedMatchedAssets,
+        handleEvidenceFilesForVerification
+    );
+    
+    showToast(t('evidence_matching_updated') || "Evidence files verified against manifest.");
 }

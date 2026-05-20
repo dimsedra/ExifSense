@@ -394,3 +394,185 @@ export function showToast(message) {
     }, 3000);
 }
 
+/**
+ * Detect file type using magic bytes (file signature verification).
+ * Reads the first 16 bytes of the file and matches them against known signatures.
+ * @param {File} file 
+ * @returns {Promise<{isValid: boolean, mimeType: string|null, extension: string|null, detectedFormat: string|null}>}
+ */
+export async function detectFileType(file) {
+    const headerBytes = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            resolve(new Uint8Array(e.target.result));
+        };
+        reader.onerror = () => resolve(null);
+        // Slice the first 16 bytes for checking headers
+        reader.readAsArrayBuffer(file.slice(0, 16));
+    });
+
+    if (!headerBytes || headerBytes.length < 4) {
+        return { isValid: false, mimeType: null, extension: null, detectedFormat: null };
+    }
+
+    // Convert to hex string helper
+    const getHex = (arr) => Array.from(arr).map(b => b.toString(16).padStart(2, '0').toUpperCase()).join(' ');
+    
+    // Convert to ASCII string helper (for sub-signatures)
+    const getAscii = (arr) => String.fromCharCode(...arr);
+
+    const hex = getHex(headerBytes);
+    const ascii = getAscii(headerBytes);
+
+    // 1. JPEG: FF D8 FF
+    if (hex.startsWith('FF D8 FF')) {
+        return { isValid: true, mimeType: 'image/jpeg', extension: 'jpg', detectedFormat: 'JPEG' };
+    }
+
+    // 2. PNG: 89 50 4E 47 0D 0A 1A 0A
+    if (hex.startsWith('89 50 4E 47 0D 0A 1A 0A')) {
+        return { isValid: true, mimeType: 'image/png', extension: 'png', detectedFormat: 'PNG' };
+    }
+
+    // 3. GIF: GIF8 (47 49 46 38)
+    if (hex.startsWith('47 49 46 38')) {
+        return { isValid: true, mimeType: 'image/gif', extension: 'gif', detectedFormat: 'GIF' };
+    }
+
+    // 4. WEBP: starts with "RIFF" (52 49 46 46) and "WEBP" at offset 8 (57 45 42 50)
+    if (hex.startsWith('52 49 46 46') && hex.substring(24, 35) === '57 45 42 50') {
+        return { isValid: true, mimeType: 'image/webp', extension: 'webp', detectedFormat: 'WEBP' };
+    }
+
+    // 5. TIFF (Little Endian): 49 49 2A 00 (This covers many raw formats like NEF, ARW, DNG, CR2)
+    if (hex.startsWith('49 49 2A 00')) {
+        // Canon RAW (.cr2) specifically has "CR" (43 52 02 00) at offset 8
+        if (hex.substring(24, 35) === '43 52 02 00') {
+            return { isValid: true, mimeType: 'image/x-canon-cr2', extension: 'cr2', detectedFormat: 'Canon RAW (CR2)' };
+        }
+        // General TIFF / NEF / ARW / DNG
+        const ext = file.name.split('.').pop().toLowerCase();
+        const tiffExts = ['tiff', 'tif', 'dng', 'nef', 'arw', 'orf', 'srw', 'raw'];
+        const resolvedExt = tiffExts.includes(ext) ? ext : 'tiff';
+        return { 
+            isValid: true, 
+            mimeType: resolvedExt === 'tiff' || resolvedExt === 'tif' ? 'image/tiff' : `image/x-${resolvedExt}`, 
+            extension: resolvedExt, 
+            detectedFormat: resolvedExt.toUpperCase() 
+        };
+    }
+
+    // 6. TIFF (Big Endian): 4D 4D 00 2A
+    if (hex.startsWith('4D 4D 00 2A')) {
+        const ext = file.name.split('.').pop().toLowerCase();
+        const tiffExts = ['tiff', 'tif', 'dng', 'nef', 'arw', 'orf', 'srw', 'raw'];
+        const resolvedExt = tiffExts.includes(ext) ? ext : 'tiff';
+        return { 
+            isValid: true, 
+            mimeType: resolvedExt === 'tiff' || resolvedExt === 'tif' ? 'image/tiff' : `image/x-${resolvedExt}`, 
+            extension: resolvedExt, 
+            detectedFormat: resolvedExt.toUpperCase() 
+        };
+    }
+
+    // 7. HEIC / HEIF: Check for 'ftyp' starting at byte 4 (offset 4, hex `66 74 79 70`)
+    // and compatible brand containing 'heic', 'heix', 'hevc', 'mif1', 'msf1' starting at byte 8 (offset 8)
+    if (hex.substring(12, 23) === '66 74 79 70') {
+        const brand = ascii.substring(8, 12);
+        if (['heic', 'heix', 'hevc', 'mif1', 'msf1'].includes(brand.toLowerCase()) || 
+            ['heic', 'heix', 'hevc', 'mif1', 'msf1'].some(b => ascii.toLowerCase().includes(b))) {
+            return { isValid: true, mimeType: 'image/heic', extension: 'heic', detectedFormat: 'HEIC/HEIF' };
+        }
+    }
+
+    return { isValid: false, mimeType: null, extension: null, detectedFormat: null };
+}
+
+/**
+ * Calculates a cryptographic hash of a file using the Web Crypto API.
+ * @param {File} file The file to hash.
+ * @param {string} algorithm The algorithm to use ('SHA-256' or 'SHA-1').
+ * @returns {Promise<string>} Hex representation of the hash.
+ */
+export async function calculateFileHash(file, algorithm = 'SHA-256') {
+    try {
+        const buffer = await file.arrayBuffer();
+        const hashBuffer = await crypto.subtle.digest(algorithm, buffer);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+        return hashHex;
+    } catch (e) {
+        console.error(`Error calculating ${algorithm} hash:`, e);
+        return '';
+    }
+}
+
+/**
+ * Analyzes the file's metadata for cryptographic and chronological integrity issues.
+ * @param {object} asset The asset containing EXIF and file details.
+ * @returns {Array<object>} List of warning/info alerts.
+ */
+export function analyzeFileIntegrity(asset) {
+    const alerts = [];
+    const exif = asset.exifData || {};
+    
+    // 1. Check for editing software
+    const software = exif.Software || '';
+    if (software) {
+        const softLower = software.toLowerCase();
+        if (softLower.includes('photoshop') || softLower.includes('gimp') || softLower.includes('lightroom') || softLower.includes('paint.net') || softLower.includes('canva') || softLower.includes('illustrator')) {
+            alerts.push({
+                type: 'editing_software',
+                severity: 'info',
+                messageParam: { software },
+                message: `Editing software signature found: "${software}". This image was likely saved or processed using an image editor.`
+            });
+        }
+    }
+    
+    // Get timestamps
+    const originalDate = parseDate(exif.DateTimeOriginal || exif.CreateDate || exif.DateTime);
+    const modifyDate = parseDate(exif.ModifyDate);
+    const fileDate = asset.fileDate ? new Date(asset.fileDate) : null;
+    const now = new Date();
+    
+    // 2. Check if Capture Date is in the future relative to current time
+    if (originalDate && !isNaN(originalDate.getTime())) {
+        // Allow 5 minutes of clock drift
+        if (originalDate.getTime() > now.getTime() + 5 * 60 * 1000) {
+            alerts.push({
+                type: 'future_capture_date',
+                severity: 'warning',
+                messageParam: { date: formatFullDate(originalDate) },
+                message: `Chronological Anomaly: Capture date (${formatFullDate(originalDate)}) is in the future. This indicates possible timestamp manipulation.`
+            });
+        }
+        
+        // 3. Check if Capture Date is newer than File System Modification Date
+        if (fileDate && !isNaN(fileDate.getTime())) {
+            // Allow a small buffer of 5 seconds
+            if (originalDate.getTime() > fileDate.getTime() + 5000) {
+                alerts.push({
+                    type: 'capture_after_file_modification',
+                    severity: 'warning',
+                    messageParam: { date: formatFullDate(originalDate), fileDate: formatFullDate(fileDate) },
+                    message: `Chronological Mismatch: Capture date (${formatFullDate(originalDate)}) is newer than the file modification date (${formatFullDate(fileDate)}). This is chronologically impossible.`
+                });
+            }
+        }
+    }
+    
+    // 4. Check if metadata was likely stripped but edited
+    if (!originalDate && (modifyDate || software)) {
+        alerts.push({
+            type: 'missing_original_metadata',
+            severity: 'warning',
+            messageParam: { indicator: software || (modifyDate ? 'ModifyDate' : '') },
+            message: `Stripped Capture Metadata: Original capture timestamp is missing, but post-processing indicators are present.`
+        });
+    }
+
+    return alerts;
+}
+
+

@@ -51,6 +51,34 @@
               <button class="lang-option" data-lang="ar">العربية</button>
             </div>
           </div>
+          <div class="identity-settings-container" id="identity-settings-container">
+            <button class="btn btn-secondary" id="identity-settings-toggle" title="Investigator Identity">
+              <i data-lucide="user-cog"></i>
+              <span id="investigator-id-badge" class="font-mono text-xs">ES-STAMP</span>
+            </button>
+            <div class="identity-dropdown hidden" id="identity-dropdown">
+              <div class="identity-card-header">
+                <i data-lucide="shield-check"></i>
+                <span data-i18n="identity_title">Forensic Identity Stamp</span>
+              </div>
+              <div class="identity-card-body">
+                <p class="text-xs text-muted" data-i18n="stamp_desc">This unique cryptographic ID is used to sign all forensic manifests exported in this session.</p>
+                <div class="identity-id-display font-mono" id="identity-id-display">ES-STAMP-XXXXX</div>
+                <div class="identity-actions">
+                  <button class="btn btn-sm btn-outline-large" id="backup-identity-btn" title="Backup Identity Key">
+                    <i data-lucide="download"></i> Backup Key
+                  </button>
+                  <button class="btn btn-sm btn-outline-large" id="restore-identity-btn" title="Restore Identity Key">
+                    <i data-lucide="upload"></i> Restore Key
+                    <input type="file" id="restore-identity-file" accept=".key" class="hidden-input" />
+                  </button>
+                </div>
+                <button class="btn btn-sm btn-text text-danger mt-2" id="reset-identity-btn" data-i18n="regenerate_identity">
+                  <i data-lucide="refresh-cw"></i> Regenerate Identity
+                </button>
+              </div>
+            </div>
+          </div>
           <div class="export-dropdown hidden" id="export-container">
             <button class="btn btn-secondary" id="export-main-btn" data-i18n="export_report" title="Export Report">
                 <i data-lucide="download"></i> <span>Export Report</span>
@@ -59,6 +87,7 @@
                 <button data-format="pdf" data-i18n="pdf_doc"><i data-lucide="file-text"></i> PDF Document</button>
                 <button data-format="md" data-i18n="md_file"><i data-lucide="file-code"></i> Markdown File</button>
                 <button data-format="json" data-i18n="json_file"><i data-lucide="braces"></i> JSON Data File</button>
+                <button data-format="manifest" data-i18n="export_signed_manifest"><i data-lucide="file-signature"></i> Signed Manifest</button>
                 <button data-format="csv" data-i18n="csv_dataset"><i data-lucide="table"></i> CSV Dataset</button>
                 <button data-format="clipboard" data-i18n="copy_clipboard"><i data-lucide="copy"></i> Copy to Clipboard</button>
             </div>
@@ -103,6 +132,9 @@
                 </button>
                 <button class="tab-btn" data-tab="history" data-i18n="tab_history">
                   <i data-lucide="history"></i> History
+                </button>
+                <button class="tab-btn" data-tab="verify" data-i18n="tab_verify">
+                  <i data-lucide="shield-alert"></i> Verify Manifest
                 </button>
               </div>
 
@@ -196,24 +228,56 @@
                   </div>
                 </section>
               </div>
+              <div id="tab-verify" class="tab-content">
+                <section id="verify-section" class="verify-section">
+                  <div class="dropzone" id="verify-dropzone">
+                    <input type="file" id="verify-file-input" accept=".json" class="hidden-input" />
+                    <div class="dropzone-content">
+                      <div class="dropzone-icon">
+                        <i data-lucide="file-check"></i>
+                      </div>
+                      <p data-i18n="verify_dropzone_prompt">Drop a signed manifest JSON file here or click to browse</p>
+                      <p class="text-sm text-muted" data-i18n="verify_dropzone_hint">
+                        JSON Manifest Files only (.json)
+                      </p>
+                    </div>
+                  </div>
+                  <div id="verify-result-card" class="verify-result-card hidden">
+                    <!-- Results populated dynamically -->
+                  </div>
+                </section>
+              </div>
             </div>
           </div>
 
           <div class="intro-features">
-            <div class="feature-card">
+            <div class="feature-card col-span-2">
               <div class="feature-icon"><i data-lucide="lock"></i></div>
-              <h3 data-i18n="feature_secure_title">Secure by Design</h3>
-              <p data-i18n="feature_secure_desc">100% local processing. Your sensitive evidence assets never leave your browser, ensuring absolute data privacy and chain of custody.</p>
+              <div class="feature-text">
+                <h3 data-i18n="feature_secure_title">Secure by Design</h3>
+                <p data-i18n="feature_secure_desc">100% local browser processing. No image assets or EXIF tags are ever transmitted to a server, keeping your data confidential.</p>
+              </div>
             </div>
             <div class="feature-card">
-              <div class="feature-icon"><i data-lucide="brain"></i></div>
-              <h3 data-i18n="feature_expert_title">Smart Insights</h3>
-              <p data-i18n="feature_expert_desc">Automated narratives that explain technical data in plain language. Transform raw metadata into meaningful information.</p>
+              <div class="feature-icon"><i data-lucide="shield-alert"></i></div>
+              <div class="feature-text">
+                <h3 data-i18n="feature_spoof_title">Spoofing Protection</h3>
+                <p data-i18n="feature_spoof_desc">Validates assets at the binary level using Magic Bytes signatures. Detects disguised extensions and rejects malicious files.</p>
+              </div>
             </div>
             <div class="feature-card">
-              <div class="feature-icon"><i data-lucide="file-check"></i></div>
-              <h3 data-i18n="feature_report_title">Unified Reporting</h3>
-              <p data-i18n="feature_report_desc">Export cross-asset findings into industry-standard PDF, Markdown, or CSV. Professional reports ready for documentation.</p>
+              <div class="feature-icon"><i data-lucide="activity"></i></div>
+              <div class="feature-text">
+                <h3 data-i18n="feature_integrity_title">Integrity Analysis</h3>
+                <p data-i18n="feature_integrity_desc">Automatically computes file hashes and analyzes metadata for chronological anomalies, tampering, and edit history.</p>
+              </div>
+            </div>
+            <div class="feature-card col-span-2">
+              <div class="feature-icon"><i data-lucide="fingerprint"></i></div>
+              <div class="feature-text">
+                <h3 data-i18n="feature_audit_title">Cryptographic Audits</h3>
+                <p data-i18n="feature_audit_desc">Signs forensic manifests using client-side ECDSA P-256 keys, establishing non-repudiation and verification of evidence.</p>
+              </div>
             </div>
           </div>
         </div>

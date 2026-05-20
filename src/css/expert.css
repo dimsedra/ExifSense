@@ -395,3 +395,86 @@ body.dark-mode #combined-analysis-card .card-header {
     margin-bottom: 6px;
     white-space: nowrap;
 }
+
+/* Narrative Bubble Support for DIV elements (same as P) */
+.expert-narrative-bubble div {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--text-main);
+    margin: 0;
+    font-family: var(--font-sans);
+}
+@media (max-width: 640px) {
+    .expert-narrative-bubble div { font-size: 0.9rem; }
+}
+
+/* Pulsing Tab Badge for Digital Integrity Warnings */
+.tab-badge {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-left: 6px;
+    display: inline-block;
+    flex-shrink: 0;
+}
+.tab-badge.badge-warning {
+    background-color: #ef4444; /* red */
+    box-shadow: 0 0 6px rgba(239, 68, 68, 0.6);
+    animation: badge-pulse 2s infinite;
+}
+.tab-badge.badge-info {
+    background-color: #3b82f6; /* blue */
+}
+@keyframes badge-pulse {
+    0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+    }
+    70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(239, 68, 68, 0);
+    }
+    100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
+    }
+}
+
+/* Integrity Alerts Styling */
+.integrity-alerts-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+.integrity-alerts-list li {
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    line-height: 1.5;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+}
+.integrity-alert-warning {
+    background-color: rgba(239, 68, 68, 0.08);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+}
+body.dark-mode .integrity-alert-warning {
+    background-color: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #f87171;
+}
+.integrity-alert-info {
+    background-color: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+    color: #3b82f6;
+}
+body.dark-mode .integrity-alert-info {
+    background-color: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.3);
+    color: #60a5fa;
+}
