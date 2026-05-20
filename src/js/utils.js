@@ -1,4 +1,4 @@
-import { t, getCurrentLanguage } from './i18n.js';
+import { t, getCurrentLanguage, translatePage } from './i18n.js';
 
 export function generateForensicId(timestamp = Date.now()) {
     const base = timestamp.toString(36).toUpperCase();
@@ -245,6 +245,110 @@ export function showConfirm(options) {
 
     overlay.classList.remove('hidden');
 }
+
+export function showPassphrasePrompt(options) {
+    const {
+        titleKey = 'passphrase_title_backup',
+        messageKey = 'passphrase_desc_backup',
+        confirmText = t('confirm'),
+        cancelText = t('cancel'),
+        onSubmit,
+        onCancel
+    } = options;
+
+    const overlay = document.getElementById('passphrase-modal-overlay');
+    const titleEl = document.getElementById('passphrase-modal-title');
+    const messageEl = document.getElementById('passphrase-modal-message');
+    const inputEl = document.getElementById('passphrase-input');
+    const errorEl = document.getElementById('passphrase-error');
+    const confirmBtn = document.getElementById('passphrase-confirm');
+    const cancelBtn = document.getElementById('passphrase-cancel');
+
+    if (!overlay) return;
+
+    // Update attributes for localization
+    titleEl.setAttribute('data-i18n', titleKey);
+    messageEl.setAttribute('data-i18n', messageKey);
+    confirmBtn.textContent = confirmText;
+    cancelBtn.textContent = cancelText;
+
+    // Translate page to apply localization keys
+    try {
+        translatePage();
+    } catch (e) {
+        console.warn("Failed to translate page:", e);
+    }
+
+    // Reset state
+    inputEl.value = '';
+    errorEl.classList.add('hidden');
+
+    const handleSubmit = () => {
+        const value = inputEl.value.trim();
+        if (!value) {
+            errorEl.textContent = t('passphrase_error_empty') || 'Passphrase cannot be empty.';
+            errorEl.classList.remove('hidden');
+            return;
+        }
+
+        if (onSubmit) {
+            Promise.resolve(onSubmit(value))
+                .then((success) => {
+                    if (success !== false) {
+                        close();
+                    } else {
+                        errorEl.textContent = t('passphrase_error_invalid') || 'Incorrect passphrase. Please try again.';
+                        errorEl.classList.remove('hidden');
+                        inputEl.value = '';
+                        inputEl.focus();
+                    }
+                })
+                .catch((err) => {
+                    console.error("Passphrase submission error:", err);
+                    errorEl.textContent = t('passphrase_error_invalid') || 'Incorrect passphrase. Please try again.';
+                    errorEl.classList.remove('hidden');
+                    inputEl.value = '';
+                    inputEl.focus();
+                });
+        } else {
+            close();
+        }
+    };
+
+    const handleCancel = () => {
+        close();
+        if (onCancel) onCancel();
+    };
+
+    const close = () => {
+        overlay.classList.add('hidden');
+        confirmBtn.removeEventListener('click', handleSubmit);
+        cancelBtn.removeEventListener('click', handleCancel);
+        overlay.removeEventListener('click', handleOverlayClick);
+        inputEl.removeEventListener('keydown', handleKeyDown);
+    };
+
+    const handleOverlayClick = (e) => {
+        if (e.target === overlay) handleCancel();
+    };
+
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter') {
+            handleSubmit();
+        } else if (e.key === 'Escape') {
+            handleCancel();
+        }
+    };
+
+    confirmBtn.addEventListener('click', handleSubmit);
+    cancelBtn.addEventListener('click', handleCancel);
+    overlay.addEventListener('click', handleOverlayClick);
+    inputEl.addEventListener('keydown', handleKeyDown);
+
+    overlay.classList.remove('hidden');
+    inputEl.focus();
+}
+
 
 export async function stripAllMetadata(file) {
     return new Promise((resolve, reject) => {

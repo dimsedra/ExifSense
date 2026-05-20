@@ -152,7 +152,14 @@
         "regenerate_btn": "Buat Ulang",
         "key_regenerate_success": "Identitas kriptografi baru berhasil dibuat!",
         "verify_invalid_manifest": "Gagal membaca file manifest. Pastikan file berupa JSON yang valid dan berisi tanda tangan.",
-        "evidence_matching_updated": "File bukti berhasil diverifikasi terhadap manifest."
+        "evidence_matching_updated": "File bukti berhasil diverifikasi terhadap manifest.",
+        "passphrase_title_backup": "Atur Kata Sandi",
+        "passphrase_desc_backup": "Silakan masukkan kata sandi untuk mengenkripsi cadangan kunci privat Anda.",
+        "passphrase_title_restore": "Masukkan Kata Sandi",
+        "passphrase_desc_restore": "Silakan masukkan kata sandi untuk mendekripsi cadangan kunci privat Anda.",
+        "passphrase_placeholder": "Masukkan kata sandi...",
+        "passphrase_error_empty": "Kata sandi tidak boleh kosong.",
+        "passphrase_error_invalid": "Kata sandi salah. Silakan coba lagi."
     },
     "narratives": {
         "integrity_clean": "Aset ini mempertahankan integritas struktural yang lengkap. Tidak ada anomali kronologis, indikator manipulasi, atau tanda-tanda perangkat lunak pengeditan yang terdeteksi.",

@@ -927,19 +927,37 @@ async function initIdentity() {
     if (elements.backupIdentityBtn) {
         elements.backupIdentityBtn.addEventListener('click', () => {
             const stampId = state.investigatorIdentity.stampId;
-            const keyData = {
-                stampId: stampId,
-                jwkPublic: state.investigatorIdentity.jwkPublic,
-                jwkPrivate: state.investigatorIdentity.jwkPrivate
-            };
-            const json = JSON.stringify(keyData, null, 4);
-            const a = document.createElement('a');
-            const file = new Blob([json], { type: 'application/octet-stream' });
-            a.href = URL.createObjectURL(file);
-            a.download = `ExifSense_${stampId}.key`;
-            a.click();
-            URL.revokeObjectURL(a.href);
-            showToast(t('key_backup_success') || 'Identity Key Backup downloaded successfully.');
+            const jwkPrivate = state.investigatorIdentity.jwkPrivate;
+            const jwkPublic = state.investigatorIdentity.jwkPublic;
+            
+            Utils.showPassphrasePrompt({
+                titleKey: 'passphrase_title_backup',
+                messageKey: 'passphrase_desc_backup',
+                onSubmit: async (passphrase) => {
+                    try {
+                        const encrypted = await Crypto.encryptPrivateJwk(jwkPrivate, passphrase);
+                        const keyData = {
+                            stampId: stampId,
+                            jwkPublic: jwkPublic,
+                            encryptedPrivateJwk: encrypted.ciphertextHex,
+                            salt: encrypted.saltHex,
+                            iv: encrypted.ivHex
+                        };
+                        const json = JSON.stringify(keyData, null, 4);
+                        const a = document.createElement('a');
+                        const file = new Blob([json], { type: 'application/octet-stream' });
+                        a.href = URL.createObjectURL(file);
+                        a.download = `ExifSense_${stampId}.key`;
+                        a.click();
+                        URL.revokeObjectURL(a.href);
+                        showToast(t('key_backup_success') || 'Identity Key Backup downloaded successfully.');
+                        return true;
+                    } catch (err) {
+                        console.error("Encryption failed:", err);
+                        return false;
+                    }
+                }
+            });
         });
     }
 
@@ -958,17 +976,53 @@ async function initIdentity() {
             reader.onload = async (event) => {
                 try {
                     const keyData = JSON.parse(event.target.result);
-                    if (!keyData.stampId || !keyData.jwkPublic || !keyData.jwkPrivate) {
+                    if (!keyData.stampId || !keyData.jwkPublic) {
                         throw new Error("Invalid key file structure.");
                     }
-                    const restored = await Crypto.restoreIdentity(keyData.jwkPrivate, keyData.jwkPublic);
-                    if (restored) {
-                        state.investigatorIdentity = restored;
-                        if (elements.identityBadge) elements.identityBadge.textContent = restored.stampId;
-                        if (elements.identityIdDisplay) elements.identityIdDisplay.textContent = restored.stampId;
-                        showToast(t('key_restore_success') || 'Investigator identity successfully restored!');
+
+                    if (keyData.jwkPrivate) {
+                        // Legacy plaintext restore
+                        const restored = await Crypto.restoreIdentity(keyData.jwkPrivate, keyData.jwkPublic);
+                        if (restored) {
+                            state.investigatorIdentity = restored;
+                            if (elements.identityBadge) elements.identityBadge.textContent = restored.stampId;
+                            if (elements.identityIdDisplay) elements.identityIdDisplay.textContent = restored.stampId;
+                            showToast(t('key_restore_success') || 'Investigator identity successfully restored!');
+                        } else {
+                            throw new Error("Crypto restore failed.");
+                        }
+                    } else if (keyData.encryptedPrivateJwk && keyData.salt && keyData.iv) {
+                        // Encrypted restore
+                        Utils.showPassphrasePrompt({
+                            titleKey: 'passphrase_title_restore',
+                            messageKey: 'passphrase_desc_restore',
+                            onSubmit: async (passphrase) => {
+                                try {
+                                    const decryptedPrivate = await Crypto.decryptPrivateJwk(
+                                        keyData.encryptedPrivateJwk,
+                                        keyData.salt,
+                                        keyData.iv,
+                                        passphrase
+                                    );
+                                    
+                                    const restored = await Crypto.restoreIdentity(decryptedPrivate, keyData.jwkPublic);
+                                    if (restored) {
+                                        state.investigatorIdentity = restored;
+                                        if (elements.identityBadge) elements.identityBadge.textContent = restored.stampId;
+                                        if (elements.identityIdDisplay) elements.identityIdDisplay.textContent = restored.stampId;
+                                        showToast(t('key_restore_success') || 'Investigator identity successfully restored!');
+                                        return true;
+                                    } else {
+                                        return false;
+                                    }
+                                } catch (err) {
+                                    console.warn("Decryption failed:", err);
+                                    return false;
+                                }
+                            }
+                        });
                     } else {
-                        throw new Error("Crypto restore failed.");
+                        throw new Error("Invalid key file structure: missing private key.");
                     }
                 } catch (err) {
                     console.error(err);

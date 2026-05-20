@@ -413,6 +413,27 @@
       </div>
     </div>
 
+    <!-- Passphrase Prompt Modal -->
+    <div id="passphrase-modal-overlay" class="modal-overlay hidden">
+      <div class="modal-card">
+        <div class="modal-icon text-primary">
+          <i data-lucide="key-round"></i>
+        </div>
+        <div class="modal-content">
+          <h3 id="passphrase-modal-title" data-i18n="passphrase_title_backup">Set Passphrase</h3>
+          <p id="passphrase-modal-message" data-i18n="passphrase_desc_backup">Please enter a passphrase to encrypt your private key.</p>
+          <div class="passphrase-input-container" style="margin-bottom: 1.5rem; text-align: left; position: relative;">
+            <input type="password" id="passphrase-input" data-i18n="passphrase_placeholder" placeholder="Enter passphrase..." style="width: 100%; padding: 0.75rem 1rem; border-radius: 8px; border: 1px solid var(--border-color); background: var(--bg-main); color: var(--text-main); font-size: 0.95rem; outline: none; transition: border-color 0.2s;" />
+            <div id="passphrase-error" class="text-danger text-xs mt-2 hidden" style="color: #ef4444; font-weight: 500; font-size: 0.8rem; margin-top: 0.4rem;">Incorrect passphrase. Please try again.</div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-secondary" id="passphrase-cancel" data-i18n="cancel">Cancel</button>
+          <button class="btn btn-primary" id="passphrase-confirm" data-i18n="confirm">Confirm</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Removal Selection Modal -->
     <div id="removal-modal-overlay" class="modal-overlay hidden">
       <div class="modal-card">

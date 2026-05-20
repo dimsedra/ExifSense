@@ -202,3 +202,116 @@ export async function restoreIdentity(privateJwk, publicJwk) {
     const stampId = await calculateInvestigatorId(publicJwk);
     return { privateKey, publicKey, jwkPrivate: privateJwk, jwkPublic: publicJwk, stampId };
 }
+
+/**
+ * Helper to convert an ArrayBuffer to a Hexadecimal string.
+ */
+function bufToHex(buffer) {
+    return Array.from(new Uint8Array(buffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+/**
+ * Helper to convert a Hexadecimal string back to an ArrayBuffer.
+ */
+function hexToBuf(hexString) {
+    const bytes = new Uint8Array(hexString.length / 2);
+    for (let i = 0; i < hexString.length; i += 2) {
+        bytes[i / 2] = parseInt(hexString.substring(i, i + 2), 16);
+    }
+    return bytes.buffer;
+}
+
+/**
+ * Derives a key for encryption from a passphrase using PBKDF2.
+ */
+async function deriveEncryptionKey(passphrase, saltBytes) {
+    const encoder = new TextEncoder();
+    const passphraseBytes = encoder.encode(passphrase);
+    const baseKey = await crypto.subtle.importKey(
+        "raw",
+        passphraseBytes,
+        "PBKDF2",
+        false,
+        ["deriveKey"]
+    );
+    
+    return await crypto.subtle.deriveKey(
+        {
+            name: "PBKDF2",
+            salt: saltBytes,
+            iterations: 100000,
+            hash: "SHA-256"
+        },
+        baseKey,
+        {
+            name: "AES-GCM",
+            length: 256
+        },
+        false,
+        ["encrypt", "decrypt"]
+    );
+}
+
+/**
+ * Encrypts a private JWK key object using a passphrase.
+ * @param {object} jwkPrivate 
+ * @param {string} passphrase 
+ * @returns {Promise<object>} Encrypted object with hex-encoded ciphertext, salt, and iv.
+ */
+export async function encryptPrivateJwk(jwkPrivate, passphrase) {
+    const encoder = new TextEncoder();
+    const jwkString = JSON.stringify(jwkPrivate);
+    const jwkBytes = encoder.encode(jwkString);
+    
+    const saltBytes = crypto.getRandomValues(new Uint8Array(16));
+    const ivBytes = crypto.getRandomValues(new Uint8Array(12));
+    
+    const aesKey = await deriveEncryptionKey(passphrase, saltBytes);
+    
+    const ciphertextBuffer = await crypto.subtle.encrypt(
+        {
+            name: "AES-GCM",
+            iv: ivBytes
+        },
+        aesKey,
+        jwkBytes
+    );
+    
+    return {
+        ciphertextHex: bufToHex(ciphertextBuffer),
+        saltHex: bufToHex(saltBytes),
+        ivHex: bufToHex(ivBytes)
+    };
+}
+
+/**
+ * Decrypts a hex-encoded private JWK key using a passphrase.
+ * @param {string} ciphertextHex 
+ * @param {string} saltHex 
+ * @param {string} ivHex 
+ * @param {string} passphrase 
+ * @returns {Promise<object>} The decrypted jwkPrivate object.
+ */
+export async function decryptPrivateJwk(ciphertextHex, saltHex, ivHex, passphrase) {
+    const ciphertextBytes = hexToBuf(ciphertextHex);
+    const saltBytes = hexToBuf(saltHex);
+    const ivBytes = hexToBuf(ivHex);
+    
+    const aesKey = await deriveEncryptionKey(passphrase, saltBytes);
+    
+    const decryptedBuffer = await crypto.subtle.decrypt(
+        {
+            name: "AES-GCM",
+            iv: ivBytes
+        },
+        aesKey,
+        ciphertextBytes
+    );
+    
+    const decoder = new TextDecoder();
+    const jwkString = decoder.decode(decryptedBuffer);
+    return JSON.parse(jwkString);
+}
+

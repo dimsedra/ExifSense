@@ -152,7 +152,14 @@
         "regenerate_btn": "Regenerate",
         "key_regenerate_success": "New cryptographic identity generated successfully!",
         "verify_invalid_manifest": "Failed to read manifest file. Ensure it is valid JSON and contains signature.",
-        "evidence_matching_updated": "Evidence files verified against manifest."
+        "evidence_matching_updated": "Evidence files verified against manifest.",
+        "passphrase_title_backup": "Set Passphrase",
+        "passphrase_desc_backup": "Please enter a passphrase to encrypt your private key backup.",
+        "passphrase_title_restore": "Enter Passphrase",
+        "passphrase_desc_restore": "Please enter the passphrase to decrypt your private key backup.",
+        "passphrase_placeholder": "Enter passphrase...",
+        "passphrase_error_empty": "Passphrase cannot be empty.",
+        "passphrase_error_invalid": "Incorrect passphrase. Please try again."
     },
     "narratives": {
         "integrity_clean": "This asset retains complete structural integrity. No chronological anomalies, tampering indicators, or editing software signatures were detected.",

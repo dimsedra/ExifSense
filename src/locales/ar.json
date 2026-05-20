@@ -152,7 +152,14 @@
         "regenerate_btn": "تجديد",
         "key_regenerate_success": "تم إنشاء هوية تشفير جديدة بنجاح!",
         "verify_invalid_manifest": "فشل قراءة ملف البيان. تأكد من أنه ملف JSON صالح ويحتوي على توقيع.",
-        "evidence_matching_updated": "تم التحقق من ملفات الأدلة مقابل البيان."
+        "evidence_matching_updated": "تم التحقق من ملفات الأدلة مقابل البيان.",
+        "passphrase_title_backup": "تعيين عبارة المرور",
+        "passphrase_desc_backup": "يرجى إدخال عبارة مرور لتشفير وتأمين النسخة الاحتياطية للمفتاح الخاص بك.",
+        "passphrase_title_restore": "إدخال عبارة المرور",
+        "passphrase_desc_restore": "يرجى إدخال عبارة المرور لفك تشفير النسخة الاحتياطية للمفتاح الخاص بك.",
+        "passphrase_placeholder": "أدخل عبارة المرور...",
+        "passphrase_error_empty": "لا يمكن أن تكون عبارة المرور فارغة.",
+        "passphrase_error_invalid": "عبارة المرور غير صحيحة. يرجى المحاولة مرة أخرى."
     },
     "narratives": {
         "integrity_clean": "يحتفظ هذا الملف بسلامة هيكلية كاملة. لم يتم الكشف عن أي تشوهات زمنية أو مؤشرات تلاعب أو توقيعات برامج تحرير.",
