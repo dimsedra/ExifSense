@@ -142,6 +142,8 @@
         "manifest_asset_missing": "الأصل مفقود من السحب: كان {name} في البيان ولكن لم يتم التحقق منه بعد.",
         "chain_custody": "سلسلة الحيازة الجنائية",
         "export_signed_manifest": "بيان جنائي موقع",
+        "export_section_integrity": "سلامة الأدلة وختمها",
+        "export_section_reports": "التقارير الجنائية",
         "key_backup_success": "تم تحميل نسخة احتياطية من مفتاح الهوية بنجاح.",
         "key_restore_success": "تم استعادة هوية المحقق بنجاح!",
         "key_restore_error": "فشل استعادة مفتاح الهوية. الملف غير صالح.",

@@ -142,6 +142,8 @@
         "manifest_asset_missing": "Aset tidak ada dalam drop: {name} ada di manifest tetapi belum diverifikasi.",
         "chain_custody": "Rantai Penjagaan Forensik",
         "export_signed_manifest": "Manifest Forensik Tertanda",
+        "export_section_integrity": "Penyegelan Bukti & Integritas",
+        "export_section_reports": "Laporan Forensik",
         "key_backup_success": "Cadangan Kunci Identitas berhasil diunduh.",
         "key_restore_success": "Identitas investigator berhasil dipulihkan!",
         "key_restore_error": "Gagal memulihkan kunci identitas. File tidak valid.",

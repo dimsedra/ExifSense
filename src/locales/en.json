@@ -142,6 +142,8 @@
         "manifest_asset_missing": "Asset missing from drop: {name} was in the manifest but has not been verified.",
         "chain_custody": "Forensic Chain of Custody",
         "export_signed_manifest": "Signed Forensic Manifest",
+        "export_section_integrity": "Evidence Sealing & Integrity",
+        "export_section_reports": "Forensic Reports",
         "key_backup_success": "Identity Key Backup downloaded successfully.",
         "key_restore_success": "Investigator identity successfully restored!",
         "key_restore_error": "Failed to restore identity key. Invalid file.",
