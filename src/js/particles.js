@@ -22,10 +22,10 @@ export function initParticles() {
     function getThemeColors() {
         const isDark = document.body.classList.contains('dark-mode');
         return {
-            particle: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(100, 116, 139, 0.25)',
-            line: isDark ? 'rgba(6, 182, 212, 0.08)' : 'rgba(148, 163, 184, 0.12)',
-            mouseLine: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(59, 130, 246, 0.18)',
-            accent: isDark ? 'rgba(6, 182, 212, 0.5)' : 'rgba(59, 130, 246, 0.35)'
+            particle: isDark ? 'rgba(59, 130, 246, 0.4)' : 'rgba(37, 99, 235, 0.4)',
+            line: isDark ? 'rgba(6, 182, 212, 0.08)' : 'rgba(37, 99, 235, 0.25)',
+            mouseLine: isDark ? 'rgba(59, 130, 246, 0.15)' : 'rgba(37, 99, 235, 0.35)',
+            accent: isDark ? 'rgba(6, 182, 212, 0.5)' : 'rgba(37, 99, 235, 0.7)'
         };
     }
 
@@ -88,7 +88,7 @@ export function initParticles() {
                     ctx.beginPath();
                     ctx.moveTo(particles[i].x, particles[i].y);
                     ctx.lineTo(particles[j].x, particles[j].y);
-                    ctx.strokeStyle = colors.line.replace('0.08', (0.08 * alpha).toFixed(3)).replace('0.12', (0.12 * alpha).toFixed(3));
+                    ctx.strokeStyle = colors.line.replace('0.08', (0.08 * alpha).toFixed(3)).replace('0.25', (0.25 * alpha).toFixed(3));
                     ctx.lineWidth = 0.75;
                     ctx.stroke();
                 }
@@ -105,7 +105,7 @@ export function initParticles() {
                     ctx.beginPath();
                     ctx.moveTo(particles[i].x, particles[i].y);
                     ctx.lineTo(mouse.x, mouse.y);
-                    ctx.strokeStyle = colors.mouseLine.replace('0.15', (0.15 * alpha).toFixed(3)).replace('0.18', (0.18 * alpha).toFixed(3));
+                    ctx.strokeStyle = colors.mouseLine.replace('0.15', (0.15 * alpha).toFixed(3)).replace('0.35', (0.35 * alpha).toFixed(3));
                     ctx.lineWidth = 1;
                     ctx.stroke();
                 }
