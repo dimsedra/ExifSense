@@ -7,7 +7,6 @@ import * as Exporter from './export.js';
 import * as UI from './ui.js';
 import { Router } from './router.js';
 import * as Crypto from './crypto.js';
-import { initParticles } from './particles.js';
 
 // DOM Elements
 const elements = {
@@ -17,7 +16,6 @@ const elements = {
     introState: document.getElementById('intro-state'),
     loadingState: document.getElementById('loading-state'),
     dashboardState: document.getElementById('dashboard-state'),
-    themeToggle: document.getElementById('theme-toggle'),
     langSelector: document.getElementById('lang-selector'),
     startAnalysisBtn: document.getElementById('start-analysis-btn'),
     viewHistoryBtn: document.getElementById('view-history-btn'),
@@ -91,7 +89,6 @@ let state = {
 document.addEventListener('DOMContentLoaded', async () => {
     await initI18n();
     initTheme();
-    initParticles();
     initLang();
     initTabs();
     initHistory();
@@ -124,7 +121,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.hash = '#/';
     });
 
-    initGlobalBackground();
     if (window.lucide) lucide.createIcons();
 
     // MOBILE: Scroll nudge — when a forensic <details> expands on a narrow viewport,
@@ -146,37 +142,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, true); // capture phase so it fires even if event stops propagating
 });
 
-// FUNGSI: Menginisialisasi dynamic mouse-glow background pada body secara global
-function initGlobalBackground() {
-    window.addEventListener('mousemove', (e) => {
-        const x = (e.clientX / window.innerWidth) * 100;
-        const y = (e.clientY / window.innerHeight) * 100;
-        document.body.style.setProperty('--mouse-x', `${x}%`);
-        document.body.style.setProperty('--mouse-y', `${y}%`);
-    });
-}
-
 // MODUL: Inisialisasi Tema (Dark/Light Mode)
 // FUNGSI: Menginisialisasi tema aplikasi (dark/light) dari cache
 function initTheme() {
-    const savedTheme = localStorage.getItem('forensic_theme') || 'light';
-    applyTheme(savedTheme);
-
-    elements.themeToggle.addEventListener('click', () => {
-        const isDark = document.body.classList.contains('dark-mode');
-        const newTheme = isDark ? 'light' : 'dark';
-        applyTheme(newTheme);
-        localStorage.setItem('forensic_theme', newTheme);
-    });
+    applyTheme('dark');
 }
 
 // FUNGSI: Mengubah/memperbarui CSS class tema pada elemen body
 function applyTheme(theme) {
-    if (theme === 'dark') {
-        document.body.classList.add('dark-mode');
-    } else {
-        document.body.classList.remove('dark-mode');
-    }
+    document.body.classList.add('dark-mode');
 }
 
 // FUNGSI: Menautkan tombol navigasi atas ke router URL

@@ -1,45 +1,25 @@
 :root {
-    --bg-main: #f9fafb;
-    --bg-card: #ffffff;
-    --bg-surface: #ffffff;
-    --text-main: #111827;
-    --text-muted: #6b7280;
-    --border-color: #e5e7eb;
-    --primary: #2563eb;
-    --primary-hover: #1d4ed8;
-    --secondary: #f3f4f6;
-    --secondary-hover: #e5e7eb;
-    --accent: #0ea5e9;
+    --bg-main: #232425;
+    --bg-card: #2c2d2e;
+    --bg-surface: #2c2d2e;
+    --text-main: #ffffff;
+    --text-muted: #8a8b8c;
+    --border-color: #3e3f40;
+    --primary: #ffffff;
+    --primary-hover: #d4d4d4;
+    --secondary: #343536;
+    --secondary-hover: #474748;
+    --accent: #e5e0d8;
     --radius: 8px;
     --radius-sm: 4px;
     --radius-md: 8px;
     --radius-lg: 12px;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-    --primary-rgb: 37, 99, 235;
-    --bg-card-rgb: 255, 255, 255;
-    --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.5);
+    --shadow-md: 0 4px 8px rgba(0,0,0,0.6);
+    --primary-rgb: 255, 255, 255;
+    --bg-card-rgb: 44, 45, 46;
+    --font-sans: 'Space Grotesk', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     --font-mono: 'JetBrains Mono', monospace;
-    --grid-color: rgba(37, 99, 235, 0.06);
-}
-
-body.dark-mode {
-    --bg-main: #121212;      /* Pure dark grey/neutral black */
-    --bg-card: #1e1e1e;      /* Neutral surface */
-    --bg-surface: #1e1e1e;
-    --text-main: #f5f5f5;    /* Clean white-grey */
-    --text-muted: #a0a0a0;   /* Neutral muted text */
-    --border-color: #333333; /* Dark neutral border */
-    --primary: #004a99;      /* Strong dark neutral blue */
-    --primary-hover: #003d7a;
-    --secondary: #2a2a2a;    /* Neutral secondary */
-    --secondary-hover: #3a3a3a;
-    --accent: #0078d4;
-    --primary-rgb: 0, 74, 153;
-    --bg-card-rgb: 30, 30, 30;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.4);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.6);
-    --grid-color: rgba(255, 255, 255, 0.02);
 }
 
 * {
@@ -64,10 +44,8 @@ html, body {
 
 body {
     background-color: var(--bg-main);
-    background-image: radial-gradient(circle at var(--mouse-x, 50%) var(--mouse-y, 50%), rgba(var(--primary-rgb), 0.08) 0%, transparent 60%),
-                      linear-gradient(var(--grid-color) 1px, transparent 1px),
-                      linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-    background-size: 100% 100%, 48px 48px, 48px 48px;
+    background-image: radial-gradient(rgba(255, 255, 255, 0.03) 1.5px, transparent 1.5px);
+    background-size: 32px 32px;
     background-attachment: fixed;
     color: var(--text-main);
     line-height: 1.5;
@@ -78,17 +56,6 @@ body {
 
 strong {
     font-weight: 600;
-}
-
-#bg-canvas {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    z-index: -1;
-    pointer-events: none;
-    opacity: 0.85;
 }
 
 .hidden { display: none !important; }
@@ -133,9 +100,6 @@ strong {
     color: var(--text-muted);
 }
 
-/* Theme Toggle Icons */
-body.dark-mode .sun-icon { display: none !important; }
-body:not(.dark-mode) .moon-icon { display: none !important; }
 
 /* Language Selector */
 .lang-selector {
@@ -348,36 +312,20 @@ body:not(.dark-mode) .moon-icon { display: none !important; }
 }
 
 .export-menu button.btn-signed-manifest {
-    background: rgba(37, 99, 235, 0.05);
-    border: 1px dashed rgba(37, 99, 235, 0.25);
-    color: var(--primary);
+    background: rgba(229, 224, 216, 0.06);
+    border: 1px dashed rgba(229, 224, 216, 0.25);
+    color: var(--accent);
     margin-top: 0.2rem;
     margin-bottom: 0.2rem;
 }
 
 .export-menu button.btn-signed-manifest i, 
 .export-menu button.btn-signed-manifest svg {
-    color: var(--primary);
+    color: var(--accent);
 }
 
 .export-menu button.btn-signed-manifest:hover {
-    background: rgba(37, 99, 235, 0.1);
-    border-color: var(--primary);
-}
-
-body.dark-mode .export-menu button.btn-signed-manifest {
-    background: rgba(14, 165, 233, 0.06);
-    border: 1px dashed rgba(14, 165, 233, 0.25);
-    color: var(--accent);
-}
-
-body.dark-mode .export-menu button.btn-signed-manifest i, 
-body.dark-mode .export-menu button.btn-signed-manifest svg {
-    color: var(--accent);
-}
-
-body.dark-mode .export-menu button.btn-signed-manifest:hover {
-    background: rgba(14, 165, 233, 0.12);
+    background: rgba(229, 224, 216, 0.12);
     border-color: var(--accent);
 }
 
@@ -449,8 +397,8 @@ body.dark-mode .export-menu button.btn-signed-manifest:hover {
 
 .mode-btn.active {
     background: var(--primary);
-    color: white;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+    color: var(--bg-main);
+    box-shadow: 0 4px 12px rgba(229, 224, 216, 0.15);
 }
 
 .mode-btn:hover:not(.active) {
@@ -1013,13 +961,14 @@ input[type="checkbox"] {
     bottom: 2rem;
     left: 50%;
     transform: translateX(-50%) translateY(100px);
-    background-color: #1e293b;
-    color: #ffffff;
+    background-color: var(--secondary);
+    color: var(--text-main);
+    border: 1px solid var(--border-color);
     padding: 0.75rem 1.5rem;
     border-radius: 9999px;
     font-size: 0.875rem;
     font-weight: 500;
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: var(--shadow-md);
     z-index: 2000;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
     opacity: 0;
@@ -1032,10 +981,6 @@ input[type="checkbox"] {
 .toast-notification.show {
     transform: translateX(-50%) translateY(0);
     opacity: 1;
-}
-
-body.dark-mode .toast-notification {
-    background-color: var(--primary);
 }
 /* Toast Notification */
 .toast-container {
