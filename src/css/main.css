@@ -631,13 +631,13 @@ strong {
 }
 
 input[type="checkbox"]:checked ~ .switch-slider {
-    background-color: var(--primary);
-    border-color: var(--primary);
+    background-color: var(--accent);
+    border-color: var(--accent);
 }
 
 input[type="checkbox"]:checked ~ .switch-slider::before {
     transform: translateX(14px);
-    background-color: white;
+    background-color: var(--bg-main);
 }
 
 input[type="checkbox"] {
@@ -949,7 +949,7 @@ input[type="checkbox"] {
         min-width: 120px;
         text-align: center;
         background: var(--primary);
-        color: white;
+        color: var(--bg-main);
         padding: 0.4rem 0.8rem;
         font-size: 0.75rem;
     }
