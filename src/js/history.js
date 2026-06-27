@@ -31,11 +31,13 @@ export async function createThumbnail(file) {
     });
 }
 
-export function saveSession(assets) {
+export function saveSession(assets, meta = {}) {
     if (!assets || assets.length === 0) return;
     
     const history = getHistory();
     const firstAsset = assets[0];
+    
+    const { isSanitized, sanitizeOptions } = meta;
     
     const session = {
         id: Date.now(),
@@ -43,6 +45,8 @@ export function saveSession(assets) {
         date: new Date().toISOString(),
         isBatch: assets.length > 1,
         assetCount: assets.length,
+        isSanitized: !!isSanitized,
+        sanitizeOptions: sanitizeOptions || null,
         // Save minimal data to avoid localStorage limits
         assets: assets.map(a => ({
             id: a.id,
@@ -54,12 +58,16 @@ export function saveSession(assets) {
             thumbUrl: a.thumbUrl,
             sha256: a.sha256,
             sha1: a.sha1,
-            integrityAlerts: a.integrityAlerts
+            integrityAlerts: a.integrityAlerts,
+            isSanitized: a.isSanitized,
+            sanitizeOptions: a.sanitizeOptions
         })),
         mainThumb: firstAsset.thumbUrl,
-        sessionTitle: assets.length > 1 
-            ? t('history_more', {name: firstAsset.fileName, n: assets.length - 1}) 
-            : firstAsset.fileName
+        sessionTitle: isSanitized
+            ? t('sanitized_session_title', {name: firstAsset.fileName})
+            : (assets.length > 1 
+                ? t('history_more', {name: firstAsset.fileName, n: assets.length - 1}) 
+                : firstAsset.fileName)
     };
     
     history.unshift(session);
@@ -122,13 +130,26 @@ export function renderHistoryItems(container, query = '', filter = 'all', onLoad
     }
     
     container.innerHTML = '';
+
+    function getSanitizeRemovedLabel(sanitizeOptions) {
+        if (!sanitizeOptions) return '';
+        const labels = [];
+        if (sanitizeOptions.gps) labels.push('GPS');
+        if (sanitizeOptions.device) labels.push(t('sanitized_device_short') || 'Device');
+        if (sanitizeOptions.camera) labels.push(t('sanitized_camera_short') || 'Camera');
+        if (sanitizeOptions.date) labels.push(t('sanitized_date_short') || 'Date');
+        return labels.join(', ');
+    }
+
     filtered.forEach(item => {
         const card = document.createElement('div');
-        card.className = `history-card ${item.isBatch ? 'batch-item' : ''}`;
+        const isSanitized = item.isSanitized;
+        card.className = `history-card ${item.isBatch ? 'batch-item' : ''} ${isSanitized ? 'sanitized-item' : ''}`;
         card.innerHTML = `
             <div class="history-thumb">
                 <img src="${item.mainThumb}" alt="${item.sessionTitle}">
                 ${item.isBatch ? `<div class="batch-badge"><i data-lucide="layers"></i> ${item.assetCount}</div>` : ''}
+                ${isSanitized ? `<div class="sanitized-badge"><i data-lucide="shield-off"></i></div>` : ''}
             </div>
             <div class="history-info">
                 <div class="history-name">${Utils.escapeHTML(item.sessionTitle)}</div>
@@ -136,7 +157,10 @@ export function renderHistoryItems(container, query = '', filter = 'all', onLoad
                     <span class="history-date">
                         ${new Date(item.date).toLocaleDateString(getCurrentLanguage() === 'id' ? 'id-ID' : (getCurrentLanguage() === 'ar' ? 'ar-SA' : 'en-GB'))} • ${new Date(item.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                    <span>${item.isBatch ? t('asset_count', {n: item.assetCount}) : Utils.escapeHTML(item.assets[0]?.exifData?.Make || t('history_unknown_device'))}</span>
+                    ${isSanitized
+                        ? `<span class="sanitized-meta"><i data-lucide="trash-2"></i> ${t('history_sanitized_badge')}${item.sanitizeOptions ? `: ${Utils.escapeHTML(getSanitizeRemovedLabel(item.sanitizeOptions))}` : ''}</span>`
+                        : `<span>${item.isBatch ? t('asset_count', {n: item.assetCount}) : Utils.escapeHTML(item.assets[0]?.exifData?.Make || t('history_unknown_device'))}</span>`
+                    }
                 </div>
             </div>
             <button class="history-delete-btn" title="${t('history_delete_title')}" data-id="${item.id}">

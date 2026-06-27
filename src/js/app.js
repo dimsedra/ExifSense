@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initToast();
     initCopyHash();
     initParticles();
-    initSanitizer(state, elements, switchState);
+    initSanitizer(state, elements, switchState, handleSanitizedAsset);
     
     elements.startAnalysisBtn.addEventListener('click', () => {
         switchTab('upload');
@@ -703,6 +703,19 @@ function loadFromHistory(session) {
     state.activeAssetIndex = 0;
     state.forensicId = session.forensicId;
     renderMultiAssetDashboard();
+    Router.navigate('#/dashboard');
+}
+
+// FUNGSI: Callback setelah sanitasi — simpan ke histori & tampilkan di dashboard
+async function handleSanitizedAsset(sanitizedAsset, sanitizeOptions) {
+    const session = History.saveSession([sanitizedAsset], {
+        isSanitized: true,
+        sanitizeOptions
+    });
+    state.forensicId = session.forensicId;
+    state.assets = [sanitizedAsset];
+    state.activeAssetIndex = 0;
+    await renderMultiAssetDashboard();
     Router.navigate('#/dashboard');
 }
 

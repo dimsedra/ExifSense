@@ -1,4 +1,5 @@
 import * as Utils from './utils.js';
+import * as History from './history.js';
 import { t } from './i18n.js';
 import { Router } from './router.js';
 
@@ -9,6 +10,7 @@ export function isSanitizerActive() {
 let state = null;
 let elements = null;
 let switchStateFn = null;
+let onSanitizedFn = null;
 
 let activeFile = null;
 let activeExif = null;
@@ -47,10 +49,11 @@ const sanitizerElements = {
     downloadBtn: document.getElementById('sanitize-download-btn')
 };
 
-export function initSanitizer(appState, appElements, switchState) {
+export function initSanitizer(appState, appElements, switchState, onSanitized) {
     state = appState;
     elements = appElements;
     switchStateFn = switchState;
+    onSanitizedFn = onSanitized;
     
     // Register event listeners
     if (sanitizerElements.presetMaxPrivacy) {
@@ -321,20 +324,40 @@ async function executeSanitization() {
         
         Utils.downloadBlob(cleanedBlob, activeFile.name);
         
-        // Show success confirm
-        Utils.showConfirm({
-            title: t('sanitization_complete_title') || 'Metadata Cleaned!',
-            message: t('sanitization_complete_msg') || 'The cleaned photo has been downloaded successfully to your computer.',
-            confirmText: t('done') || 'Done',
-            type: 'info',
-            onConfirm: () => {
-                Router.navigate(state.assets && state.assets.length > 0 ? '#/dashboard' : '#/');
-            }
-        });
+        // --- Create sanitized asset for history + dashboard ---
+        const cleanedFile = new File([cleanedBlob], activeFile.name, { type: activeFile.type || 'image/jpeg' });
+        
+        const parseOptions = { tiff: true, xmp: true, icc: true, iptc: true, jfif: true, ihdr: true, gps: true };
+        const remainingExif = await exifr.parse(cleanedFile, parseOptions);
+        const thumbUrl = await History.createThumbnail(cleanedFile);
+        const sha256 = await Utils.calculateFileHash(cleanedFile, 'SHA-256');
+        const sha1 = await Utils.calculateFileHash(cleanedFile, 'SHA-1');
+        
+        const sanitizedAsset = {
+            id: Date.now() + Math.random(),
+            fileName: activeFile.name,
+            fileObject: cleanedFile,
+            fileSize: cleanedFile.size,
+            fileType: cleanedFile.type,
+            fileDate: Date.now(),
+            exifData: remainingExif || {},
+            thumbUrl: thumbUrl,
+            locationData: null,
+            sha256,
+            sha1,
+            isSanitized: true,
+            sanitizeOptions: options,
+            integrityAlerts: []
+        };
+        sanitizedAsset.integrityAlerts = Utils.analyzeFileIntegrity(sanitizedAsset);
+        
+        if (onSanitizedFn) {
+            onSanitizedFn(sanitizedAsset, options);
+        }
     } catch (err) {
         console.error("Sanitization failed:", err);
+        if (switchStateFn) switchStateFn('sanitize');
         alert(t('err_sanitize_failed') || 'Failed to clean metadata. Please try again.');
-        Router.navigate('#/sanitize');
     }
 }
 
