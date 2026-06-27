@@ -17,13 +17,14 @@ const sanitizerElements = {
     mapCard: document.getElementById('sanitize-map-card'),
     mapDiv: document.getElementById('sanitize-map'),
     privacyOverlay: document.getElementById('sanitize-privacy-overlay'),
+    previewContainer: document.getElementById('sanitize-metadata-preview-container'),
     
     // Presets
     presetMaxPrivacy: document.getElementById('preset-max-privacy'),
     presetPhotoShare: document.getElementById('preset-photo-share'),
     presetLocationOnly: document.getElementById('preset-location-only'),
     
-    // Toggles
+    // Toggles (OFF = KEEP / ON = REMOVE)
     toggleGps: document.getElementById('sanitize-toggle-gps'),
     toggleDevice: document.getElementById('sanitize-toggle-device'),
     toggleCamera: document.getElementById('sanitize-toggle-camera'),
@@ -111,10 +112,10 @@ export async function startSanitizerStudio(file, exifData) {
     // 4. Initialize Map if GPS exists
     initSanitizerMap();
     
-    // 5. Default Toggle States (start checked = KEEP)
+    // 5. Default Toggle States (start checked = false -> KEEP)
     resetToggles();
     
-    // 6. Update Peta & Overlay
+    // 6. Update Peta & Overlay & Render Metadata
     updateVisuals();
     
     // 7. Transition view
@@ -124,31 +125,29 @@ export async function startSanitizerStudio(file, exifData) {
 }
 
 function resetToggles() {
-    // If no GPS, disable and uncheck GPS toggle
+    // Default: OFF (unchecked) meaning KEEP. ON (checked) means REMOVE.
+    // If no data exists, disable the toggle.
     const hasGPS = activeExif.latitude !== undefined && activeExif.longitude !== undefined;
     if (sanitizerElements.toggleGps) {
-        sanitizerElements.toggleGps.checked = hasGPS;
+        sanitizerElements.toggleGps.checked = false;
         sanitizerElements.toggleGps.disabled = !hasGPS;
     }
     
-    // Device toggle
     const hasDevice = activeExif.Make || activeExif.Model;
     if (sanitizerElements.toggleDevice) {
-        sanitizerElements.toggleDevice.checked = hasDevice;
+        sanitizerElements.toggleDevice.checked = false;
         sanitizerElements.toggleDevice.disabled = !hasDevice;
     }
     
-    // Camera toggle
     const hasCamera = activeExif.ApertureValue !== undefined || activeExif.ISO !== undefined || activeExif.ExposureTime !== undefined || activeExif.FocalLength !== undefined;
     if (sanitizerElements.toggleCamera) {
-        sanitizerElements.toggleCamera.checked = hasCamera;
+        sanitizerElements.toggleCamera.checked = false;
         sanitizerElements.toggleCamera.disabled = !hasCamera;
     }
     
-    // Date toggle
     const hasDate = activeExif.DateTimeOriginal || activeExif.DateTimeDigitized || activeExif.DateTime;
     if (sanitizerElements.toggleDate) {
-        sanitizerElements.toggleDate.checked = hasDate;
+        sanitizerElements.toggleDate.checked = false;
         sanitizerElements.toggleDate.disabled = !hasDate;
     }
 }
@@ -243,38 +242,43 @@ function initSanitizerMap() {
 }
 
 function updateVisuals() {
-    const isGpsChecked = sanitizerElements.toggleGps ? sanitizerElements.toggleGps.checked : false;
+    // Checked (true) means REMOVE. Unchecked (false) means KEEP.
+    const isGpsRemoveChecked = sanitizerElements.toggleGps ? sanitizerElements.toggleGps.checked : false;
     
     if (sanitizerElements.mapDiv) {
-        if (isGpsChecked) {
+        if (!isGpsRemoveChecked) { // Not checked = KEEP = Show map normal
             sanitizerElements.mapDiv.classList.remove('map-blurred');
             if (sanitizerElements.privacyOverlay) sanitizerElements.privacyOverlay.classList.add('hidden');
             if (sanitizeMap) {
                 setTimeout(() => sanitizeMap.invalidateSize(), 50);
             }
-        } else {
+        } else { // Checked = REMOVE = Blur map & show gembok
             sanitizerElements.mapDiv.classList.add('map-blurred');
             if (sanitizerElements.privacyOverlay) sanitizerElements.privacyOverlay.classList.remove('hidden');
         }
     }
+    
+    // Redraw reactive metadata preview
+    renderReactiveMetadata();
 }
 
 function applyPreset(presetName) {
+    // Checked (true) = REMOVE, Unchecked (false) = KEEP
     if (presetName === 'max-privacy') {
-        if (sanitizerElements.toggleGps && !sanitizerElements.toggleGps.disabled) sanitizerElements.toggleGps.checked = false;
-        if (sanitizerElements.toggleDevice && !sanitizerElements.toggleDevice.disabled) sanitizerElements.toggleDevice.checked = false;
-        if (sanitizerElements.toggleCamera && !sanitizerElements.toggleCamera.disabled) sanitizerElements.toggleCamera.checked = false;
-        if (sanitizerElements.toggleDate && !sanitizerElements.toggleDate.disabled) sanitizerElements.toggleDate.checked = false;
-    } else if (presetName === 'photo-share') {
-        if (sanitizerElements.toggleGps && !sanitizerElements.toggleGps.disabled) sanitizerElements.toggleGps.checked = false;
+        if (sanitizerElements.toggleGps && !sanitizerElements.toggleGps.disabled) sanitizerElements.toggleGps.checked = true;
         if (sanitizerElements.toggleDevice && !sanitizerElements.toggleDevice.disabled) sanitizerElements.toggleDevice.checked = true;
         if (sanitizerElements.toggleCamera && !sanitizerElements.toggleCamera.disabled) sanitizerElements.toggleCamera.checked = true;
-        if (sanitizerElements.toggleDate && !sanitizerElements.toggleDate.disabled) sanitizerElements.toggleDate.checked = false;
-    } else if (presetName === 'location-only') {
+        if (sanitizerElements.toggleDate && !sanitizerElements.toggleDate.disabled) sanitizerElements.toggleDate.checked = true;
+    } else if (presetName === 'photo-share') {
         if (sanitizerElements.toggleGps && !sanitizerElements.toggleGps.disabled) sanitizerElements.toggleGps.checked = true;
         if (sanitizerElements.toggleDevice && !sanitizerElements.toggleDevice.disabled) sanitizerElements.toggleDevice.checked = false;
         if (sanitizerElements.toggleCamera && !sanitizerElements.toggleCamera.disabled) sanitizerElements.toggleCamera.checked = false;
-        if (sanitizerElements.toggleDate && !sanitizerElements.toggleDate.disabled) sanitizerElements.toggleDate.checked = false;
+        if (sanitizerElements.toggleDate && !sanitizerElements.toggleDate.disabled) sanitizerElements.toggleDate.checked = true;
+    } else if (presetName === 'location-only') {
+        if (sanitizerElements.toggleGps && !sanitizerElements.toggleGps.disabled) sanitizerElements.toggleGps.checked = false;
+        if (sanitizerElements.toggleDevice && !sanitizerElements.toggleDevice.disabled) sanitizerElements.toggleDevice.checked = true;
+        if (sanitizerElements.toggleCamera && !sanitizerElements.toggleCamera.disabled) sanitizerElements.toggleCamera.checked = true;
+        if (sanitizerElements.toggleDate && !sanitizerElements.toggleDate.disabled) sanitizerElements.toggleDate.checked = true;
     }
     updateVisuals();
 }
@@ -289,13 +293,12 @@ function handleCancel() {
 async function executeSanitization() {
     if (!activeFile) return;
     
-    // Toggle checked means KEEP. Toggle UNCHECKED means STRIP.
-    // removalOptions requires true if we want to REMOVE/STRIP.
+    // Checked (true) means REMOVE/STRIP.
     const options = {
-        gps: sanitizerElements.toggleGps ? !sanitizerElements.toggleGps.checked : false,
-        device: sanitizerElements.toggleDevice ? !sanitizerElements.toggleDevice.checked : false,
-        camera: sanitizerElements.toggleCamera ? !sanitizerElements.toggleCamera.checked : false,
-        date: sanitizerElements.toggleDate ? !sanitizerElements.toggleDate.checked : false
+        gps: sanitizerElements.toggleGps ? sanitizerElements.toggleGps.checked : false,
+        device: sanitizerElements.toggleDevice ? sanitizerElements.toggleDevice.checked : false,
+        camera: sanitizerElements.toggleCamera ? sanitizerElements.toggleCamera.checked : false,
+        date: sanitizerElements.toggleDate ? sanitizerElements.toggleDate.checked : false
     };
     
     if (switchStateFn) {
@@ -304,7 +307,7 @@ async function executeSanitization() {
     
     try {
         let cleanedBlob;
-        // If all are checked to be removed, run stripAllMetadata directly
+        // If all options are checked to be removed, run stripAllMetadata directly
         const stripAll = options.gps && options.device && options.camera && options.date;
         
         if (stripAll) {
@@ -333,5 +336,149 @@ async function executeSanitization() {
         if (switchStateFn) {
             switchStateFn('sanitize');
         }
+    }
+}
+
+function renderReactiveMetadata() {
+    if (!sanitizerElements.previewContainer) return;
+    sanitizerElements.previewContainer.innerHTML = '';
+    
+    const categorized = Utils.categorizeExif(activeExif);
+    const items = [];
+    
+    // Determine which toggles are checked (checked = REMOVE)
+    const removeGps = sanitizerElements.toggleGps ? sanitizerElements.toggleGps.checked : false;
+    const removeDevice = sanitizerElements.toggleDevice ? sanitizerElements.toggleDevice.checked : false;
+    const removeCamera = sanitizerElements.toggleCamera ? sanitizerElements.toggleCamera.checked : false;
+    const removeDate = sanitizerElements.toggleDate ? sanitizerElements.toggleDate.checked : false;
+    
+    for (const [category, props] of Object.entries(categorized)) {
+        const catKey = Utils.getCategoryKey(category);
+        const isImportant = ['Device Hardware', 'Exposure Settings', 'Optics & Lens', 'Image Quality', 'Timeline & Date'].includes(category);
+        const isSecondary = ['Standards & Info', 'Miscellaneous'].includes(category);
+        
+        // Only render tabs that contain properties in this file
+        if (Object.keys(props).length === 0) continue;
+        
+        // Check if this entire category is flagged for removal
+        let isCategoryRemoved = false;
+        if (category === 'Geospatial' && removeGps) isCategoryRemoved = true;
+        if (category === 'Device Hardware' && removeDevice) isCategoryRemoved = true;
+        if (['Exposure Settings', 'Optics & Lens', 'Image Quality'].includes(category) && removeCamera) isCategoryRemoved = true;
+        if (category === 'Timeline & Date' && removeDate) isCategoryRemoved = true;
+        
+        items.push({
+            category,
+            props,
+            key: catKey,
+            isImportant,
+            isSecondary,
+            isRemoved: isCategoryRemoved,
+            icon: Utils.getCategoryIcon(category)
+        });
+    }
+    
+    if (items.length === 0) {
+        sanitizerElements.previewContainer.innerHTML = `
+            <div class="text-muted" style="padding: 24px; text-align: center; opacity: 0.7;">
+                ${t('no_metadata_tags') || 'No metadata tags found'}
+            </div>
+        `;
+        return;
+    }
+    
+    const tabsWrapper = document.createElement('div');
+    tabsWrapper.className = 'tabs-wrapper';
+    
+    const tabsContainer = document.createElement('div');
+    tabsContainer.className = 'expert-tabs-container metadata-tabs';
+    tabsContainer.style.borderBottom = '1px solid var(--border-color)';
+    tabsContainer.style.padding = '0.5rem 1rem 0';
+    
+    const contentContainer = document.createElement('div');
+    contentContainer.className = 'panes-container';
+    
+    items.forEach((item, index) => {
+        const translatedCategory = t(item.key) || item.category;
+        
+        // Tab Button
+        const btn = document.createElement('button');
+        btn.className = `expert-tab-btn ${index === 0 ? 'active' : ''}`;
+        btn.dataset.id = `meta-${item.key}`;
+        btn.style.position = 'relative';
+        
+        let tabLabelHtml = `
+            <i data-lucide="${item.icon}"></i>
+            <span>${translatedCategory}</span>
+        `;
+        
+        if (item.isRemoved) {
+            tabLabelHtml += `
+                <span style="position: absolute; top: 4px; right: 4px; width: 6px; height: 6px; background-color: #ef4444; border-radius: 50%;"></span>
+            `;
+        }
+        
+        btn.innerHTML = tabLabelHtml;
+        tabsContainer.appendChild(btn);
+        
+        // Tab Pane
+        const pane = document.createElement('div');
+        pane.className = `expert-tab-pane ${index === 0 ? 'active' : ''}`;
+        
+        const keys = Object.keys(item.props);
+        
+        const dataGridHtml = keys.sort().map(key => {
+            const formattedLabel = Utils.formatLabel(key);
+            const formattedValue = Utils.formatValue(key, item.props[key]);
+            
+            if (item.isRemoved) {
+                return `
+                    <div class="data-item" style="opacity: 0.55;">
+                        <div class="data-label" style="text-decoration: line-through; opacity: 0.7;">${Utils.escapeHTML(formattedLabel)}</div>
+                        <div class="data-value" style="text-decoration: line-through; display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <span>${Utils.escapeHTML(formattedValue)}</span>
+                            <span class="badge" style="background-color: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; text-decoration: none !important; display: inline-block;">${t('status_removed') || 'Removed'}</span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="data-item">
+                        <div class="data-label">${Utils.escapeHTML(formattedLabel)}</div>
+                        <div class="data-value" style="display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                            <span>${Utils.escapeHTML(formattedValue)}</span>
+                            <span class="badge" style="background-color: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; display: inline-block;">${t('status_kept') || 'Kept'}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }).join('');
+        
+        pane.innerHTML = `
+            <div class="card-body" style="padding: 1.25rem;">
+                <div class="data-grid">
+                    ${dataGridHtml}
+                </div>
+            </div>
+        `;
+        
+        contentContainer.appendChild(pane);
+        
+        btn.addEventListener('click', () => {
+            tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
+            contentContainer.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
+            
+            btn.classList.add('active');
+            pane.classList.add('active');
+        });
+    });
+    
+    tabsWrapper.appendChild(tabsContainer);
+    tabsWrapper.appendChild(contentContainer);
+    sanitizerElements.previewContainer.appendChild(tabsWrapper);
+    
+    // Trigger Lucide icons rendering
+    if (window.lucide) {
+        window.lucide.createIcons();
     }
 }

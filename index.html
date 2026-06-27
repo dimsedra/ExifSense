@@ -407,11 +407,11 @@
                   <!-- GPS Toggle -->
                   <div class="sanitize-control-item" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
                     <div>
-                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="cat_gps_removal">Location Information (GPS)</div>
+                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="cat_gps_removal">Remove Location Information (GPS)</div>
                       <div class="text-xs text-muted" id="sanitize-gps-details">No coordinates found</div>
                     </div>
                     <label class="switch-control">
-                      <input type="checkbox" id="sanitize-toggle-gps" checked>
+                      <input type="checkbox" id="sanitize-toggle-gps">
                       <span class="switch-slider"></span>
                     </label>
                   </div>
@@ -419,11 +419,11 @@
                   <!-- Device Toggle -->
                   <div class="sanitize-control-item" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
                     <div>
-                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="cat_device_removal">Device Information</div>
+                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="cat_device_removal">Remove Device Information</div>
                       <div class="text-xs text-muted" id="sanitize-device-details">No device manufacturer or model info found</div>
                     </div>
                     <label class="switch-control">
-                      <input type="checkbox" id="sanitize-toggle-device" checked>
+                      <input type="checkbox" id="sanitize-toggle-device">
                       <span class="switch-slider"></span>
                     </label>
                   </div>
@@ -431,11 +431,11 @@
                   <!-- Camera Settings Toggle -->
                   <div class="sanitize-control-item" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
                     <div>
-                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="cat_camera_removal">Camera Settings & Exposure</div>
+                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="cat_camera_removal">Remove Camera Settings & Exposure</div>
                       <div class="text-xs text-muted" id="sanitize-camera-details">No aperture, ISO, shutter speed, or lens data found</div>
                     </div>
                     <label class="switch-control">
-                      <input type="checkbox" id="sanitize-toggle-camera" checked>
+                      <input type="checkbox" id="sanitize-toggle-camera">
                       <span class="switch-slider"></span>
                     </label>
                   </div>
@@ -443,15 +443,26 @@
                   <!-- Date & Time Toggle -->
                   <div class="sanitize-control-item" style="display: flex; justify-content: space-between; align-items: center;">
                     <div>
-                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="sanitize_toggle_date">Date & Time Taken</div>
+                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="sanitize_toggle_date">Remove Date & Time Taken</div>
                       <div class="text-xs text-muted" id="sanitize-date-details">No timestamp found</div>
                     </div>
                     <label class="switch-control">
-                      <input type="checkbox" id="sanitize-toggle-date" checked>
+                      <input type="checkbox" id="sanitize-toggle-date">
                       <span class="switch-slider"></span>
                     </label>
                   </div>
                 </div>
+              </div>
+            </div>
+
+            <!-- Reactive Metadata Preview Card -->
+            <div class="card" id="sanitize-metadata-preview-card" style="margin-top: 1.5rem;">
+              <div class="card-header">
+                <i data-lucide="eye"></i>
+                <h3 data-i18n="metadata_preview">Metadata Preview</h3>
+              </div>
+              <div class="card-body" id="sanitize-metadata-preview-container" style="padding: 0;">
+                <!-- Populated dynamically with reactive tabs -->
               </div>
             </div>
 

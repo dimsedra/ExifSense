@@ -166,12 +166,15 @@
         "preset_photo_share": "Photographer Share",
         "preset_location_only": "Location Only",
         "selective_controls_title": "Selective Metadata Controls",
-        "sanitize_toggle_date": "Date & Time Taken",
+        "sanitize_toggle_date": "Remove Date & Time Taken",
         "location_hidden": "Location Info Removed",
         "no_location_found": "No location coordinates found",
         "no_device_found": "No device manufacturer or model info found",
         "no_exposure_found": "No camera exposure settings found",
-        "no_date_found": "No timestamp found"
+        "no_date_found": "No timestamp found",
+        "metadata_preview": "Metadata Preview (Real-Time)",
+        "status_removed": "Will Be Removed",
+        "status_kept": "Kept"
     },
     "narratives": {
         "integrity_clean": "This photo retains its original date and location details. No common indicators of external editing tools were found in the basic metadata.",

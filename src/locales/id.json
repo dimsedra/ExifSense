@@ -166,12 +166,15 @@
         "preset_photo_share": "Ramah Fotografer",
         "preset_location_only": "Hanya Lokasi",
         "selective_controls_title": "Kontrol Selektif Metadata",
-        "sanitize_toggle_date": "Tanggal & Waktu Pemotretan",
+        "sanitize_toggle_date": "Hapus Tanggal & Waktu Pemotretan",
         "location_hidden": "Info Lokasi Dihapus",
         "no_location_found": "Tidak ditemukan koordinat lokasi",
         "no_device_found": "Tidak ditemukan info produsen/model perangkat",
         "no_exposure_found": "Tidak ditemukan pengaturan cahaya (ISO/aperture/rana)",
-        "no_date_found": "Tidak ditemukan stempel waktu"
+        "no_date_found": "Tidak ditemukan stempel waktu",
+        "metadata_preview": "Pratinjau Metadata (Real-Time)",
+        "status_removed": "Akan Dihapus",
+        "status_kept": "Dipertahankan"
     },
     "narratives": {
         "integrity_clean": "Foto ini mempertahankan informasi tanggal dan lokasi aslinya. Tidak ada indikasi umum dari penggunaan aplikasi edit eksternal pada metadata dasar.",
