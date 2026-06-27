@@ -688,4 +688,41 @@ export function analyzeFileIntegrity(asset) {
     return alerts;
 }
 
+/**
+ * Helper to smoothly switch active tab pane with height transition
+ * @param {HTMLElement} wrapper - The wrapper element of the panes (.expert-panes-wrapper)
+ * @param {HTMLElement} targetPane - The pane to activate
+ * @param {Function} switchCallback - Callback to perform the actual DOM/class updates
+ */
+export function animateTabTransition(wrapper, targetPane, switchCallback) {
+    if (!wrapper || !targetPane) {
+        switchCallback();
+        return;
+    }
+    
+    // 1. Record start height
+    const startHeight = wrapper.offsetHeight;
+    wrapper.style.height = `${startHeight}px`;
+    
+    // Force reflow
+    wrapper.offsetHeight;
+    
+    // 2. Perform the DOM switch
+    switchCallback();
+    
+    // 3. Record end height of the active pane
+    const endHeight = targetPane.offsetHeight;
+    wrapper.style.height = `${endHeight}px`;
+    
+    // 4. Clean up style after transition completes
+    const onTransitionEnd = (e) => {
+        if (e.propertyName === 'height') {
+            wrapper.style.height = 'auto';
+            wrapper.removeEventListener('transitionend', onTransitionEnd);
+        }
+    };
+    wrapper.addEventListener('transitionend', onTransitionEnd);
+}
+
+
 

@@ -150,6 +150,10 @@ export function renderCombinedAnalysis(state, elements) {
         const tabsContainer = document.createElement('div');
         tabsContainer.className = 'expert-tabs-container combined-tabs';
         
+        const panesWrapper = document.createElement('div');
+        panesWrapper.className = 'expert-panes-wrapper';
+        elements.combinedAnalysisContent.appendChild(panesWrapper);
+        
         findings.forEach((f, index) => {
             const btn = document.createElement('button');
             btn.className = `expert-tab-btn ${index === 0 ? 'active' : ''}`;
@@ -172,16 +176,17 @@ export function renderCombinedAnalysis(state, elements) {
             `;
             
             btn.addEventListener('click', () => {
-                const contentBlock = elements.combinedAnalysisContent;
-                contentBlock.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
-                pane.classList.add('active');
-                
-                tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                Utils.animateTabTransition(panesWrapper, pane, () => {
+                    panesWrapper.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
+                    pane.classList.add('active');
+                    
+                    tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
             });
             
             tabsContainer.appendChild(btn);
-            elements.combinedAnalysisContent.appendChild(pane);
+            panesWrapper.appendChild(pane);
         });
         
         const wrapper = document.createElement('div');
@@ -271,6 +276,10 @@ export function renderExpertAnalysis(asset, elements) {
         const tabsContainer = document.createElement('div');
         tabsContainer.className = 'expert-tabs-container expert-tabs';
 
+        const panesWrapper = document.createElement('div');
+        panesWrapper.className = 'expert-panes-wrapper';
+        elements.expertAnalysisContent.appendChild(panesWrapper);
+
         items.forEach((item, index) => {
             const btn = document.createElement('button');
             btn.className = `expert-tab-btn ${index === 0 ? 'active' : ''}`;
@@ -297,16 +306,17 @@ export function renderExpertAnalysis(asset, elements) {
             `;
             
             btn.addEventListener('click', () => {
-                const contentBlock = elements.expertAnalysisContent;
-                contentBlock.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
-                pane.classList.add('active');
-                
-                tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                Utils.animateTabTransition(panesWrapper, pane, () => {
+                    panesWrapper.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
+                    pane.classList.add('active');
+                    
+                    tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
             });
             
             tabsContainer.appendChild(btn);
-            elements.expertAnalysisContent.appendChild(pane);
+            panesWrapper.appendChild(pane);
         });
 
         const wrapper = document.createElement('div');
@@ -348,6 +358,10 @@ export function renderMetadata(data, elements) {
         const tabsContainer = document.createElement('div');
         tabsContainer.className = 'expert-tabs-container metadata-tabs';
 
+        const panesWrapper = document.createElement('div');
+        panesWrapper.className = 'expert-panes-wrapper';
+        parent.appendChild(panesWrapper);
+
         items.forEach((item, index) => {
             const translatedCategory = t(item.key);
             const btn = document.createElement('button');
@@ -384,15 +398,17 @@ export function renderMetadata(data, elements) {
             pane.appendChild(card);
 
             btn.addEventListener('click', () => {
-                parent.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
-                pane.classList.add('active');
-                
-                tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
-                btn.classList.add('active');
+                Utils.animateTabTransition(panesWrapper, pane, () => {
+                    panesWrapper.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
+                    pane.classList.add('active');
+                    
+                    tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
+                    btn.classList.add('active');
+                });
             });
 
             tabsContainer.appendChild(btn);
-            parent.appendChild(pane);
+            panesWrapper.appendChild(pane);
         });
 
         const wrapper = document.createElement('div');

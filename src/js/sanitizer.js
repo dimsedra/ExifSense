@@ -395,7 +395,7 @@ function renderReactiveMetadata() {
     tabsContainer.style.padding = '0.5rem 1rem 0';
     
     const contentContainer = document.createElement('div');
-    contentContainer.className = 'panes-container';
+    contentContainer.className = 'expert-panes-wrapper';
     
     // Ensure activeTabKey is valid, otherwise set to first available
     const hasActiveTab = items.some(item => item.key === activeTabKey);
@@ -477,12 +477,14 @@ function renderReactiveMetadata() {
         contentContainer.appendChild(pane);
         
         btn.addEventListener('click', () => {
-            activeTabKey = item.key;
-            tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
-            contentContainer.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
-            
-            btn.classList.add('active');
-            pane.classList.add('active');
+            Utils.animateTabTransition(contentContainer, pane, () => {
+                activeTabKey = item.key;
+                tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
+                contentContainer.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
+                
+                btn.classList.add('active');
+                pane.classList.add('active');
+            });
         });
     });
     
