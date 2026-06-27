@@ -637,9 +637,12 @@ export function generateIntegrityNarrative(asset) {
 
         const localizedText = t(key, alert.messageParam || {}, 'narratives');
         const alertClass = alert.severity === 'warning' ? 'integrity-alert-warning' : 'integrity-alert-info';
-        const icon = alert.severity === 'warning' ? '⚠️' : 'ℹ️';
+        const colonIndex = localizedText.indexOf(':');
+        const formattedText = colonIndex !== -1
+            ? `<strong>${localizedText.substring(0, colonIndex + 1)}</strong>${localizedText.substring(colonIndex + 1)}`
+            : localizedText;
         
-        narrative += `<li class="${alertClass}">${icon} ${localizedText}</li>`;
+        narrative += `<li class="${alertClass}">${formattedText}</li>`;
     });
     narrative += '</ul>';
     
