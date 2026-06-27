@@ -138,19 +138,32 @@
     box-shadow: var(--shadow-sm);
 }
 
+.tab-panes-wrapper {
+    position: relative;
+    overflow: hidden;
+    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 100%;
+}
+
 .tab-content {
-    display: none;
     padding: 3rem 2rem;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s;
+    transform: translateY(8px);
 }
 
 .tab-content.active {
-    display: block;
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    position: relative;
+    transform: translateY(0);
 }
 
 .analysis-section, .history-section {

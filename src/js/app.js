@@ -156,11 +156,48 @@ function initTabs() {
 }
 
 // MODUL: Kontrol Navigasi Tab Utama
-// FUNGSI: Mematikan/menghidupkan kelas visual tab yang aktif
+// FUNGSI: Mematikan/menghidupkan kelas visual tab yang aktif dengan transisi tinggi yang halus
 function switchTab(tabId) {
-    elements.tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
-    elements.tabContents.forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
-    if (tabId === 'history') refreshHistory();
+    const wrapper = document.getElementById('tab-panes-wrapper');
+    const activeBtn = Array.from(elements.tabBtns).find(b => b.dataset.tab === tabId);
+    
+    if (activeBtn && activeBtn.classList.contains('active')) {
+        return; // Sudah aktif, abaikan
+    }
+
+    if (wrapper) {
+        // 1. Catat tinggi awal sebelum berpindah tab
+        const startHeight = wrapper.offsetHeight;
+        wrapper.style.height = `${startHeight}px`;
+        
+        // Paksa reflow agar browser mencatat setelan tinggi pixel secara eksplisit
+        wrapper.offsetHeight;
+
+        // 2. Lakukan pergantian kelas tab aktif
+        elements.tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+        elements.tabContents.forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
+        
+        if (tabId === 'history') refreshHistory();
+
+        // 3. Catat tinggi akhir tab tujuan setelah memiliki kelas active
+        const targetPane = document.getElementById(`tab-${tabId}`);
+        const endHeight = targetPane ? targetPane.offsetHeight : startHeight;
+        wrapper.style.height = `${endHeight}px`;
+
+        // 4. Kembalikan tinggi wadah ke 'auto' setelah transisi selesai
+        const onTransitionEnd = (e) => {
+            if (e.propertyName === 'height') {
+                wrapper.style.height = 'auto';
+                wrapper.removeEventListener('transitionend', onTransitionEnd);
+            }
+        };
+        wrapper.addEventListener('transitionend', onTransitionEnd);
+    } else {
+        // Fallback jika wadah wrapper tidak ditemukan
+        elements.tabBtns.forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
+        elements.tabContents.forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
+        if (tabId === 'history') refreshHistory();
+    }
 }
 
 

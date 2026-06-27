@@ -31,8 +31,7 @@
     background-color: var(--secondary-hover);
 }
 
-.tab-content { display: none; }
-.tab-content.active { display: block; }
+
 
 .history-controls {
     display: flex;
