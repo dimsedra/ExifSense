@@ -91,11 +91,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     initSanitizer(state, elements, switchState);
     
     elements.startAnalysisBtn.addEventListener('click', () => {
-        Router.navigate('#/upload');
+        switchTab('upload');
+        elements.analysisSection.scrollIntoView({ behavior: 'smooth' });
     });
     
     elements.viewHistoryBtn.addEventListener('click', () => {
-        Router.navigate('#/history');
+        switchTab('history');
+        elements.historySection.scrollIntoView({ behavior: 'smooth' });
     });
 
     elements.resetBtn.addEventListener('click', () => {
@@ -148,8 +150,7 @@ function initTabs() {
     elements.tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const tabId = btn.dataset.tab;
-            const path = tabId === 'upload' ? '#/upload' : `#/${tabId}`;
-            Router.navigate(path);
+            switchTab(tabId);
         });
     });
 }
@@ -173,22 +174,7 @@ function initRouter() {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             }
         },
-        { 
-            path: '#/upload', 
-            action: () => {
-                switchState('intro');
-                switchTab('upload');
-                elements.analysisSection.scrollIntoView({ behavior: 'smooth' });
-            }
-        },
-        { 
-            path: '#/history', 
-            action: () => {
-                switchState('intro');
-                switchTab('history');
-                elements.historySection.scrollIntoView({ behavior: 'smooth' });
-            }
-        },
+
 
         { 
             path: '#/dashboard', 
