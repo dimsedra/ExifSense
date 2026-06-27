@@ -642,7 +642,7 @@ export function analyzeFileIntegrity(asset) {
     if (!hasAnyExif && !hasGps) {
         alerts.push({
             type: 'fully_stripped',
-            severity: 'warning',
+            severity: 'info',
             messageParam: {},
             message: 'No EXIF metadata found in this file.'
         });
@@ -660,7 +660,7 @@ export function analyzeFileIntegrity(asset) {
     if (missingCategories.length >= 2 && hasAnyExif) {
         alerts.push({
             type: 'partially_stripped',
-            severity: 'warning',
+            severity: 'info',
             messageParam: { missing: missingCategories.join(', ') },
             message: 'Several key metadata categories are absent.'
         });
