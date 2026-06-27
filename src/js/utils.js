@@ -700,21 +700,31 @@ export function animateTabTransition(wrapper, targetPane, switchCallback) {
         return;
     }
     
-    // 1. Record start height
+    // 1. Catat tinggi awal sebelum perpindahan tab
     const startHeight = wrapper.offsetHeight;
-    wrapper.style.height = `${startHeight}px`;
     
-    // Force reflow
-    wrapper.offsetHeight;
-    
-    // 2. Perform the DOM switch
+    // 2. Lakukan pergantian kelas tab aktif
     switchCallback();
     
-    // 3. Record end height of the active pane
+    // 3. Catat tinggi akhir tab tujuan setelah memiliki kelas active
     const endHeight = targetPane.offsetHeight;
+    
+    // Jika tingginya sama persis, tidak perlu melakukan transisi tinggi
+    if (startHeight === endHeight) {
+        wrapper.style.height = 'auto';
+        return;
+    }
+    
+    // Setel tinggi awal dalam piksel eksplisit
+    wrapper.style.height = `${startHeight}px`;
+    
+    // Paksa reflow agar browser mencatat setelan tinggi piksel eksplisit
+    wrapper.offsetHeight;
+    
+    // Setel tinggi akhir dalam piksel eksplisit untuk memicu transisi
     wrapper.style.height = `${endHeight}px`;
     
-    // 4. Clean up style after transition completes
+    // 4. Kembalikan tinggi wadah ke 'auto' setelah transisi selesai
     const onTransitionEnd = (e) => {
         if (e.propertyName === 'height') {
             wrapper.style.height = 'auto';
