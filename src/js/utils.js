@@ -163,10 +163,18 @@ export function categorizeExif(data) {
         GPSDestBearing: 'Geospatial', GPSSpeed: 'Geospatial'
     };
 
+    const structuralKeys = new Set([
+        'ImageWidth', 'ImageHeight', 'PixelXDimension', 'PixelYDimension',
+        'ColorSpace', 'Orientation',
+        'ExifVersion', 'FlashpixVersion', 'ComponentsConfiguration',
+        'JFIFVersion', 'ResolutionUnit', 'XResolution', 'YResolution',
+    ]);
+
     for (const [key, value] of Object.entries(data)) {
         if (value == null) continue;
         if (typeof value === 'object' && !(value instanceof Date)) continue;
-        
+        if (structuralKeys.has(key) || key.startsWith('Profile')) continue;
+
         let category = propMap[key];
         if (!category) {
             const lowerKey = key.toLowerCase();
