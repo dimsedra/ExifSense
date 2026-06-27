@@ -222,7 +222,7 @@
         "no_metadata_tags": "No standard data tags were found in this category.",
         "filter_all": "All Photos",
         "filter_complete": "Complete Data",
-        "filter_stripped": "Cleaned/Stripped Data",
+        "filter_stripped": "Without Details",
         "empty_geospatial": "Cannot map location because this photo does not have embedded GPS coordinates.",
         "empty_hardware": "Camera brand and model cannot be determined because the device manufacturer data (Make/Model tags) was deleted.",
         "empty_exposure": "Camera exposure details (Aperture, ISO, Shutter speed) were not found on this photo.",

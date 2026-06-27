@@ -222,7 +222,7 @@
         "no_metadata_tags": "Tidak ditemukan data standar pada kategori ini.",
         "filter_all": "Semua Foto",
         "filter_complete": "Data Utuh",
-        "filter_stripped": "Data Terhapus/Bersih",
+        "filter_stripped": "Tanpa Detail",
         "empty_geospatial": "Tidak dapat memetakan lokasi karena foto ini tidak memiliki koordinat GPS di dalamnya.",
         "empty_hardware": "Merek dan tipe kamera tidak dapat diketahui karena data pembuat kamera (Make/Model) telah terhapus.",
         "empty_exposure": "Detail pengaturan cahaya kamera (Aperture, ISO, Shutter) tidak ditemukan pada foto ini.",

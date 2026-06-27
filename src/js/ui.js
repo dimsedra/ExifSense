@@ -66,7 +66,7 @@ export function renderAssetSelector(state, elements, onAssetSelect) {
             <i data-lucide="check-circle"></i><span>${t('filter_complete', {}, 'narratives') || 'Complete'}</span>
         </button>
         <button class="asset-filter-btn ${state.assetFilter === 'stripped' ? 'active' : ''}" data-filter="stripped">
-            <i data-lucide="alert-triangle"></i><span>${t('filter_stripped', {}, 'narratives') || 'Stripped'}</span>
+            <i data-lucide="eye-off"></i><span>${t('filter_stripped', {}, 'narratives') || 'Stripped'}</span>
         </button>
     `;
     
