@@ -629,6 +629,43 @@ export function analyzeFileIntegrity(asset) {
     const alerts = [];
     const exif = asset.exifData || {};
     
+    // --- Pre-checks: detect stripped metadata states first ---
+    const hasGps = exif.latitude != null && exif.longitude != null;
+    const hasDateTime = !!(exif.DateTimeOriginal || exif.CreateDate || exif.DateTime);
+    const hasMake = !!(exif.Make || exif.Model);
+    const hasExposure = !!(exif.ExposureTime || exif.FNumber || exif.ISO);
+    
+    const exifKeys = Object.keys(exif).filter(k => k !== 'latitude' && k !== 'longitude');
+    const hasAnyExif = exifKeys.length > 0;
+    
+    // 0a. Fully stripped — no EXIF data at all
+    if (!hasAnyExif && !hasGps) {
+        alerts.push({
+            type: 'fully_stripped',
+            severity: 'warning',
+            messageParam: {},
+            message: 'No EXIF metadata found in this file.'
+        });
+        return alerts; // No further checks possible
+    }
+    
+    // 0b. Partially stripped — some key categories are missing but others remain
+    const missingCategories = [];
+    if (!hasGps) missingCategories.push('gps');
+    if (!hasDateTime) missingCategories.push('datetime');
+    if (!hasMake && !hasExposure) missingCategories.push('device');
+    
+    // Only flag partial strip if at least 2 of 3 key categories are missing
+    // while something else still remains (indicating selective removal)
+    if (missingCategories.length >= 2 && hasAnyExif) {
+        alerts.push({
+            type: 'partially_stripped',
+            severity: 'warning',
+            messageParam: { missing: missingCategories.join(', ') },
+            message: 'Several key metadata categories are absent.'
+        });
+    }
+    
     // 1. Check for editing software
     const software = exif.Software || '';
     if (software) {
