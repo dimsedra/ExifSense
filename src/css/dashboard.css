@@ -63,9 +63,11 @@
     padding: 0;
 }
 
-#preview-image {
+#preview-image, #sanitize-preview-image {
     width: 100%;
     height: auto;
+    max-height: 380px;
+    object-fit: contain;
     display: block;
     background-color: var(--secondary);
 }
