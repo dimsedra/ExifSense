@@ -629,7 +629,9 @@ export function generateIntegrityNarrative(asset) {
     alerts.forEach(alert => {
         let key = 'integrity_clean'; // fallback
         if (alert.type === 'fully_stripped') key = 'integrity_fully_stripped';
-        else if (alert.type === 'partially_stripped') key = 'integrity_partially_stripped';
+        else if (alert.type === 'missing_gps') key = 'integrity_missing_gps';
+        else if (alert.type === 'missing_datetime') key = 'integrity_missing_datetime';
+        else if (alert.type === 'missing_device') key = 'integrity_missing_device';
         else if (alert.type === 'editing_software') key = 'integrity_edit_software';
         else if (alert.type === 'future_capture_date') key = 'integrity_future_date';
         else if (alert.type === 'capture_after_file_modification') key = 'integrity_capture_after_file';

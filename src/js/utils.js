@@ -651,7 +651,7 @@ export function analyzeFileIntegrity(asset) {
         return alerts; // No further checks possible
     }
     
-    // 0b. Partially stripped — some key categories are missing but others remain
+    // 0b. Partially stripped — some key categories are missing while others remain
     const missingCategories = [];
     if (!hasGps) missingCategories.push('gps');
     if (!hasDateTime) missingCategories.push('datetime');
@@ -660,11 +660,12 @@ export function analyzeFileIntegrity(asset) {
     // Only flag partial strip if at least 2 of 3 key categories are missing
     // while something else still remains (indicating selective removal)
     if (missingCategories.length >= 2 && hasAnyExif) {
-        alerts.push({
-            type: 'partially_stripped',
-            severity: 'info',
-            messageParam: { missing: missingCategories.join(', ') },
-            message: 'Several key metadata categories are absent.'
+        missingCategories.forEach(cat => {
+            alerts.push({
+                type: `missing_${cat}`,
+                severity: 'info',
+                messageParam: {}
+            });
         });
     }
     
