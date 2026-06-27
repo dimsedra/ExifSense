@@ -635,7 +635,8 @@ export function analyzeFileIntegrity(asset) {
     const hasMake = !!(exif.Make || exif.Model);
     const hasExposure = !!(exif.ExposureTime || exif.FNumber || exif.ISO);
     
-    const exifKeys = Object.keys(exif).filter(k => k !== 'latitude' && k !== 'longitude');
+    const structuralKeys = ['ImageWidth', 'ImageHeight', 'PixelXDimension', 'PixelYDimension', 'ColorSpace', 'Orientation', 'ExifVersion', 'FlashpixVersion', 'ComponentsConfiguration'];
+    const exifKeys = Object.keys(exif).filter(k => k !== 'latitude' && k !== 'longitude').filter(k => !structuralKeys.includes(k));
     const hasAnyExif = exifKeys.length > 0;
     
     // 0a. Fully stripped — no EXIF data at all
