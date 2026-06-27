@@ -7,7 +7,7 @@ import * as Exporter from './export.js';
 import * as UI from './ui.js';
 import { Router } from './router.js';
 import { initParticles } from './particles.js';
-import { initSanitizer, startSanitizerStudio } from './sanitizer.js';
+import { initSanitizer, startSanitizerStudio, isSanitizerActive } from './sanitizer.js';
 
 // DOM Elements
 const elements = {
@@ -197,6 +197,13 @@ function initRouter() {
                 switchState('dashboard');
                 elements.resetBtn.classList.remove('hidden');
                 elements.exportContainer.classList.remove('hidden');
+            }
+        },
+        {
+            path: '#/sanitize',
+            guard: () => isSanitizerActive(),
+            action: () => {
+                switchState('sanitize');
             }
         }
     ];

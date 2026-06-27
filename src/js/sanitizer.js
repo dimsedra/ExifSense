@@ -1,5 +1,10 @@
 import * as Utils from './utils.js';
 import { t } from './i18n.js';
+import { Router } from './router.js';
+
+export function isSanitizerActive() {
+    return !!activeFile;
+}
 
 let state = null;
 let elements = null;
@@ -120,10 +125,8 @@ export async function startSanitizerStudio(file, exifData) {
     // 6. Update Peta & Overlay & Render Metadata
     updateVisuals();
     
-    // 7. Transition view
-    if (switchStateFn) {
-        switchStateFn('sanitize');
-    }
+    // 7. Transition view via Router hash state
+    Router.navigate('#/sanitize');
 }
 
 function resetToggles() {
@@ -286,10 +289,8 @@ function applyPreset(presetName) {
 }
 
 function handleCancel() {
-    // Switch state back
-    if (switchStateFn) {
-        switchStateFn(state.assets.length > 0 ? 'dashboard' : 'intro');
-    }
+    // Navigate back via Router
+    Router.navigate(state.assets && state.assets.length > 0 ? '#/dashboard' : '#/');
 }
 
 async function executeSanitization() {
@@ -327,17 +328,13 @@ async function executeSanitization() {
             confirmText: t('done') || 'Done',
             type: 'info',
             onConfirm: () => {
-                if (switchStateFn) {
-                    switchStateFn(state.assets.length > 0 ? 'dashboard' : 'intro');
-                }
+                Router.navigate(state.assets && state.assets.length > 0 ? '#/dashboard' : '#/');
             }
         });
     } catch (err) {
         console.error("Sanitization failed:", err);
         alert(t('err_sanitize_failed') || 'Failed to clean metadata. Please try again.');
-        if (switchStateFn) {
-            switchStateFn('sanitize');
-        }
+        Router.navigate('#/sanitize');
     }
 }
 
