@@ -103,7 +103,7 @@ export function renderAssetSelector(state, elements, onAssetSelect) {
             badgesHtml += `<span class="badge-geo" title="${t('analysis_geospatial')}"><i data-lucide="map-pin"></i></span>`;
         }
         if (isStripped) {
-            badgesHtml += `<span class="badge-stripped" title="${t('empty_all', {}, 'narratives')}"><i data-lucide="alert-triangle"></i></span>`;
+            badgesHtml += `<span class="badge-stripped" title="${t('empty_all', {}, 'narratives')}"><i data-lucide="file-minus"></i></span>`;
         }
 
         const sizeInMB = (asset.fileSize / (1024 * 1024)).toFixed(2);

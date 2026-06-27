@@ -226,20 +226,15 @@
 }
 
 .sanitized-item {
-    border-left: 4px solid #f59e0b;
-    background: linear-gradient(135deg, var(--bg-card), rgba(245, 158, 11, 0.04));
-}
-
-.sanitized-item:hover {
-    border-color: #f59e0b;
+    background: var(--bg-card);
 }
 
 .sanitized-badge {
     position: absolute;
     top: 0.5rem;
     right: 0.5rem;
-    background: rgba(245, 158, 11, 0.95);
-    color: #1a1a2e;
+    background: rgba(107, 114, 128, 0.9);
+    color: #ffffff;
     padding: 0.25rem 0.5rem;
     border-radius: 6px;
     font-size: 0.7rem;
@@ -260,8 +255,8 @@
     display: flex;
     align-items: center;
     gap: 0.25rem;
-    color: #f59e0b;
-    font-weight: 600;
+    color: var(--text-muted);
+    font-weight: 500;
 }
 
 .sanitized-meta svg {

@@ -8,6 +8,7 @@ import * as UI from './ui.js';
 import { Router } from './router.js';
 import { initParticles } from './particles.js';
 import { initSanitizer, startSanitizerStudio, isSanitizerActive } from './sanitizer.js';
+import { initGuide, renderGuide } from './guide.js';
 
 // DOM Elements
 const elements = {
@@ -56,6 +57,8 @@ const elements = {
     stagedFilesList: document.getElementById('staged-files-list'),
     clearStagedBtn: document.getElementById('clear-staged-btn'),
     startStagedBtn: document.getElementById('start-staged-btn'),
+    guideBtn: document.getElementById('guide-btn'),
+    guideState: document.getElementById('guide-state'),
 
 };
 
@@ -89,6 +92,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     initCopyHash();
     initParticles();
     initSanitizer(state, elements, switchState, handleSanitizedAsset);
+    initGuide(state, elements);
+    
+    window.addEventListener('switch-to-history', () => {
+        switchTab('history');
+    });
     
     elements.startAnalysisBtn.addEventListener('click', () => {
         switchTab('upload');
@@ -213,6 +221,13 @@ function initRouter() {
         },
 
 
+        { 
+            path: '#/guide', 
+            action: () => {
+                switchState('guide');
+                renderGuide();
+            }
+        },
         { 
             path: '#/dashboard', 
             guard: () => state.assets && state.assets.length > 0,
@@ -737,9 +752,15 @@ function switchState(s) {
     elements.loadingState.classList.add('hidden');
     elements.dashboardState.classList.add('hidden');
     elements.sanitizeState.classList.add('hidden');
+    elements.guideState.classList.add('hidden');
     
     if (s === 'intro') {
         elements.introState.classList.remove('hidden');
+        elements.resetBtn.classList.add('hidden');
+        elements.exportContainer.classList.add('hidden');
+        elements.sanitizeMainBtn.classList.add('hidden');
+    } else if (s === 'guide') {
+        elements.guideState.classList.remove('hidden');
         elements.resetBtn.classList.add('hidden');
         elements.exportContainer.classList.add('hidden');
         elements.sanitizeMainBtn.classList.add('hidden');

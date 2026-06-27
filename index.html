@@ -20,6 +20,7 @@
     <link rel="stylesheet" href="src/css/history.css" />
     <link rel="stylesheet" href="src/css/modal.css" />
     <link rel="stylesheet" href="src/css/intro.css" />
+    <link rel="stylesheet" href="src/css/guide.css" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -35,6 +36,9 @@
           <h1>EXIF<span>SENSE</span></h1>
         </div>
         <div class="header-actions">
+          <button class="btn btn-secondary" id="guide-btn" data-i18n="guide_btn" title="Guide">
+            <i data-lucide="book-open"></i> <span>Guide</span>
+          </button>
           <div class="lang-selector" id="lang-selector-container">
             <button class="btn btn-secondary" id="lang-toggle" title="Switch Language">
               <i data-lucide="languages"></i>
@@ -231,6 +235,9 @@
           </div>
         </div>
       </section>
+
+      <!-- Guide State -->
+      <section id="guide-state" class="state-container hidden"></section>
 
       <!-- Loading State -->
       <section id="loading-state" class="state-container hidden">
