@@ -703,36 +703,32 @@ export function animateTabTransition(wrapper, targetPane, switchCallback) {
     // 1. Catat tinggi awal sebelum perpindahan tab
     const startHeight = wrapper.offsetHeight;
     
-    // Setel tinggi awal dalam piksel eksplisit SEBELUM mengganti kelas tab
-    // Ini mengunci tinggi wadah agar tidak kolaps saat pergantian kelas DOM dilakukan
-    wrapper.style.height = `${startHeight}px`;
+    // 2. Kunci min-height ke tinggi awal agar halaman tidak menyusut saat pergantian.
+    //    Ini mencegah browser melakukan scroll clamping (menyentak scrollbar ke atas)
+    //    ketika berpindah dari tab panjang ke tab pendek di bagian bawah halaman.
+    wrapper.style.minHeight = `${startHeight}px`;
+    wrapper.style.height = 'auto';
     
-    // Paksa reflow agar browser mencatat setelan tinggi piksel eksplisit ini
-    wrapper.offsetHeight;
-    
-    // 2. Lakukan pergantian kelas tab aktif
+    // 3. Lakukan pergantian kelas tab aktif
     switchCallback();
     
-    // 3. Catat tinggi akhir tab tujuan setelah memiliki kelas active
-    const endHeight = targetPane.offsetHeight;
-    
-    // Jika tingginya sama persis, kembalikan ke auto dan selesai
-    if (startHeight === endHeight) {
-        wrapper.style.height = 'auto';
-        return;
-    }
-    
-    // Setel tinggi akhir dalam piksel eksplisit untuk memicu transisi tinggi
-    wrapper.style.height = `${endHeight}px`;
-    
-    // 4. Kembalikan tinggi wadah ke 'auto' setelah transisi selesai
-    const onTransitionEnd = (e) => {
-        if (e.propertyName === 'height') {
-            wrapper.style.height = 'auto';
-            wrapper.removeEventListener('transitionend', onTransitionEnd);
-        }
-    };
-    wrapper.addEventListener('transitionend', onTransitionEnd);
+    // 4. Setelah tab baru aktif, lepaskan min-height secara bertahap
+    //    Gunakan requestAnimationFrame ganda agar browser sempat merender frame baru
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            wrapper.style.transition = 'min-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+            wrapper.style.minHeight = '0px';
+            
+            const onTransitionEnd = (e) => {
+                if (e.propertyName === 'min-height') {
+                    wrapper.style.minHeight = '';
+                    wrapper.style.transition = '';
+                    wrapper.removeEventListener('transitionend', onTransitionEnd);
+                }
+            };
+            wrapper.addEventListener('transitionend', onTransitionEnd);
+        });
+    });
 }
 
 
