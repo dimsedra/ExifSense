@@ -636,14 +636,9 @@ export function analyzeFileIntegrity(asset) {
     const hasMake = !!(exif.Make || exif.Model);
     const hasExposure = !!(exif.ExposureTime || exif.FNumber || exif.ISO);
     
-    const structuralKeys = new Set([
-        'ImageWidth', 'ImageHeight', 'PixelXDimension', 'PixelYDimension',
-        'ColorSpace', 'Orientation',
-        'ExifVersion', 'FlashpixVersion', 'ComponentsConfiguration',
-        'JFIFVersion', 'ResolutionUnit', 'XResolution', 'YResolution',
-    ]);
-    const exifKeys = Object.keys(exif).filter(k => k !== 'latitude' && k !== 'longitude').filter(k => !structuralKeys.has(k) && !k.startsWith('Profile'));
-    const hasAnyExif = exifKeys.length > 0;
+    const meaningfulCategories = ['Device Hardware', 'Exposure Settings', 'Optics & Lens', 'Image Quality', 'Timeline & Date', 'Geospatial'];
+    const categorized = categorizeExif(exif);
+    const hasAnyExif = meaningfulCategories.some(cat => Object.keys(categorized[cat]).length > 0);
     
     // 0a. Fully stripped — no EXIF data at all
     if (!hasAnyExif && !hasGps) {
