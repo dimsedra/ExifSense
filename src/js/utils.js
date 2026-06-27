@@ -397,6 +397,15 @@ export async function stripSpecificMetadata(file, removalOptions) {
                 if (removalOptions.camera) {
                     exifObj["Exif"] = {}; // Strip most camera settings
                 }
+                if (removalOptions.date) {
+                    if (exifObj["0th"]) {
+                        delete exifObj["0th"][piexif.ImageIFD.DateTime];
+                    }
+                    if (exifObj["Exif"]) {
+                        delete exifObj["Exif"][piexif.ExifIFD.DateTimeOriginal];
+                        delete exifObj["Exif"][piexif.ExifIFD.DateTimeDigitized];
+                    }
+                }
 
                 const exifBytes = piexif.dump(exifObj);
                 const newDataUrl = piexif.insert(exifBytes, dataUrl);

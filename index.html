@@ -334,6 +334,139 @@
           </div>
         </div>
       </section>
+
+      <!-- Sanitizer State -->
+      <section id="sanitize-state" class="state-container hidden">
+        <div class="dashboard-grid">
+          <!-- Left Column: Preview & Map -->
+          <div class="col-left">
+            <!-- Image Preview Card -->
+            <div class="card image-card">
+              <div class="card-header">
+                <i data-lucide="image"></i>
+                <h3 data-i18n="source_file">Source File</h3>
+              </div>
+              <div class="card-body">
+                <img id="sanitize-preview-image" src="" alt="Preview" />
+                <div class="file-basic-info" id="sanitize-file-info">
+                  <!-- Populated dynamically -->
+                </div>
+              </div>
+            </div>
+
+            <!-- Mini Map Card -->
+            <div class="card map-card" id="sanitize-map-card">
+              <div class="card-header">
+                <i data-lucide="map-pin"></i>
+                <h3 data-i18n="geospatial_data">Geospatial Data</h3>
+              </div>
+              <div class="card-body" style="position: relative; padding: 0;">
+                <div id="sanitize-map" style="height: 200px; width: 100%;"></div>
+                <div id="sanitize-privacy-overlay" class="privacy-overlay hidden">
+                  <div class="privacy-overlay-content">
+                    <i data-lucide="eye-off"></i>
+                    <span data-i18n="location_hidden">Location Info Removed</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Preset Cards & Selective Controls -->
+          <div class="col-right">
+            <!-- Presets Card -->
+            <div class="card">
+              <div class="card-header">
+                <i data-lucide="sliders"></i>
+                <h3 data-i18n="sanitize_presets_title">Quick Presets</h3>
+              </div>
+              <div class="card-body">
+                <p class="text-sm text-muted mb-4" data-i18n="sanitize_presets_desc">Select a preset to quickly toggle metadata settings for your specific sharing needs:</p>
+                <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+                  <button class="btn btn-secondary" id="preset-max-privacy">
+                    <i data-lucide="shield-alert"></i> <span data-i18n="preset_max_privacy">Max Privacy</span>
+                  </button>
+                  <button class="btn btn-secondary" id="preset-photo-share">
+                    <i data-lucide="camera"></i> <span data-i18n="preset_photo_share">Photographer Share</span>
+                  </button>
+                  <button class="btn btn-secondary" id="preset-location-only">
+                    <i data-lucide="map-pin"></i> <span data-i18n="preset_location_only">Location Only</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selective Controls Card -->
+            <div class="card">
+              <div class="card-header">
+                <i data-lucide="toggle-left"></i>
+                <h3 data-i18n="selective_controls_title">Selective Metadata Controls</h3>
+              </div>
+              <div class="card-body">
+                <div class="sanitize-controls-list" style="display: flex; flex-direction: column; gap: 1rem;">
+                  <!-- GPS Toggle -->
+                  <div class="sanitize-control-item" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
+                    <div>
+                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="cat_gps_removal">Location Information (GPS)</div>
+                      <div class="text-xs text-muted" id="sanitize-gps-details">No coordinates found</div>
+                    </div>
+                    <label class="switch-control">
+                      <input type="checkbox" id="sanitize-toggle-gps" checked>
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+
+                  <!-- Device Toggle -->
+                  <div class="sanitize-control-item" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
+                    <div>
+                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="cat_device_removal">Device Information</div>
+                      <div class="text-xs text-muted" id="sanitize-device-details">No device manufacturer or model info found</div>
+                    </div>
+                    <label class="switch-control">
+                      <input type="checkbox" id="sanitize-toggle-device" checked>
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+
+                  <!-- Camera Settings Toggle -->
+                  <div class="sanitize-control-item" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-color);">
+                    <div>
+                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="cat_camera_removal">Camera Settings & Exposure</div>
+                      <div class="text-xs text-muted" id="sanitize-camera-details">No aperture, ISO, shutter speed, or lens data found</div>
+                    </div>
+                    <label class="switch-control">
+                      <input type="checkbox" id="sanitize-toggle-camera" checked>
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+
+                  <!-- Date & Time Toggle -->
+                  <div class="sanitize-control-item" style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                      <div style="font-weight: 600; font-size: 0.9rem;" data-i18n="sanitize_toggle_date">Date & Time Taken</div>
+                      <div class="text-xs text-muted" id="sanitize-date-details">No timestamp found</div>
+                    </div>
+                    <label class="switch-control">
+                      <input type="checkbox" id="sanitize-toggle-date" checked>
+                      <span class="switch-slider"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Actions Card -->
+            <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+              <button class="btn btn-secondary" id="sanitize-cancel-btn" style="padding: 0.75rem 1.5rem;">
+                <i data-lucide="x"></i> <span data-i18n="cancel">Cancel</span>
+              </button>
+              <button class="btn btn-primary" id="sanitize-download-btn" style="padding: 0.75rem 2rem;">
+                <i data-lucide="download"></i> <span data-i18n="download_cleaned">Download Cleaned Photo</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Custom Modal (Restore) -->

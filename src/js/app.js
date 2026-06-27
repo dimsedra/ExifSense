@@ -7,6 +7,7 @@ import * as Exporter from './export.js';
 import * as UI from './ui.js';
 import { Router } from './router.js';
 import { initParticles } from './particles.js';
+import { initSanitizer, startSanitizerStudio } from './sanitizer.js';
 
 // DOM Elements
 const elements = {
@@ -16,6 +17,7 @@ const elements = {
     introState: document.getElementById('intro-state'),
     loadingState: document.getElementById('loading-state'),
     dashboardState: document.getElementById('dashboard-state'),
+    sanitizeState: document.getElementById('sanitize-state'),
     langSelector: document.getElementById('lang-selector'),
     startAnalysisBtn: document.getElementById('start-analysis-btn'),
     viewHistoryBtn: document.getElementById('view-history-btn'),
@@ -86,6 +88,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initToast();
     initCopyHash();
     initParticles();
+    initSanitizer(state, elements, switchState);
     
     elements.startAnalysisBtn.addEventListener('click', () => {
         Router.navigate('#/upload');
@@ -302,7 +305,7 @@ function initDropzone() {
         const currentAsset = state.assets[state.activeAssetIndex];
         if (currentAsset) {
             if (currentAsset.fileObject) {
-                handleSanitization(currentAsset.fileObject);
+                startSanitizerStudio(currentAsset.fileObject, currentAsset.exifData);
             } else {
                 Utils.showConfirm({
                     title: t('reupload_required_title'),
@@ -521,36 +524,15 @@ async function handleFiles(fileList) {
 
 // FUNGSI: Mengelola alur sanitasi pembersihan metadata foto
 async function handleSanitization(file) {
-    Utils.showRemovalModal({
-        onConfirm: async (options) => {
-            switchState('loading');
-            try {
-                let cleanedBlob;
-                if (options.all) {
-                    cleanedBlob = await Utils.stripAllMetadata(file);
-                } else {
-                    cleanedBlob = await Utils.stripSpecificMetadata(file, options);
-                }
-                
-                Utils.downloadBlob(cleanedBlob, file.name);
-                
-                // Show success modal
-                Utils.showConfirm({
-                    title: t('sanitization_complete_title'),
-                    message: t('sanitization_complete_msg'),
-                    confirmText: t('done'),
-                    type: 'info'
-                });
-            } catch (err) {
-                console.error("Sanitization failed:", err);
-                alert(t('err_sanitize_failed'));
-            }
-            switchState(state.assets.length > 0 ? 'dashboard' : 'intro');
-        },
-        onCancel: () => {
-            switchState(state.assets.length > 0 ? 'dashboard' : 'intro');
-        }
-    });
+    switchState('loading');
+    try {
+        const options = { tiff: true, xmp: true, icc: true, iptc: true, jfif: true, ihdr: true, gps: true };
+        const exifData = await exifr.parse(file, options);
+        startSanitizerStudio(file, exifData);
+    } catch (err) {
+        console.error("Failed to parse EXIF for sanitization:", err);
+        startSanitizerStudio(file, {});
+    }
 }
 
 // MODUL: Pemetaan & Visualisasi Dashboard Multi-Aset (Batch)
@@ -711,6 +693,7 @@ function switchState(s) {
     elements.introState.classList.add('hidden');
     elements.loadingState.classList.add('hidden');
     elements.dashboardState.classList.add('hidden');
+    elements.sanitizeState.classList.add('hidden');
     
     if (s === 'intro') {
         elements.introState.classList.remove('hidden');
@@ -728,6 +711,11 @@ function switchState(s) {
         elements.exportContainer.classList.remove('hidden');
         elements.sanitizeMainBtn.classList.remove('hidden');
         if (state.map) setTimeout(() => state.map.invalidateSize(), 100);
+    } else if (s === 'sanitize') {
+        elements.sanitizeState.classList.remove('hidden');
+        elements.resetBtn.classList.add('hidden');
+        elements.exportContainer.classList.add('hidden');
+        elements.sanitizeMainBtn.classList.add('hidden');
     }
 }
 
