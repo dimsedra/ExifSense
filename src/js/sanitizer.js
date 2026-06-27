@@ -9,6 +9,7 @@ let activeFile = null;
 let activeExif = null;
 let sanitizeMap = null;
 let sanitizeMarker = null;
+let activeTabKey = null;
 
 // DOM Elements local to Sanitizer Studio
 const sanitizerElements = {
@@ -81,6 +82,7 @@ export function initSanitizer(appState, appElements, switchState) {
 export async function startSanitizerStudio(file, exifData) {
     activeFile = file;
     activeExif = exifData || {};
+    activeTabKey = null; // Reset tab selection for new session
     
     // 1. Set Preview Image
     if (sanitizerElements.previewImage) {
@@ -398,12 +400,19 @@ function renderReactiveMetadata() {
     const contentContainer = document.createElement('div');
     contentContainer.className = 'panes-container';
     
+    // Ensure activeTabKey is valid, otherwise set to first available
+    const hasActiveTab = items.some(item => item.key === activeTabKey);
+    if (!hasActiveTab && items.length > 0) {
+        activeTabKey = items[0].key;
+    }
+
     items.forEach((item, index) => {
         const translatedCategory = t(item.key) || item.category;
+        const isActive = item.key === activeTabKey;
         
         // Tab Button
         const btn = document.createElement('button');
-        btn.className = `expert-tab-btn ${index === 0 ? 'active' : ''}`;
+        btn.className = `expert-tab-btn ${isActive ? 'active' : ''}`;
         btn.dataset.id = `meta-${item.key}`;
         btn.style.position = 'relative';
         
@@ -423,7 +432,7 @@ function renderReactiveMetadata() {
         
         // Tab Pane
         const pane = document.createElement('div');
-        pane.className = `expert-tab-pane ${index === 0 ? 'active' : ''}`;
+        pane.className = `expert-tab-pane ${isActive ? 'active' : ''}`;
         
         const keys = Object.keys(item.props);
         
@@ -471,6 +480,7 @@ function renderReactiveMetadata() {
         contentContainer.appendChild(pane);
         
         btn.addEventListener('click', () => {
+            activeTabKey = item.key;
             tabsContainer.querySelectorAll('.expert-tab-btn').forEach(b => b.classList.remove('active'));
             contentContainer.querySelectorAll('.expert-tab-pane').forEach(p => p.classList.remove('active'));
             
