@@ -222,8 +222,6 @@
 }
 
 .batch-item {
-    border-left: 4px solid var(--primary);
-}
 
 .sanitized-item {
     background: var(--bg-card);
