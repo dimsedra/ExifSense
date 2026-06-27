@@ -183,6 +183,9 @@
     },
     "narratives": {
         "integrity_clean": "This photo retains its original date and location details. No common indicators of external editing tools were found in the basic metadata.",
+        "integrity_clean_no_gps": "Device and timeline information are intact. No location data was embedded — this is normal if GPS was turned off when the photo was taken.",
+        "integrity_clean_no_datetime": "Device and location data are intact. No capture timestamp was recorded — this can happen with screenshots or certain export tools.",
+        "integrity_clean_no_device": "Timeline and location data are intact. No device information was recorded — common for screenshots or images shared via social media.",
         "integrity_edit_software": "Recorded Processing Software: The metadata indicates this photo was saved or processed using <strong>{software}</strong>. Some original camera details may have been modified.",
         "integrity_future_date": "Unusual Capture Time: The recorded capture date (<strong>{date}</strong>) is in the future compared to the current system time. This is commonly caused by an incorrectly set camera clock, <strong>but it also raises the possibility of deliberate date modification.</strong>",
         "integrity_capture_after_file": "File Time Difference: The recorded photo capture date (<strong>{date}</strong>) is newer than the file modification date (<strong>{fileDate}</strong>). This can be caused by device time zone variations or file transfers between unsynchronized systems, <strong>but it may also occur if the camera capture date was intentionally adjusted backward.</strong>",

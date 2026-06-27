@@ -183,6 +183,9 @@
     },
     "narratives": {
         "integrity_clean": "Foto ini mempertahankan informasi tanggal dan lokasi aslinya. Tidak ada indikasi umum dari penggunaan aplikasi edit eksternal pada metadata dasar.",
+        "integrity_clean_no_gps": "Informasi perangkat dan waktu masih utuh. Tidak ada data lokasi yang terekam — hal wajar jika GPS dimatikan saat foto diambil.",
+        "integrity_clean_no_datetime": "Informasi perangkat dan lokasi masih utuh. Tidak ada stempel waktu pengambilan yang tercatat — umum terjadi pada tangkapan layar atau hasil ekspor tertentu.",
+        "integrity_clean_no_device": "Informasi waktu dan lokasi masih utuh. Tidak ada data perangkat yang tercatat — umum untuk tangkapan layar atau foto yang dibagikan via media sosial.",
         "integrity_edit_software": "Tercatat Aplikasi Pengolah: Metadata foto ini menunjukkan riwayat penyimpanan atau pemrosesan menggunakan aplikasi <strong>{software}</strong>. Beberapa informasi bawaan kamera mungkin telah disesuaikan.",
         "integrity_future_date": "Waktu Pemotretan Tidak Wajar: Tanggal pengambilan foto (<strong>{date}</strong>) tercatat berada di masa depan dibandingkan dengan waktu saat ini. Kondisi ini biasanya disebabkan oleh kesalahan pengaturan jam pada kamera, <strong>namun juga membuka kemungkinan adanya manipulasi data tanggal secara sengaja.</strong>",
         "integrity_capture_after_file": "Perbedaan Waktu Berkas: Tanggal pengambilan foto (<strong>{date}</strong>) tercatat lebih baru dibanding tanggal modifikasi berkas digitalnya (<strong>{fileDate}</strong>). Kondisi ini bisa disebabkan oleh perbedaan zona waktu perangkat atau pemindahan berkas antar-sistem dengan jam yang tidak sinkron, <strong>namun juga dapat terjadi apabila tanggal pengambilan kamera sengaja diubah mundur.</strong>",

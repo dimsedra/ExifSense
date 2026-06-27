@@ -622,7 +622,17 @@ export function generateCombinedAnalysis(assets) {
 export function generateIntegrityNarrative(asset) {
     const alerts = asset.integrityAlerts || [];
     if (alerts.length === 0) {
-        return `<p class="narrative-p text-success">${t('integrity_clean', {}, 'narratives')}</p>`;
+        const exif = asset.exifData || {};
+        const hasGps = exif.latitude != null && exif.longitude != null;
+        const hasDateTime = !!(exif.DateTimeOriginal || exif.CreateDate || exif.DateTime);
+        const hasMake = !!(exif.Make || exif.Model);
+        
+        let cleanKey = 'integrity_clean';
+        if (!hasGps && hasDateTime && hasMake) cleanKey = 'integrity_clean_no_gps';
+        else if (!hasDateTime && hasGps && hasMake) cleanKey = 'integrity_clean_no_datetime';
+        else if (!hasMake && hasGps && hasDateTime) cleanKey = 'integrity_clean_no_device';
+        
+        return `<p class="narrative-p text-success">${t(cleanKey, {}, 'narratives')}</p>`;
     }
 
     let narrative = '<ul class="integrity-alerts-list">';
