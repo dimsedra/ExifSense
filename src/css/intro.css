@@ -202,14 +202,6 @@
 
 .feature-card.col-span-2 {
     grid-column: span 2;
-    flex-direction: row;
-    align-items: flex-start;
-    gap: 2rem;
-}
-
-.feature-card.col-span-2 .feature-icon {
-    margin-bottom: 0;
-    flex-shrink: 0;
 }
 
 .feature-text {

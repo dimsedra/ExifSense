@@ -4,19 +4,30 @@ import { t } from './i18n.js';
 import { Router } from './router.js';
 
 export function isSanitizerActive() {
-    return !!activeFile;
+    return !!activeFile || batchEntries.length > 0;
+}
+
+export function isBatchSanitizerActive() {
+    return batchEntries.length > 0;
 }
 
 let state = null;
 let elements = null;
 let switchStateFn = null;
 let onSanitizedFn = null;
+let onBatchSanitizedFn = null;
 
 let activeFile = null;
 let activeExif = null;
 let sanitizeMap = null;
 let sanitizeMarker = null;
 let activeTabKey = null;
+
+// Batch sanitizer state
+let batchEntries = [];
+let batchActiveIndex = 0;
+let batchGlobalOptions = { gps: false, device: false, camera: false, date: false };
+let batchOverrides = {}; // { [index]: { gps, device, camera, date } }
 
 // DOM Elements local to Sanitizer Studio
 const sanitizerElements = {
@@ -67,6 +78,12 @@ export function initSanitizer(appState, appElements, switchState, onSanitized) {
     }
     
     // Watch toggles for live visual updates
+    const toggleMap = {
+        'sanitize-toggle-gps': 'gps',
+        'sanitize-toggle-device': 'device',
+        'sanitize-toggle-camera': 'camera',
+        'sanitize-toggle-date': 'date'
+    };
     [
         sanitizerElements.toggleGps,
         sanitizerElements.toggleDevice,
@@ -74,7 +91,13 @@ export function initSanitizer(appState, appElements, switchState, onSanitized) {
         sanitizerElements.toggleDate
     ].forEach(toggle => {
         if (toggle) {
-            toggle.addEventListener('change', updateVisuals);
+            toggle.addEventListener('change', () => {
+                if (batchEntries.length > 0) {
+                    const key = toggleMap[toggle.id];
+                    if (key) batchGlobalOptions[key] = toggle.checked;
+                }
+                updateVisuals();
+            });
         }
     });
     
@@ -292,11 +315,17 @@ function applyPreset(presetName) {
 }
 
 function handleCancel() {
-    // Navigate back via Router
+    if (batchEntries.length > 0) {
+        cleanupBatchSanitizer();
+    }
     Router.navigate(state.assets && state.assets.length > 0 ? '#/dashboard' : '#/');
 }
 
 async function executeSanitization() {
+    if (batchEntries.length > 0) {
+        await executeBatchSanitization();
+        return;
+    }
     if (!activeFile) return;
     
     // Checked (true) means REMOVE/STRIP.
@@ -519,4 +548,355 @@ function renderReactiveMetadata() {
     if (window.lucide) {
         window.lucide.createIcons();
     }
+}
+
+// ===== BATCH SANITIZER =====
+
+export function startBatchSanitizerStudio(entries) {
+    batchEntries = entries;
+    batchActiveIndex = 0;
+    batchGlobalOptions = { gps: false, device: false, camera: false, date: false };
+    batchOverrides = {};
+
+    const entry = entries[0];
+    activeFile = entry.file;
+    activeExif = entry.exifData || {};
+    activeTabKey = null;
+
+    if (sanitizerElements.previewImage) {
+        sanitizerElements.previewImage.src = URL.createObjectURL(entry.file);
+    }
+    if (sanitizerElements.fileInfo) {
+        const sizeMB = (entry.file.size / (1024 * 1024)).toFixed(2);
+        sanitizerElements.fileInfo.innerHTML = `
+            <div class="info-item">
+                <span class="info-label" data-i18n="info_filename">Filename</span>
+                <span class="info-value font-mono text-sm">${Utils.escapeHTML(entry.fileName)}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label" data-i18n="info_filesize">File Size</span>
+                <span class="info-value">${sizeMB} MB</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label" data-i18n="info_format">Format</span>
+                <span class="info-value font-mono">${entry.file.type.split('/')[1]?.toUpperCase() || 'JPEG'}</span>
+            </div>
+        `;
+    }
+
+    populateDetailsLabels();
+    initSanitizerMap();
+    // In batch mode, toggles show global defaults (all unchecked = KEEP)
+    if (sanitizerElements.toggleGps) { sanitizerElements.toggleGps.checked = false; sanitizerElements.toggleGps.disabled = false; }
+    if (sanitizerElements.toggleDevice) { sanitizerElements.toggleDevice.checked = false; sanitizerElements.toggleDevice.disabled = false; }
+    if (sanitizerElements.toggleCamera) { sanitizerElements.toggleCamera.checked = false; sanitizerElements.toggleCamera.disabled = false; }
+    if (sanitizerElements.toggleDate) { sanitizerElements.toggleDate.checked = false; sanitizerElements.toggleDate.disabled = false; }
+    updateVisuals();
+
+    renderBatchSelector();
+
+    const batchIndicator = document.getElementById('sanitize-batch-indicator');
+    if (batchIndicator) {
+        batchIndicator.classList.remove('hidden');
+        batchIndicator.innerHTML = `<i data-lucide="layers"></i> ${t('batch') || 'Batch'}: ${batchActiveIndex + 1} / ${batchEntries.length}`;
+    }
+
+    if (sanitizerElements.downloadBtn) {
+        sanitizerElements.downloadBtn.innerHTML = '<i data-lucide="download"></i> <span>' + (t('download_all_sanitized') || 'Download All Sanitized') + '</span>';
+    }
+
+    Router.navigate('#/sanitize');
+}
+
+function renderBatchSelector() {
+    const container = document.getElementById('sanitize-asset-selector');
+    if (!container) return;
+    container.innerHTML = '';
+    container.classList.remove('hidden');
+
+    batchEntries.forEach((entry, index) => {
+        const thumb = document.createElement('div');
+        thumb.className = `sanitize-selector-thumb${index === batchActiveIndex ? ' active' : ''}`;
+
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(entry.file);
+        img.alt = entry.fileName;
+
+        const label = document.createElement('span');
+        label.className = 'sanitize-selector-label';
+        label.textContent = entry.fileName.length > 18 ? entry.fileName.substring(0, 15) + '...' : entry.fileName;
+
+        const customizeBtn = document.createElement('button');
+        customizeBtn.className = 'sanitize-selector-customize';
+        customizeBtn.innerHTML = '<i data-lucide="sliders"></i>';
+        customizeBtn.title = t('customize_options') || 'Customize options';
+        customizeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openPerFileModal(index);
+        });
+
+        thumb.appendChild(img);
+        thumb.appendChild(label);
+        thumb.appendChild(customizeBtn);
+        thumb.addEventListener('click', () => switchBatchAsset(index));
+
+        if (batchOverrides[index]) thumb.classList.add('has-customize');
+
+        container.appendChild(thumb);
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+export function switchBatchAsset(index) {
+    if (index < 0 || index >= batchEntries.length) return;
+    batchActiveIndex = index;
+    const entry = batchEntries[index];
+    activeFile = entry.file;
+    activeExif = entry.exifData || {};
+    activeTabKey = null;
+
+    if (sanitizerElements.previewImage) {
+        URL.revokeObjectURL(sanitizerElements.previewImage.src);
+        sanitizerElements.previewImage.src = URL.createObjectURL(entry.file);
+    }
+    if (sanitizerElements.fileInfo) {
+        const sizeMB = (entry.file.size / (1024 * 1024)).toFixed(2);
+        sanitizerElements.fileInfo.innerHTML = `
+            <div class="info-item">
+                <span class="info-label" data-i18n="info_filename">Filename</span>
+                <span class="info-value font-mono text-sm">${Utils.escapeHTML(entry.fileName)}</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label" data-i18n="info_filesize">File Size</span>
+                <span class="info-value">${sizeMB} MB</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label" data-i18n="info_format">Format</span>
+                <span class="info-value font-mono">${entry.file.type.split('/')[1]?.toUpperCase() || 'JPEG'}</span>
+            </div>
+        `;
+    }
+
+    populateDetailsLabels();
+    initSanitizerMap();
+    updateVisuals();
+
+    const container = document.getElementById('sanitize-asset-selector');
+    if (container) {
+        container.querySelectorAll('.sanitize-selector-thumb').forEach((t, i) => {
+            t.classList.toggle('active', i === index);
+        });
+    }
+
+    const batchIndicator = document.getElementById('sanitize-batch-indicator');
+    if (batchIndicator) {
+        batchIndicator.innerHTML = `<i data-lucide="layers"></i> ${t('batch') || 'Batch'}: ${index + 1} / ${batchEntries.length}`;
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+export function openPerFileModal(index) {
+    const entry = batchEntries[index];
+    const overlay = document.getElementById('sanitize-perfile-overlay');
+    if (!overlay) return;
+
+    const contentEl = overlay.querySelector('.modal-content');
+    if (!contentEl) return;
+
+    const override = batchOverrides[index];
+    const gpsChecked = override ? override.gps : batchGlobalOptions.gps;
+    const deviceChecked = override ? override.device : batchGlobalOptions.device;
+    const cameraChecked = override ? override.camera : batchGlobalOptions.camera;
+    const dateChecked = override ? override.date : batchGlobalOptions.date;
+
+    const exif = entry.exifData || {};
+    const hasGPS = exif.latitude !== undefined && exif.longitude !== undefined;
+    const hasDevice = exif.Make || exif.Model;
+    const hasCamera = exif.ApertureValue !== undefined || exif.ISO !== undefined || exif.ExposureTime !== undefined || exif.FocalLength !== undefined;
+    const hasDate = exif.DateTimeOriginal || exif.DateTimeDigitized || exif.DateTime;
+
+    contentEl.innerHTML = `
+        <div class="modal-header">
+            <h3>${t('customize_file_options') || 'Customize Options'}</h3>
+            <span class="modal-filename">${Utils.escapeHTML(entry.fileName)}</span>
+        </div>
+        <div class="modal-body">
+            <div class="sanitize-toggle-row">
+                <div class="toggle-info"><i data-lucide="map-pin"></i><span>${t('cat_gps_removal') || 'GPS Location'}</span></div>
+                <label class="switch-control">
+                    <input type="checkbox" class="perfile-toggle" data-key="gps" ${gpsChecked ? 'checked' : ''} ${!hasGPS ? 'disabled' : ''}>
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <div class="sanitize-toggle-row">
+                <div class="toggle-info"><i data-lucide="smartphone"></i><span>${t('cat_device_removal') || 'Device Info'}</span></div>
+                <label class="switch-control">
+                    <input type="checkbox" class="perfile-toggle" data-key="device" ${deviceChecked ? 'checked' : ''} ${!hasDevice ? 'disabled' : ''}>
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <div class="sanitize-toggle-row">
+                <div class="toggle-info"><i data-lucide="camera"></i><span>${t('cat_camera_removal') || 'Camera Settings'}</span></div>
+                <label class="switch-control">
+                    <input type="checkbox" class="perfile-toggle" data-key="camera" ${cameraChecked ? 'checked' : ''} ${!hasCamera ? 'disabled' : ''}>
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+            <div class="sanitize-toggle-row">
+                <div class="toggle-info"><i data-lucide="calendar"></i><span>${t('sanitize_toggle_date') || 'Date/Time'}</span></div>
+                <label class="switch-control">
+                    <input type="checkbox" class="perfile-toggle" data-key="date" ${dateChecked ? 'checked' : ''} ${!hasDate ? 'disabled' : ''}>
+                    <span class="switch-slider"></span>
+                </label>
+            </div>
+        </div>
+    `;
+
+    overlay.classList.remove('hidden');
+
+    // Cancel
+    const cancelBtn = document.getElementById('sanitize-perfile-cancel');
+    const applyBtn = document.getElementById('sanitize-perfile-apply');
+    const resetBtn = document.getElementById('sanitize-perfile-reset');
+
+    const closeModal = () => overlay.classList.add('hidden');
+    const cleanup = () => {
+        cancelBtn.removeEventListener('click', closeModal);
+        applyBtn.removeEventListener('click', applyHandler);
+        resetBtn.removeEventListener('click', resetHandler);
+        overlay.removeEventListener('click', outsideClick);
+    };
+    const outsideClick = (e) => { if (e.target === overlay) { closeModal(); cleanup(); } };
+
+    const applyHandler = () => {
+        const toggles = contentEl.querySelectorAll('.perfile-toggle');
+        const options = {};
+        toggles.forEach(t => { options[t.dataset.key] = t.checked; });
+        batchOverrides[index] = options;
+        closeModal();
+        cleanup();
+        if (batchActiveIndex === index) switchBatchAsset(index);
+        updateSelectorCustomizeIndicator(index);
+        if (window.lucide) window.lucide.createIcons();
+    };
+
+    const resetHandler = () => {
+        delete batchOverrides[index];
+        closeModal();
+        cleanup();
+        if (batchActiveIndex === index) switchBatchAsset(index);
+        updateSelectorCustomizeIndicator(index);
+    };
+
+    cancelBtn.addEventListener('click', () => { closeModal(); cleanup(); });
+    applyBtn.addEventListener('click', applyHandler);
+    resetBtn.addEventListener('click', resetHandler);
+    overlay.addEventListener('click', outsideClick);
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+function updateSelectorCustomizeIndicator(index) {
+    const container = document.getElementById('sanitize-asset-selector');
+    if (!container) return;
+    const thumbs = container.querySelectorAll('.sanitize-selector-thumb');
+    if (thumbs[index]) {
+        thumbs[index].classList.toggle('has-customize', !!batchOverrides[index]);
+    }
+}
+
+async function executeBatchSanitization() {
+    if (batchEntries.length === 0) return;
+
+    if (sanitizerElements.downloadBtn) {
+        sanitizerElements.downloadBtn.disabled = true;
+        sanitizerElements.downloadBtn.innerHTML = '<i data-lucide="loader"></i> <span>' + (t('processing') || 'Processing...') + '</span>';
+    }
+
+    if (switchStateFn) switchStateFn('loading');
+
+    const sanitizedAssets = [];
+    try {
+        for (let i = 0; i < batchEntries.length; i++) {
+            const entry = batchEntries[i];
+            const options = batchOverrides[i] || { ...batchGlobalOptions };
+
+            const stripAll = options.gps && options.device && options.camera && options.date;
+            let cleanedBlob;
+            if (stripAll) {
+                cleanedBlob = await Utils.stripAllMetadata(entry.file);
+            } else {
+                cleanedBlob = await Utils.stripSpecificMetadata(entry.file, options);
+            }
+
+            Utils.downloadBlob(cleanedBlob, entry.fileName);
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const cleanedFile = new File([cleanedBlob], entry.fileName, { type: entry.file.type || 'image/jpeg' });
+            const parseOptions = { tiff: true, xmp: true, icc: true, iptc: true, jfif: true, ihdr: true, gps: true };
+            const remainingExif = await exifr.parse(cleanedFile, parseOptions);
+            const thumbUrl = await History.createThumbnail(cleanedFile);
+            const sha256 = await Utils.calculateFileHash(cleanedFile, 'SHA-256');
+            const sha1 = await Utils.calculateFileHash(cleanedFile, 'SHA-1');
+
+            const batchAsset = {
+                id: Date.now() + Math.random() + i,
+                fileName: entry.fileName,
+                fileObject: cleanedFile,
+                fileSize: cleanedFile.size,
+                fileType: cleanedFile.type,
+                fileDate: Date.now(),
+                exifData: remainingExif || {},
+                thumbUrl,
+                locationData: null,
+                sha256,
+                sha1,
+                isSanitized: true,
+                sanitizeOptions: options,
+                integrityAlerts: []
+            };
+            batchAsset.integrityAlerts = Utils.analyzeFileIntegrity(batchAsset);
+            sanitizedAssets.push(batchAsset);
+        }
+
+        cleanupBatchSanitizer();
+
+        if (onBatchSanitizedFn) {
+            onBatchSanitizedFn(sanitizedAssets, { ...batchGlobalOptions, perFileOverrides: { ...batchOverrides } });
+        }
+    } catch (err) {
+        console.error("Batch sanitization failed:", err);
+        if (switchStateFn) switchStateFn('sanitize');
+        alert(t('err_sanitize_failed') || 'Failed to clean metadata. Please try again.');
+        if (sanitizerElements.downloadBtn) {
+            sanitizerElements.downloadBtn.disabled = false;
+            sanitizerElements.downloadBtn.innerHTML = '<i data-lucide="download"></i> <span>' + (t('download_all_sanitized') || 'Download All Sanitized') + '</span>';
+        }
+    }
+}
+
+export function cleanupBatchSanitizer() {
+    batchEntries = [];
+    batchActiveIndex = 0;
+    batchGlobalOptions = { gps: false, device: false, camera: false, date: false };
+    batchOverrides = {};
+
+    const container = document.getElementById('sanitize-asset-selector');
+    if (container) {
+        container.classList.add('hidden');
+        container.innerHTML = '';
+    }
+    const indicator = document.getElementById('sanitize-batch-indicator');
+    if (indicator) indicator.classList.add('hidden');
+
+    if (sanitizerElements.downloadBtn) {
+        sanitizerElements.downloadBtn.disabled = false;
+        sanitizerElements.downloadBtn.innerHTML = '<i data-lucide="download"></i> <span>' + (t('download_cleaned') || 'Download Cleaned Photo') + '</span>';
+    }
+}
+
+export function setOnBatchSanitizedFn(fn) {
+    onBatchSanitizedFn = fn;
 }

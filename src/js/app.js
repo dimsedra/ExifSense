@@ -7,7 +7,7 @@ import * as Exporter from './export.js';
 import * as UI from './ui.js';
 import { Router } from './router.js';
 import { initParticles } from './particles.js';
-import { initSanitizer, startSanitizerStudio, isSanitizerActive } from './sanitizer.js';
+import { initSanitizer, startSanitizerStudio, isSanitizerActive, isBatchSanitizerActive, startBatchSanitizerStudio, setOnBatchSanitizedFn } from './sanitizer.js';
 import { initGuide, renderGuide } from './guide.js';
 
 // DOM Elements
@@ -92,6 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initCopyHash();
     initParticles();
     initSanitizer(state, elements, switchState, handleSanitizedAsset);
+    setOnBatchSanitizedFn(handleBatchSanitizedAssets);
     initGuide(state, elements);
     
     window.addEventListener('switch-to-history', () => {
@@ -317,8 +318,14 @@ function initDropzone() {
     const setUploadMode = (mode) => {
         state.uploadMode = mode;
         elements.modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-        elements.fileInput.multiple = (mode === 'batch');
+        elements.fileInput.multiple = (mode === 'batch' || mode === 'remove');
         elements.dropzone.classList.toggle('remove-mode', mode === 'remove');
+        const modeDesc = document.getElementById('mode-description');
+        if (modeDesc) {
+            const key = `mode_${mode}_desc`;
+            modeDesc.setAttribute('data-i18n', key);
+            modeDesc.textContent = t(key) || modeDesc.textContent;
+        }
     };
 
     elements.modeBtns.forEach(btn => {
@@ -347,6 +354,25 @@ function initDropzone() {
     }
     
     elements.sanitizeMainBtn.addEventListener('click', () => {
+        if (state.assets.length > 1) {
+            // Batch sanitize from dashboard
+            const entries = state.assets.map(a => ({
+                file: a.fileObject,
+                exifData: a.exifData,
+                fileName: a.fileName
+            })).filter(e => e.file);
+            if (entries.length > 0) {
+                startBatchSanitizerStudio(entries);
+            } else {
+                Utils.showConfirm({
+                    title: t('reupload_required_title'),
+                    message: t('reupload_required_msg'),
+                    confirmText: t('go_to_upload'),
+                    onConfirm: () => resetApp()
+                });
+            }
+            return;
+        }
         const currentAsset = state.assets[state.activeAssetIndex];
         if (currentAsset) {
             if (currentAsset.fileObject) {
@@ -529,9 +555,12 @@ async function handleFiles(fileList) {
     }
 
     if (state.uploadMode === 'remove') {
-        const file = files[0];
-        handleSanitization(file);
-        switchState('intro');
+        if (files.length === 1) {
+            handleSanitization(files[0]);
+            switchState('intro');
+        } else {
+            handleBatchSanitization(files);
+        }
         return;
     }
 
@@ -578,6 +607,42 @@ async function handleSanitization(file) {
         console.error("Failed to parse EXIF for sanitization:", err);
         startSanitizerStudio(file, {});
     }
+}
+
+// FUNGSI: Sanitasi massal dari unggahan mode 'remove' (banyak file)
+async function handleBatchSanitization(files) {
+    switchState('loading');
+    const entries = [];
+    for (const file of files) {
+        try {
+            const parseOptions = { tiff: true, xmp: true, icc: true, iptc: true, jfif: true, ihdr: true, gps: true };
+            const exifData = await exifr.parse(file, parseOptions);
+            entries.push({ file, exifData: exifData || {}, fileName: file.name });
+        } catch (err) {
+            console.error(`Failed to parse EXIF for ${file.name}:`, err);
+            entries.push({ file, exifData: {}, fileName: file.name });
+        }
+    }
+    if (entries.length > 0) {
+        startBatchSanitizerStudio(entries);
+    } else {
+        alert(t('err_no_entries') || 'No files could be processed.');
+        Router.navigate('#/');
+    }
+}
+
+// FUNGSI: Callback setelah sanitasi massal — simpan sesi batch ke histori & dashboard
+async function handleBatchSanitizedAssets(sanitizedAssets, sanitizeOptions) {
+    const session = History.saveSession(sanitizedAssets, {
+        isSanitized: true,
+        isBatch: true,
+        sanitizeOptions
+    });
+    state.forensicId = session.forensicId;
+    state.assets = sanitizedAssets;
+    state.activeAssetIndex = 0;
+    await renderMultiAssetDashboard();
+    Router.navigate('#/dashboard');
 }
 
 // MODUL: Pemetaan & Visualisasi Dashboard Multi-Aset (Batch)
