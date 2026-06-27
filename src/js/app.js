@@ -7,6 +7,7 @@ import * as Exporter from './export.js';
 import * as UI from './ui.js';
 import { Router } from './router.js';
 import * as Crypto from './crypto.js';
+import { initParticles } from './particles.js';
 
 // DOM Elements
 const elements = {
@@ -99,6 +100,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initCopyHash();
     await initIdentity();
     initVerification();
+    initParticles();
     
     elements.startAnalysisBtn.addEventListener('click', () => {
         Router.navigate('#/upload');
