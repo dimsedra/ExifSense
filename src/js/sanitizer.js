@@ -433,22 +433,28 @@ function renderReactiveMetadata() {
             
             if (item.isRemoved) {
                 return `
-                    <div class="data-item" style="opacity: 0.55;">
-                        <div class="data-label" style="text-decoration: line-through; opacity: 0.7;">${Utils.escapeHTML(formattedLabel)}</div>
-                        <div class="data-value" style="text-decoration: line-through; display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <span>${Utils.escapeHTML(formattedValue)}</span>
-                            <span class="badge" style="background-color: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; text-decoration: none !important; display: inline-block;">${t('status_removed') || 'Removed'}</span>
+                    <div class="data-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                            <div class="data-label" style="margin-bottom: 0; text-decoration: line-through; opacity: 0.5;">${Utils.escapeHTML(formattedLabel)}</div>
+                            <span style="font-size: 0.65rem; font-weight: 600; text-transform: uppercase; color: #ef4444; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                <span style="display: inline-block; width: 5px; height: 5px; background-color: #ef4444; border-radius: 50%;"></span>
+                                ${t('status_removed') || 'Removed'}
+                            </span>
                         </div>
+                        <div class="data-value" style="text-decoration: line-through; opacity: 0.5;">${Utils.escapeHTML(formattedValue)}</div>
                     </div>
                 `;
             } else {
                 return `
                     <div class="data-item">
-                        <div class="data-label">${Utils.escapeHTML(formattedLabel)}</div>
-                        <div class="data-value" style="display: inline-flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                            <span>${Utils.escapeHTML(formattedValue)}</span>
-                            <span class="badge" style="background-color: rgba(34, 197, 94, 0.15); color: #4ade80; border: 1px solid rgba(34, 197, 94, 0.3); padding: 1px 6px; border-radius: 4px; font-size: 0.65rem; font-weight: 600; text-transform: uppercase; display: inline-block;">${t('status_kept') || 'Kept'}</span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.25rem;">
+                            <div class="data-label" style="margin-bottom: 0;">${Utils.escapeHTML(formattedLabel)}</div>
+                            <span style="font-size: 0.65rem; font-weight: 600; text-transform: uppercase; color: #10b981; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                <span style="display: inline-block; width: 5px; height: 5px; background-color: #10b981; border-radius: 50%;"></span>
+                                ${t('status_kept') || 'Kept'}
+                            </span>
                         </div>
+                        <div class="data-value">${Utils.escapeHTML(formattedValue)}</div>
                     </div>
                 `;
             }
