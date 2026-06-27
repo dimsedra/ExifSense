@@ -6,7 +6,6 @@ import * as History from './history.js';
 import * as Exporter from './export.js';
 import * as UI from './ui.js';
 import { Router } from './router.js';
-import * as Crypto from './crypto.js';
 import { initParticles } from './particles.js';
 
 // DOM Elements
@@ -55,19 +54,7 @@ const elements = {
     stagedFilesList: document.getElementById('staged-files-list'),
     clearStagedBtn: document.getElementById('clear-staged-btn'),
     startStagedBtn: document.getElementById('start-staged-btn'),
-    // Identity elements
-    identityToggle: document.getElementById('identity-settings-toggle'),
-    identityBadge: document.getElementById('investigator-id-badge'),
-    identityDropdown: document.getElementById('identity-dropdown'),
-    identityIdDisplay: document.getElementById('identity-id-display'),
-    backupIdentityBtn: document.getElementById('backup-identity-btn'),
-    restoreIdentityBtn: document.getElementById('restore-identity-btn'),
-    restoreIdentityFile: document.getElementById('restore-identity-file'),
-    resetIdentityBtn: document.getElementById('reset-identity-btn'),
-    // Verify tab elements
-    verifyDropzone: document.getElementById('verify-dropzone'),
-    verifyFileInput: document.getElementById('verify-file-input'),
-    verifyResultCard: document.getElementById('verify-result-card')
+
 };
 
 let state = {
@@ -98,8 +85,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initRouter();
     initToast();
     initCopyHash();
-    await initIdentity();
-    initVerification();
     initParticles();
     
     elements.startAnalysisBtn.addEventListener('click', () => {
@@ -201,15 +186,7 @@ function initRouter() {
                 elements.historySection.scrollIntoView({ behavior: 'smooth' });
             }
         },
-        { 
-            path: '#/verify', 
-            action: () => {
-                switchState('intro');
-                switchTab('verify');
-                const verifySec = document.getElementById('verify-section');
-                if (verifySec) verifySec.scrollIntoView({ behavior: 'smooth' });
-            }
-        },
+
         { 
             path: '#/dashboard', 
             guard: () => state.assets && state.assets.length > 0,
@@ -279,7 +256,6 @@ function initExport() {
                 case 'pdf': Exporter.exportToPdf(state.assets, title, state.forensicId); break;
                 case 'md': Exporter.exportToMd(state.assets, title, state.forensicId); break;
                 case 'json': Exporter.exportToJson(state.assets, title, state.forensicId); break;
-                case 'manifest': Exporter.exportSignedManifest(state.assets, title, state.forensicId, state.investigatorIdentity); break;
                 case 'csv': Exporter.exportToCsv(state.assets, title, state.forensicId); break;
                 case 'clipboard': Exporter.copyToClipboard(state.assets, title, state.forensicId); break;
             }
@@ -872,251 +848,4 @@ function initCopyHash() {
 
 function showToast(message) {
     document.dispatchEvent(new CustomEvent('toast', { detail: { message } }));
-}
-
-async function initIdentity() {
-    state.investigatorIdentity = await Crypto.initInvestigatorIdentity();
-    
-    if (elements.identityBadge) {
-        elements.identityBadge.textContent = state.investigatorIdentity.stampId;
-    }
-    if (elements.identityIdDisplay) {
-        elements.identityIdDisplay.textContent = state.investigatorIdentity.stampId;
-    }
-
-    if (elements.identityToggle) {
-        elements.identityToggle.addEventListener('click', (e) => {
-            e.stopPropagation();
-            elements.identityDropdown.classList.toggle('hidden');
-        });
-    }
-
-    document.addEventListener('click', (e) => {
-        if (elements.identityDropdown && !elements.identityDropdown.classList.contains('hidden')) {
-            const container = document.getElementById('identity-settings-container');
-            if (container && !container.contains(e.target)) {
-                elements.identityDropdown.classList.add('hidden');
-            }
-        }
-    });
-
-    if (elements.backupIdentityBtn) {
-        elements.backupIdentityBtn.addEventListener('click', () => {
-            const stampId = state.investigatorIdentity.stampId;
-            const jwkPrivate = state.investigatorIdentity.jwkPrivate;
-            const jwkPublic = state.investigatorIdentity.jwkPublic;
-            
-            Utils.showPassphrasePrompt({
-                titleKey: 'passphrase_title_backup',
-                messageKey: 'passphrase_desc_backup',
-                onSubmit: async (passphrase) => {
-                    try {
-                        const encrypted = await Crypto.encryptPrivateJwk(jwkPrivate, passphrase);
-                        const keyData = {
-                            stampId: stampId,
-                            jwkPublic: jwkPublic,
-                            encryptedPrivateJwk: encrypted.ciphertextHex,
-                            salt: encrypted.saltHex,
-                            iv: encrypted.ivHex
-                        };
-                        const json = JSON.stringify(keyData, null, 4);
-                        const a = document.createElement('a');
-                        const file = new Blob([json], { type: 'application/octet-stream' });
-                        a.href = URL.createObjectURL(file);
-                        a.download = `ExifSense_${stampId}.key`;
-                        a.click();
-                        URL.revokeObjectURL(a.href);
-                        showToast(t('key_backup_success') || 'Identity Key Backup downloaded successfully.');
-                        return true;
-                    } catch (err) {
-                        console.error("Encryption failed:", err);
-                        return false;
-                    }
-                }
-            });
-        });
-    }
-
-    if (elements.restoreIdentityBtn && elements.restoreIdentityFile) {
-        elements.restoreIdentityBtn.addEventListener('click', (e) => {
-            if (e.target !== elements.restoreIdentityFile) {
-                elements.restoreIdentityFile.click();
-            }
-        });
-
-        elements.restoreIdentityFile.addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async (event) => {
-                try {
-                    const keyData = JSON.parse(event.target.result);
-                    if (!keyData.stampId || !keyData.jwkPublic) {
-                        throw new Error("Invalid key file structure.");
-                    }
-
-                    if (keyData.jwkPrivate) {
-                        // Legacy plaintext restore
-                        const restored = await Crypto.restoreIdentity(keyData.jwkPrivate, keyData.jwkPublic);
-                        if (restored) {
-                            state.investigatorIdentity = restored;
-                            if (elements.identityBadge) elements.identityBadge.textContent = restored.stampId;
-                            if (elements.identityIdDisplay) elements.identityIdDisplay.textContent = restored.stampId;
-                            showToast(t('key_restore_success') || 'Investigator identity successfully restored!');
-                        } else {
-                            throw new Error("Crypto restore failed.");
-                        }
-                    } else if (keyData.encryptedPrivateJwk && keyData.salt && keyData.iv) {
-                        // Encrypted restore
-                        Utils.showPassphrasePrompt({
-                            titleKey: 'passphrase_title_restore',
-                            messageKey: 'passphrase_desc_restore',
-                            onSubmit: async (passphrase) => {
-                                try {
-                                    const decryptedPrivate = await Crypto.decryptPrivateJwk(
-                                        keyData.encryptedPrivateJwk,
-                                        keyData.salt,
-                                        keyData.iv,
-                                        passphrase
-                                    );
-                                    
-                                    const restored = await Crypto.restoreIdentity(decryptedPrivate, keyData.jwkPublic);
-                                    if (restored) {
-                                        state.investigatorIdentity = restored;
-                                        if (elements.identityBadge) elements.identityBadge.textContent = restored.stampId;
-                                        if (elements.identityIdDisplay) elements.identityIdDisplay.textContent = restored.stampId;
-                                        showToast(t('key_restore_success') || 'Investigator identity successfully restored!');
-                                        return true;
-                                    } else {
-                                        return false;
-                                    }
-                                } catch (err) {
-                                    console.warn("Decryption failed:", err);
-                                    return false;
-                                }
-                            }
-                        });
-                    } else {
-                        throw new Error("Invalid key file structure: missing private key.");
-                    }
-                } catch (err) {
-                    console.error(err);
-                    showToast(t('key_restore_error') || 'Failed to restore identity key. Invalid file.');
-                }
-                e.target.value = '';
-            };
-            reader.readAsText(file);
-        });
-    }
-
-    if (elements.resetIdentityBtn) {
-        elements.resetIdentityBtn.addEventListener('click', () => {
-            Utils.showConfirm({
-                title: t('confirm_regenerate_title') || 'Regenerate Identity',
-                message: t('confirm_regenerate') || 'Are you sure you want to regenerate your identity? Your current key will be replaced.',
-                confirmText: t('regenerate_btn') || 'Regenerate',
-                type: 'danger',
-                onConfirm: async () => {
-                    localStorage.removeItem('exifsense_inv_priv_jwk');
-                    localStorage.removeItem('exifsense_inv_pub_jwk');
-                    localStorage.removeItem('exifsense_inv_stamp');
-                    state.investigatorIdentity = await Crypto.initInvestigatorIdentity();
-                    if (elements.identityBadge) elements.identityBadge.textContent = state.investigatorIdentity.stampId;
-                    if (elements.identityIdDisplay) elements.identityIdDisplay.textContent = state.investigatorIdentity.stampId;
-                    showToast(t('key_regenerate_success') || 'New cryptographic identity generated successfully!');
-                }
-            });
-        });
-    }
-}
-
-function initVerification() {
-    if (!elements.verifyDropzone || !elements.verifyFileInput) return;
-
-    elements.verifyDropzone.addEventListener('click', (e) => {
-        if (e.target !== elements.verifyFileInput) {
-            elements.verifyFileInput.click();
-        }
-    });
-
-    elements.verifyDropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        elements.verifyDropzone.classList.add('dragover');
-    });
-
-    elements.verifyDropzone.addEventListener('dragleave', () => {
-        elements.verifyDropzone.classList.remove('dragover');
-    });
-
-    elements.verifyDropzone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        elements.verifyDropzone.classList.remove('dragover');
-        if (e.dataTransfer.files.length) {
-            handleManifestFile(e.dataTransfer.files[0]);
-        }
-    });
-
-    elements.verifyFileInput.addEventListener('change', (e) => {
-        if (e.target.files.length) {
-            handleManifestFile(e.target.files[0]);
-            e.target.value = '';
-        }
-    });
-}
-
-async function handleManifestFile(file) {
-    if (!file) return;
-    
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-        try {
-            const manifest = JSON.parse(e.target.result);
-            if (!manifest.manifestVersion || !manifest.signature || !manifest.payload) {
-                showToast(t('verify_invalid_manifest') || "Invalid forensic manifest format.");
-                return;
-            }
-
-            const payloadStr = JSON.stringify(manifest.payload);
-            const isValid = await Crypto.verifyPayload(manifest.publicKey, manifest.signature, payloadStr);
-            
-            state.verifiedManifest = manifest;
-            state.verifiedMatchedAssets = {};
-            
-            UI.renderManifestVerification(
-                elements.verifyResultCard, 
-                manifest, 
-                isValid, 
-                state.verifiedMatchedAssets,
-                handleEvidenceFilesForVerification
-            );
-
-        } catch (err) {
-            console.error("Error reading manifest:", err);
-            showToast(t('verify_invalid_manifest') || "Failed to read manifest file. Ensure it is valid JSON.");
-        }
-    };
-    reader.readAsText(file);
-}
-
-async function handleEvidenceFilesForVerification(files) {
-    if (!files || files.length === 0 || !state.verifiedManifest) return;
-
-    for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const sha256 = await Utils.calculateFileHash(file, 'SHA-256');
-        state.verifiedMatchedAssets[file.name] = {
-            sha256: sha256
-        };
-    }
-
-    UI.renderManifestVerification(
-        elements.verifyResultCard, 
-        state.verifiedManifest, 
-        true,
-        state.verifiedMatchedAssets,
-        handleEvidenceFilesForVerification
-    );
-    
-    showToast(t('evidence_matching_updated') || "Evidence files verified against manifest.");
 }

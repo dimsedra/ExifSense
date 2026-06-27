@@ -1,7 +1,6 @@
 import * as Narratives from './narratives.js';
 import { t } from './i18n.js';
 import * as Utils from './utils.js';
-import { signPayload } from './crypto.js';
 
 function stripHtml(html, preserveTables = true) {
     if (!html) return '';
@@ -620,59 +619,7 @@ export function exportToJson(assets, sessionTitle, forensicId) {
     downloadFile(jsonContent, `ExifSense_Report_${Date.now()}.json`, 'application/json');
 }
 
-export async function exportSignedManifest(assets, sessionTitle, forensicId, investigatorIdentity) {
-    // Generate the standard report data structure
-    const reportData = {
-        reportInfo: {
-            title: t('title', {}, 'reports'),
-            session: sessionTitle,
-            forensicId: forensicId || Utils.generateForensicId(),
-            generated: Utils.formatFullDate(new Date()),
-            assetCount: assets.length
-        },
-        assets: assets.map((asset, idx) => {
-            return {
-                assetId: idx + 1,
-                fileName: asset.fileName,
-                sourceDetails: {
-                    fileType: asset.fileType || 'Unknown',
-                    fileSizeMB: (asset.fileSize / (1024 * 1024)).toFixed(2),
-                    fileSystemDate: Utils.formatFullDate(asset.fileDate),
-                    sha256: asset.sha256 || null,
-                    sha1: asset.sha1 || null
-                }
-            };
-        })
-    };
 
-    // Calculate signature
-    const signaturePayload = JSON.stringify(reportData);
-    let signature = null;
-    let investigatorId = "UNKNOWN";
-    let publicKeyJwk = null;
-
-    if (investigatorIdentity && investigatorIdentity.privateKey) {
-        try {
-            signature = await signPayload(investigatorIdentity.privateKey, signaturePayload);
-            investigatorId = investigatorIdentity.stampId;
-            publicKeyJwk = investigatorIdentity.jwkPublic;
-        } catch (e) {
-            console.error("Failed to sign manifest payload:", e);
-        }
-    }
-
-    const manifest = {
-        manifestVersion: "1.0",
-        investigatorId: investigatorId,
-        signedAt: Utils.formatFullDate(new Date()),
-        publicKey: publicKeyJwk,
-        signature: signature,
-        payload: reportData
-    };
-
-    const jsonContent = JSON.stringify(manifest, null, 4);
-    downloadFile(jsonContent, `ExifSense_Manifest_${forensicId || 'session'}.json`, 'application/json');
-}
 
 
 function downloadFile(content, fileName, contentType) {
