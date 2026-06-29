@@ -182,7 +182,7 @@
         "sanitize_presets_desc": "Select a preset to quickly toggle metadata settings for your sharing needs:",
         "preset_max_privacy": "Max Privacy",
         "preset_photo_share": "Photographer Share",
-        "preset_location_only": "Location Only",
+        "preset_location_only": "Remove Location Only",
         "selective_controls_title": "Selective Metadata Controls",
         "sanitize_toggle_date": "Remove Date & Time Taken",
         "location_hidden": "Location Info Removed",

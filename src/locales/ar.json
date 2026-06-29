@@ -145,7 +145,7 @@
         "sanitize_presets_desc": "اختر إعداداً مسبقاً لضبط خيارات التطهير فوراً وفقاً لاحتياجاتك:",
         "preset_max_privacy": "أقصى خصوصية",
         "preset_photo_share": "مشاركة المصورين",
-        "preset_location_only": "الموقع فقط",
+        "preset_location_only": "حذف الموقع فقط",
         "selective_controls_title": "عناصر التحكم الانتقائية في البيانات",
         "sanitize_toggle_date": "إزالة تاريخ ووقت التقاط الصورة",
         "location_hidden": "تمت إزالة معلومات الموقع",

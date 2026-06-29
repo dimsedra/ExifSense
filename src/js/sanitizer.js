@@ -464,10 +464,10 @@ function applyPreset(presetName) {
         if (sanitizerElements.toggleCamera && !sanitizerElements.toggleCamera.disabled) sanitizerElements.toggleCamera.checked = false;
         if (sanitizerElements.toggleDate && !sanitizerElements.toggleDate.disabled) sanitizerElements.toggleDate.checked = true;
     } else if (presetName === 'location-only') {
-        if (sanitizerElements.toggleGps && !sanitizerElements.toggleGps.disabled) sanitizerElements.toggleGps.checked = false;
-        if (sanitizerElements.toggleDevice && !sanitizerElements.toggleDevice.disabled) sanitizerElements.toggleDevice.checked = true;
-        if (sanitizerElements.toggleCamera && !sanitizerElements.toggleCamera.disabled) sanitizerElements.toggleCamera.checked = true;
-        if (sanitizerElements.toggleDate && !sanitizerElements.toggleDate.disabled) sanitizerElements.toggleDate.checked = true;
+        if (sanitizerElements.toggleGps && !sanitizerElements.toggleGps.disabled) sanitizerElements.toggleGps.checked = true;
+        if (sanitizerElements.toggleDevice && !sanitizerElements.toggleDevice.disabled) sanitizerElements.toggleDevice.checked = false;
+        if (sanitizerElements.toggleCamera && !sanitizerElements.toggleCamera.disabled) sanitizerElements.toggleCamera.checked = false;
+        if (sanitizerElements.toggleDate && !sanitizerElements.toggleDate.disabled) sanitizerElements.toggleDate.checked = false;
     }
     updateVisuals();
 }
