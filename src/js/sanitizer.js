@@ -37,6 +37,7 @@ const sanitizerElements = {
     mapDiv: document.getElementById('sanitize-map'),
     privacyOverlay: document.getElementById('sanitize-privacy-overlay'),
     previewContainer: document.getElementById('sanitize-metadata-preview-container'),
+    privacyAnalysisContainer: document.getElementById('sanitize-privacy-analysis-container'),
     
     // Presets
     presetMaxPrivacy: document.getElementById('preset-max-privacy'),
@@ -289,8 +290,165 @@ function updateVisuals() {
         }
     }
     
+    // Redraw reactive privacy analysis
+    renderPrivacyAnalysis();
+    
     // Redraw reactive metadata preview
     renderReactiveMetadata();
+}
+
+function renderPrivacyAnalysis() {
+    if (!sanitizerElements.privacyAnalysisContainer) return;
+    
+    // Checked (true) means REMOVE/STRIP
+    const removeGps = sanitizerElements.toggleGps ? sanitizerElements.toggleGps.checked : false;
+    const removeDevice = sanitizerElements.toggleDevice ? sanitizerElements.toggleDevice.checked : false;
+    const removeCamera = sanitizerElements.toggleCamera ? sanitizerElements.toggleCamera.checked : false;
+    const removeDate = sanitizerElements.toggleDate ? sanitizerElements.toggleDate.checked : false;
+    
+    // Presence check
+    const hasGps = activeExif.latitude !== undefined && activeExif.longitude !== undefined;
+    const hasDevice = !!(activeExif.Make || activeExif.Model);
+    
+    const cameraParts = [];
+    if (activeExif.ApertureValue || activeExif.FNumber) cameraParts.push(`f/${activeExif.ApertureValue || activeExif.FNumber}`);
+    if (activeExif.ISO) cameraParts.push(`ISO ${activeExif.ISO}`);
+    if (activeExif.ExposureTime) cameraParts.push(`${activeExif.ExposureTime}s`);
+    if (activeExif.FocalLength) cameraParts.push(`${activeExif.FocalLength}mm`);
+    const hasCamera = cameraParts.length > 0 || !!activeExif.LensModel;
+    
+    const rawDate = activeExif.DateTimeOriginal || activeExif.DateTimeDigitized || activeExif.DateTime;
+    const hasDate = !!rawDate;
+    
+    // Check if any existing sensitive data is being KEPT
+    const isGpsAtRisk = hasGps && !removeGps;
+    const isDateAtRisk = hasDate && !removeDate;
+    const isDeviceAtRisk = hasDevice && !removeDevice;
+    const isCameraAtRisk = hasCamera && !removeCamera;
+    
+    const isAnyAtRisk = isGpsAtRisk || isDateAtRisk || isDeviceAtRisk || isCameraAtRisk;
+    
+    // Score Badge / Header
+    let statusClass = isAnyAtRisk ? 'risk' : 'safe';
+    let statusTitle = isAnyAtRisk ? t('privacy_score_risk') : t('privacy_score_safe');
+    let statusDesc = isAnyAtRisk ? t('privacy_desc_risk') : t('privacy_desc_safe');
+    let statusIcon = isAnyAtRisk ? 'shield-alert' : 'shield-check';
+    let statusColor = isAnyAtRisk ? '#ea580c' : '#10b981';
+    let statusBg = isAnyAtRisk ? 'rgba(234, 88, 12, 0.05)' : 'rgba(16, 185, 129, 0.05)';
+    let statusBorder = isAnyAtRisk ? 'rgba(234, 88, 12, 0.2)' : 'rgba(16, 185, 129, 0.2)';
+    
+    // Render the score header
+    let html = `
+        <div style="background: ${statusBg}; border: 1px solid ${statusBorder}; padding: 1rem; border-radius: 8px; margin-bottom: 1.25rem; display: flex; gap: 0.75rem; align-items: flex-start;">
+            <div style="color: ${statusColor}; margin-top: 0.15rem;">
+                <i data-lucide="${statusIcon}" style="width: 24px; height: 24px;"></i>
+            </div>
+            <div>
+                <h4 style="margin: 0 0 0.25rem; font-size: 0.95rem; font-weight: 600; color: var(--text-main);">${statusTitle}</h4>
+                <p style="margin: 0; font-size: 0.8rem; line-height: 1.4; color: var(--text-muted);">${statusDesc}</p>
+            </div>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+    `;
+    
+    // 1. GPS Item
+    let gpsIcon = 'info';
+    let gpsIconColor = 'var(--text-muted)';
+    let gpsText = t('privacy_item_gps_none');
+    
+    if (hasGps) {
+        if (removeGps) {
+            gpsIcon = 'check-circle';
+            gpsIconColor = '#10b981';
+            gpsText = t('privacy_item_gps_safe');
+        } else {
+            gpsIcon = 'alert-triangle';
+            gpsIconColor = '#ea580c';
+            gpsText = t('privacy_item_gps_risk', { coords: `${activeExif.latitude.toFixed(5)}, ${activeExif.longitude.toFixed(5)}` });
+        }
+    }
+    html += renderChecklistItem(gpsIcon, gpsIconColor, gpsText);
+    
+    // 2. Date Item
+    let dateIcon = 'info';
+    let dateIconColor = 'var(--text-muted)';
+    let dateText = t('privacy_item_date_none');
+    
+    if (hasDate) {
+        if (removeDate) {
+            dateIcon = 'check-circle';
+            dateIconColor = '#10b981';
+            dateText = t('privacy_item_date_safe');
+        } else {
+            dateIcon = 'alert-triangle';
+            dateIconColor = '#ea580c';
+            dateText = t('privacy_item_date_risk', { time: Utils.formatFullDate(rawDate) });
+        }
+    }
+    html += renderChecklistItem(dateIcon, dateIconColor, dateText);
+    
+    // 3. Device Item
+    let deviceIcon = 'info';
+    let deviceIconColor = 'var(--text-muted)';
+    let deviceText = t('privacy_item_device_none');
+    
+    if (hasDevice) {
+        if (removeDevice) {
+            deviceIcon = 'check-circle';
+            deviceIconColor = '#10b981';
+            deviceText = t('privacy_item_device_safe');
+        } else {
+            deviceIcon = 'alert-triangle';
+            deviceIconColor = '#ea580c';
+            const deviceName = `${activeExif.Make || ''} ${activeExif.Model || ''}`.trim();
+            deviceText = t('privacy_item_device_risk', { device: deviceName });
+        }
+    }
+    html += renderChecklistItem(deviceIcon, deviceIconColor, deviceText);
+    
+    // 4. Camera settings Item
+    let cameraIcon = 'info';
+    let cameraIconColor = 'var(--text-muted)';
+    let cameraText = t('privacy_item_camera_none');
+    
+    if (hasCamera) {
+        if (removeCamera) {
+            cameraIcon = 'check-circle';
+            cameraIconColor = '#10b981';
+            cameraText = t('privacy_item_camera_safe');
+        } else {
+            cameraIcon = 'alert-triangle';
+            cameraIconColor = '#ea580c';
+            const settingsStr = [cameraParts.join(', '), activeExif.LensModel].filter(Boolean).join(' | ');
+            cameraText = t('privacy_item_camera_risk', { settings: settingsStr });
+        }
+    }
+    html += renderChecklistItem(cameraIcon, cameraIconColor, cameraText);
+    
+    html += `</div>`;
+    
+    sanitizerElements.privacyAnalysisContainer.innerHTML = html;
+    
+    if (window.lucide) {
+        window.lucide.createIcons({
+            attrs: {
+                class: 'lucide-icon'
+            },
+            node: sanitizerElements.privacyAnalysisContainer
+        });
+    }
+}
+
+function renderChecklistItem(icon, color, text) {
+    return `
+        <div style="display: flex; gap: 0.65rem; align-items: flex-start; font-size: 0.85rem; line-height: 1.45;">
+            <div style="color: ${color}; flex-shrink: 0; margin-top: 0.1rem;">
+                <i data-lucide="${icon}" style="width: 16px; height: 16px;"></i>
+            </div>
+            <div style="color: var(--text-main);">${text}</div>
+        </div>
+    `;
 }
 
 function applyPreset(presetName) {
