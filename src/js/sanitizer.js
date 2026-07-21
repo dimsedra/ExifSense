@@ -517,6 +517,7 @@ async function executeSanitization() {
         const parseOptions = { tiff: true, xmp: true, icc: true, iptc: true, jfif: true, ihdr: true, gps: true };
         const remainingExif = await exifr.parse(cleanedFile, parseOptions);
         const thumbUrl = await History.createThumbnail(cleanedFile);
+        const actualDims = await Utils.getImageDimensions(cleanedFile);
         const sha256 = await Utils.calculateFileHash(cleanedFile, 'SHA-256');
         const sha1 = await Utils.calculateFileHash(cleanedFile, 'SHA-1');
         
@@ -532,6 +533,8 @@ async function executeSanitization() {
             locationData: null,
             sha256,
             sha1,
+            actualWidth: actualDims.width,
+            actualHeight: actualDims.height,
             isSanitized: true,
             sanitizeOptions: options,
             integrityAlerts: []
@@ -996,6 +999,7 @@ async function executeBatchSanitization() {
             const parseOptions = { tiff: true, xmp: true, icc: true, iptc: true, jfif: true, ihdr: true, gps: true };
             const remainingExif = await exifr.parse(cleanedFile, parseOptions);
             const thumbUrl = await History.createThumbnail(cleanedFile);
+            const actualDims = await Utils.getImageDimensions(cleanedFile);
             const sha256 = await Utils.calculateFileHash(cleanedFile, 'SHA-256');
             const sha1 = await Utils.calculateFileHash(cleanedFile, 'SHA-1');
 
@@ -1011,6 +1015,8 @@ async function executeBatchSanitization() {
                 locationData: null,
                 sha256,
                 sha1,
+                actualWidth: actualDims.width,
+                actualHeight: actualDims.height,
                 isSanitized: true,
                 sanitizeOptions: options,
                 integrityAlerts: []

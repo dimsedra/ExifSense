@@ -1,0 +1,6 @@
+{
+  "type": "module",
+  "dependencies": {
+    "exifr": "^7.1.3"
+  }
+}

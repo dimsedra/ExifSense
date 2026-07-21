@@ -725,6 +725,28 @@ export function analyzeFileIntegrity(asset) {
         });
     }
 
+    // 5. Check if EXIF reported dimensions match the actual pixel array size
+    const exifWidth = exif.ExifImageWidth || exif.PixelXDimension || exif.ImageWidth;
+    const exifHeight = exif.ExifImageHeight || exif.PixelYDimension || exif.ImageHeight;
+    const actualWidth = asset.actualWidth;
+    const actualHeight = asset.actualHeight;
+
+    if (exifWidth && exifHeight && actualWidth && actualHeight) {
+        if (Number(exifWidth) !== Number(actualWidth) || Number(exifHeight) !== Number(actualHeight)) {
+            alerts.push({
+                type: 'dimension_mismatch',
+                severity: 'warning',
+                messageParam: {
+                    exifWidth,
+                    exifHeight,
+                    actualWidth,
+                    actualHeight
+                },
+                message: `Dimension Mismatch: EXIF metadata reports image dimensions as ${exifWidth}x${exifHeight}, but the actual pixel array size is ${actualWidth}x${actualHeight}. This suggests the image was cropped or resized without updating the EXIF metadata.`
+            });
+        }
+    }
+
     return alerts;
 }
 
@@ -768,6 +790,31 @@ export function animateTabTransition(wrapper, targetPane, switchCallback) {
             };
             wrapper.addEventListener('transitionend', onTransitionEnd);
         });
+    });
+}
+
+/**
+ * Loads a file into an Image element to determine its actual natural dimensions.
+ * @param {File} file - The image file to load.
+ * @returns {Promise<{width: number|null, height: number|null}>}
+ */
+export async function getImageDimensions(file) {
+    return new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                resolve({ width: img.naturalWidth, height: img.naturalHeight });
+            };
+            img.onerror = () => {
+                resolve({ width: null, height: null });
+            };
+            img.src = e.target.result;
+        };
+        reader.onerror = () => {
+            resolve({ width: null, height: null });
+        };
+        reader.readAsDataURL(file);
     });
 }
 

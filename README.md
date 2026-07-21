@@ -1,212 +1,79 @@
 # ExifSense
 
-## Professional Asset Intelligence and Forensic Visualization
+## EXIF Image Metadata, Made Easy for Everyone
+
+ExifSense is a browser-native tool that translates raw image metadata, camera settings, and geolocation tags into clear, human-readable insights. Designed to reduce technical complexity and lower the barrier of understanding, ExifSense helps photographers, privacy-conscious users, and curious individuals understand the data behind their photos—without sending a single byte to the cloud.
+
+> "Standard EXIF viewers provide raw data lists. ExifSense provides clarity and context."
 
 ![Hero Screenshot](./assets/screenshots/hero.png)
 
-ExifSense is an advanced, browser-native forensic platform designed to transform raw image metadata into comprehensive investigative intelligence.
+---
 
-> "Standard EXIF viewers provide a list of tags. ExifSense provides a narrative."
+## Quick Start
 
-Built for forensic analysts, private investigators, and digital archeologists, ExifSense bridges the gap between technical data extraction and human-readable storytelling.
+No installation, account creation, or server deployment is required.
+
+1. **Clone or Download** this repository.
+2. **Open** `index.html` in any modern web browser.
+3. **Drag & Drop** your images to view detailed metadata and insights immediately.
 
 ---
 
-## Core Pillars
+## Key Benefits
 
-### 1. Absolute Privacy (Local-First)
+### Human-Readable Insights (Cognitive Reducer)
+Raw EXIF data often consists of obscure technical parameters such as aperture, exposure bias, and focal length. ExifSense automatically analyzes these attributes and presents them in plain, accessible language—explaining lighting conditions, lens choices, and capture history without requiring deep technical knowledge.
 
-Metadata is sensitive evidence. ExifSense ensures 100% of the extraction, processing, and narrative generation happens locally in your browser. No assets or metadata are ever uploaded to a server, maintaining an air-tight Chain of Custody and data privacy.
+### Complete Local Privacy (Zero-Server Architecture)
+Your photos and metadata remain entirely on your device. Extraction, narrative generation, mapping, and metadata removal are performed 100% locally in your browser to guarantee complete data confidentiality.
 
-### 2. Cryptographic Chain of Custody & Audit Trails
+### Geospatial and Travel Route Visualization
+Visualize photo capture locations on interactive maps. For collections taken across multiple locations, ExifSense reconstructs plausible road-following movement paths to help you trace travel journeys.
 
-To establish non-repudiation, ExifSense generates a local ECDSA P-256 investigator key pair. Sessions can be exported as signed JSON manifests containing cryptographic signatures of all evidence files (SHA-256/SHA-1), binding the investigator's identity to the verified metadata state.
+### One-Click Privacy Shield
+Remove sensitive GPS coordinates, device identifiers, and metadata tags prior to sharing photos online, protecting personal privacy while maintaining original asset quality.
 
-### 3. Forensic Storytelling (Narrative Engine)
-
-Standard EXIF viewers provide a list of tags. ExifSense provides a narrative. Our specialized engine analyzes technical parameters (shutter speed, aperture, focal length, and geolocation) to generate human-readable expert deductions — identifying hardware consistencies, potential metadata spoofing, and optical characteristics.
-
-### 4. Geospatial Movement Intelligence
-
-Beyond simple pins on a map, ExifSense utilizes the OSRM (Open Source Routing Machine) to calculate realistic road-based movement between assets. It reconstructs the subject's path across the globe, revealing travel patterns that simple coordinates cannot show.
-
-### 5. Metadata Sanitization (Privacy Shield)
-
-ExifSense includes a dedicated metadata removal workflow. Analysts can selectively strip specific EXIF categories — or perform a full wipe — and download a forensically clean copy of the asset without altering the original.
+### Software Modification Detection
+Identify post-processing signatures from common image editing software, timestamp discrepancies, and file extension mismatches to evaluate asset integrity.
 
 ---
 
-## Key Features
+## Core Features
 
-### Advanced Forensic Extraction
-
-* **Hardware Profiling**: Comprehensive analysis of technical device signatures, including manufacturer (Make), specific device model, and firmware/software versions used to capture the asset.
-* **Software Tampering Detection**: Automatically identifies post-processing signatures from known editing tools (Adobe, GIMP, Snapseed, Canva, and others), flagging potential forensic alteration.
-* **Optic & Exposure Intelligence**: Deep technical extraction of internal camera settings such as Aperture (F-Stop), ISO Sensitivity, Shutter Speed, and Focal Length. The system classifies the lighting environment (Low-Light, Bright Daylight, Shallow Depth of Field) based on these parameters.
-* **Chronological Verification**: Sophisticated cross-referencing between the external file system's "Last Modified" time and the internal EXIF `DateTimeOriginal` tag, detecting potential timestamp manipulation.
-* **Coordinate Spoofing Detection**: Flags two classes of anomalous GPS data — Null Island coordinates (near 0°, 0°) and integer-precision coordinates — both of which commonly indicate fabricated or manually entered location data.
-
-### Cryptographic Security & Evidence Verification
-
-* **Investigator Identity Management**: Local client-side generation of ECDSA P-256 private/public key pairs representing the investigator. Supports encrypted key backups (JSON file download) and key restoration to ensure identity persistence.
-* **Binary Spoofing Protection**: Real-time analysis of file headers (Magic Bytes) to verify the actual mime type of files (JPEG, PNG, HEIC, etc.) against their extension, protecting against disguised malicious payloads or spoofed files. Auto-recovers correct extensions when mismatches are detected.
-* **Cryptographic Hashing**: Automatic computation of SHA-256 and SHA-1 hashes for every analyzed file, serving as immutable evidence fingerprints.
-* **Signed Forensic Manifests**: Exports analysis results, file hashes, metadata parameters, and investigator public keys as a signed JSON manifest. The manifest contains a cryptographic signature validating the integrity of the evidence list.
-* **Manifest Verification Dropzone**: A dedicated validation tab where users can drop a signed forensic manifest along with the corresponding source images to calculate and verify evidence integrity and sign matching authenticity in real-time.
-
-### Geospatial Dashboard
-
-* **Interactive Multi-Pin Mapping**: A high-fidelity visualization layer that renders all loaded assets simultaneously. Each marker provides a high-resolution thumbnail preview and quick access to precise GPS coordinates.
-* **Road-Following Path Reconstruction**: Leverages the OSRM (Open Source Routing Machine) API to calculate the most probable road-based route between a sequence of geo-tagged assets.
-* **Reverse Geocoding**: Automated conversion of raw latitude/longitude coordinates into human-readable physical addresses using the Nominatim engine.
-* **Live Map Highlight**: Clicking an asset in the selector panel highlights its corresponding map marker in real-time.
-
-### Expert Analysis & Batch Intelligence
-
-* **Cross-Asset Batch Correlation**: Automated logical engine that scans multiple files to identify shared technical signatures — confirming whether evidence originated from a unified source or multiple distinct operators.
-* **Metadata Integrity Classification**: Classifies each asset into one of three states — **Complete** (Hardware + Timeline + Geospatial all present), **Partially Stripped** (some categories missing), or **Fully Stripped** (zero core metadata).
-* **Integrity Verification Matrix**: A collapsible interactive table mapping every asset against six metadata categories, allowing immediate visual identification of sanitization patterns.
-* **Hardware Comparison Table**: A side-by-side raw-value comparison of Make, Model, Software, Lens Model, Lens Make, Body Serial Number, and Lens Serial Number across all uploaded assets — enabling cross-device attribution.
-* **Serial Number Cross-Reference**: Detects if multiple assets share the same physical body serial number, confirming single-device provenance.
-* **Timeline Reconstruction Panel**: Sorts assets chronologically and presents per-step temporal gaps between captures (e.g., `➔ +2 min 34 sec`), exposing capture sequences and potential gaps.
-* **Geospatial Reconstruction Panel**: Calculates total movement path distance and per-leg distances between consecutive geotagged captures.
-* **Velocity Impossibility Guard**: Calculates travel speed between consecutive geospatial points. Exceeding 1,200 km/h triggers an automatic spoofing alert.
-
-### Upload & Staging System
-
-* **Three Upload Modes**: Switch between **Single** (one asset at a time), **Batch** (multi-file staging queue), and **Remove** (metadata sanitization) modes via a carousel navigator.
-* **Staged File Queue**: In Batch mode, assets accumulate in a visible staging list before analysis, allowing investigators to build their evidence set incrementally.
-* **Smart Deduplication**: Prevents the same file from being added to the staging queue twice.
-* **Animated Loading Screen**: A visual analysis buffer screen displays during processing for a polished, professional experience.
-* **Interactive Constellation Network**: A global background canvas rendering dynamic floating forensic nodes that connect, react, and glow when they interact with the user's cursor, adapting colors on-the-fly to theme shifts.
-
-### Asset Navigation & Filtering
-
-* **Thumbnail Asset Selector**: A horizontal scrollable panel displays all uploaded assets as thumbnails with badge indicators for geotagged and stripped files.
-* **Completeness Filter**: Three-state filter allowing investigators to view **All Assets**, **Complete** assets only (full metadata), or **Stripped** assets only (missing core metadata).
-* **Dynamic Expert Panel Header**: The individual analysis panel updates its heading to reflect the currently active asset's filename.
-
-### Scalable Internationalization (i18n)
-
-* **Three Language Support**: Full localization across English (EN), Bahasa Indonesia (ID), and Arabic (AR) — including right-to-left (RTL) layout support.
-* **Decoupled JSON Dictionary**: UI strings and forensic narratives are stored in external JSON locale files, allowing new languages without modifying core logic.
-* **Seamless Real-Time Switching**: Language changes apply instantly across all dashboard components — including complex forensic narratives — without a page reload.
-
-### Unified Reporting Suite
-
-Generate professional, investigation-ready reports in five standardized formats, complete with SHA-256/SHA-1 evidence fingerprints and investigator public keys to preserve audit records:
-
-* **PDF**: A formatted, print-ready document featuring the full forensic narrative, integrity overview, and detailed metadata tables — structured across pages with clear section headers and signed references.
-* **Markdown**: A lightweight, version-control-friendly format with full narrative text, cryptographic hash checklists, and structured metadata sections.
-* **JSON (Signed Manifest)**: An industry-standard structured object export containing file hashes, metadata, and investigator public keys, cryptographically sealed with an ECDSA P-256 signature for verification.
-* **CSV**: A tabular raw dataset export including SHA-256 and SHA-1 evidence fingerprints, tailored for spreadsheet-based correlation and auditing.
-* **Clipboard (Plain Text)**: A clean, human-readable summary of forensic narratives, hashes, and key metadata, copied directly to the system clipboard for rapid sharing.
-
-### Session Persistence & History
-
-* **Automatic Session Saving**: Every analysis session is automatically saved to browser `localStorage` with a unique Forensic ID, preserving the evidence record between sessions.
-* **History Search & Filter**: Search sessions by filename and filter by type (All / Single / Batch).
-* **Session Restore**: Any past session can be reloaded into the full dashboard from the history panel.
+| Feature | Description |
+| :--- | :--- |
+| **Single Image Analysis** | Detailed breakdown of camera hardware, optical settings, date history, and exact location. |
+| **Batch Comparison** | Inspect multiple files simultaneously with side-by-side technical correlation and combined map views. |
+| **Metadata Sanitization** | Selective or full removal of EXIF metadata categories with instant cleaned file downloads. |
+| **Interactive Mapping** | High-fidelity map rendering with reverse geocoding to display physical addresses. |
+| **Export Capability** | Export comprehensive reports as PDF, Markdown, CSV, or structured JSON data manifests. |
+| **Multi-Language Support** | Full localization in English, Bahasa Indonesia, and Arabic (RTL layout supported). |
 
 ---
 
-## Technology Stack & Architecture
+## Target Use Cases
 
-ExifSense is built with a modular vanilla architecture for maximum performance and longevity without framework overhead.
-
-* **Core Engine**: Vanilla JavaScript (ES6+ modules) with a decoupled module system and hash-based client-side router.
-* **EXIF Processing**: [Exifr](https://github.com/MikeKroz/exifr) for high-performance, multi-format metadata parsing (JPEG, TIFF, HEIC, DNG, RAW, and more).
-* **Mapping**: [Leaflet.js](https://leafletjs.com/) with custom road-routing integration via OSRM and reverse geocoding via Nominatim.
-* **PDF Export**: [jsPDF](https://github.com/parallax/jsPDF) with `jspdf-autotable` for structured table rendering.
-* **Visual Interface**: Custom CSS system (Dark/Light theme) with a sleek, professional aesthetic.
-* **Storage**: Browser-native `localStorage` for secure, zero-server session persistence and history.
+* **Photographers & Enthusiasts**: Review camera settings, lens performance, and exposure metrics across shooting sessions.
+* **Privacy-Conscious Individuals**: Strip sensitive location and device identifiers before publishing photos to public channels.
+* **Travelers**: Map past journeys and visualize geographic movements through geotagged photos.
+* **Content Creators**: Verify photo authenticity, check for post-processing edits, and inspect source metadata.
 
 ---
 
-## Usage Workflow
+## Architecture & Technology
 
-1. **Launch**: Open `index.html` in a modern browser.
-2. **Setup Identity**: Confirm or regenerate your **Investigator Identity** in the header. Download an encrypted key backup for future session signatures.
-3. **Select Mode**: Choose between Single, Batch, or Remove (sanitization) mode.
-4. **Import**: Drag and drop assets into the investigation zone. Binary magic bytes are immediately audited to detect extension tampering.
-5. **Analyze**: Review individual forensic narratives, file SHA signatures, the cross-asset comparison matrix, and the geospatial map.
-6. **Export & Sign**: Export findings in PDF, Markdown, CSV, or download the **Signed JSON Manifest** sealed with your P-256 investigator signature.
-7. **Verify Evidence**: Use the **Verify Manifest** tab to drag and drop a previously signed manifest and its source assets to instantly verify integrity.
+ExifSense is built with a lightweight, modular vanilla JavaScript architecture designed for high performance and long-term maintainability without framework overhead.
 
----
-
-## Visual Walkthrough
-
-### Professional Investigation Dashboard
-
-![Technical Details](./assets/screenshots/dashboard-technical-details.png)
-*Detailed technical extraction and forensic intelligence narratives.*
-
-### Individual Asset Analysis
-
-![Individual Analysis](./assets/screenshots/dashboard-individual-asset-analysis.png)
-*Focus on specific optical characteristics and geospatial context.*
-
-### Analysis Modes
-
-| Upload & Batch Mode | History & Persistence |
-| :---: | :---: |
-| ![Upload Mode](./assets/screenshots/action-zone-upload.png) | ![History Mode](./assets/screenshots/action-zone-history.png) |
+* **EXIF Engine**: [Exifr](https://github.com/MikeKroz/exifr) for multi-format metadata parsing (JPEG, TIFF, HEIC, DNG, RAW).
+* **Geospatial Mapping**: [Leaflet.js](https://leafletjs.com/) with OSRM road-routing and Nominatim reverse geocoding.
+* **Document Generation**: [jsPDF](https://github.com/parallax/jsPDF) with `jspdf-autotable` for structured reporting.
+* **Storage & State**: Browser-native `localStorage` for session history and zero-server state persistence.
 
 ---
-
-## Technical Security Note
-
-ExifSense is designed for read-only forensic analysis. The **Remove Mode** sanitization feature operates on a copy of the file delivered via browser download — the original source asset is never modified. While ExifSense provides high-fidelity analysis, it should be used as a supplementary intelligence tool alongside certified hardware forensic suites for judicial proceedings.
-
----
-
-## Getting Started
-
-ExifSense is a zero-server, browser-native application. To begin:
-
-1. **Clone or Download** the repository to your local machine.
-2. **Open** `index.html` in any modern web browser (Chrome, Firefox, Edge recommended).
-3. **Drag & Drop** your assets into the investigation zone.
-
-*Note: An active internet connection is recommended for geospatial tile rendering, road-following path reconstruction, and reverse geocoding.*
-
-## Project Structure
-
-```text
-├── index.html              # Main Entry Point
-├── src/
-│   ├── css/                # UI System & Styling
-│   │   ├── main.css        # Global tokens, layout, loader, modals
-│   │   ├── dashboard.css   # Dashboard grid & asset selector
-│   │   ├── expert.css      # Expert analysis & combined intel panels
-│   │   ├── history.css     # History section
-│   │   ├── intro.css       # Landing / upload zone
-│   │   └── modal.css       # Confirm & removal modals
-│   ├── locales/            # i18n Dictionaries
-│   │   ├── en.json         # English
-│   │   ├── id.json         # Bahasa Indonesia
-│   │   └── ar.json         # Arabic (RTL)
-│   └── js/
-│       ├── app.js          # Core Application Orchestrator & Router
-│       ├── crypto.js       # Client-side ECDSA Key Management, Signing, & Hashing
-│       ├── i18n.js         # Internationalization Engine
-│       ├── mapping.js      # Geospatial, Routing & Geocoding Logic
-│       ├── narratives.js   # Narrative Intelligence Engine (616 lines)
-│       ├── export.js       # Multi-format Export Logic (PDF/MD/JSON/CSV/Clipboard)
-│       ├── history.js      # Local Persistence & Session Management
-│       ├── particles.js    # Interactive Constellation Network background animation
-│       ├── router.js       # Hash-based Client-Side Router
-│       ├── ui.js           # UI Rendering & Asset Selector Logic
-│       └── utils.js        # Shared Utilities & Sanitization Engine
-└── assets/
-    └── screenshots/        # README visual assets
-```
 
 ## License
 
-Distributed under the MIT License.
+Distributed under the MIT License. See `LICENSE` for more information.
 
----
 
-Developed for high-precision digital forensics. **Sense the data behind the pixels.**

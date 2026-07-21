@@ -646,6 +646,7 @@ export function generateIntegrityNarrative(asset) {
         else if (alert.type === 'future_capture_date') key = 'integrity_future_date';
         else if (alert.type === 'capture_after_file_modification') key = 'integrity_capture_after_file';
         else if (alert.type === 'missing_original_metadata') key = 'integrity_missing_original';
+        else if (alert.type === 'dimension_mismatch') key = 'integrity_dimension_mismatch';
 
         const localizedText = t(key, alert.messageParam || {}, 'narratives');
         const alertClass = alert.severity === 'warning' ? 'integrity-alert-warning' : 'integrity-alert-info';

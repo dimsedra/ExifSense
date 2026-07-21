@@ -453,6 +453,7 @@ async function processBatchFiles(files) {
             const options = { tiff: true, xmp: true, icc: true, iptc: true, jfif: true, ihdr: true, gps: true };
             const exifData = await exifr.parse(file, options);
             const thumbUrl = await History.createThumbnail(file);
+            const actualDims = await Utils.getImageDimensions(file);
             
             // Calculate cryptographic hashes locally
             const sha256 = await Utils.calculateFileHash(file, 'SHA-256');
@@ -469,7 +470,9 @@ async function processBatchFiles(files) {
                 thumbUrl: thumbUrl,
                 locationData: null,
                 sha256,
-                sha1
+                sha1,
+                actualWidth: actualDims.width,
+                actualHeight: actualDims.height
             };
 
             // Run integrity heuristics
