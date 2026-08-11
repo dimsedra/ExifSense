@@ -111,7 +111,7 @@ export function generateGeospatialNarrative(lat, lng, locationData = null) {
     let narrative = t('geospatial', { locationName, lat: lat.toFixed(6), lng: lng.toFixed(6) }, 'narratives');
 
     const isNullIsland = Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001;
-    const isIntegerPrecision = Number.isInteger(lat) && Number.isInteger(lng);
+    const isIntegerPrecision = Number.isInteger(lat) || Number.isInteger(lng);
 
     if (isNullIsland) {
         narrative += `<div style="color: #ef4444; margin-top: 8px;"><strong>${t('null_island_warn', {}, 'narratives')}</strong></div>`;
