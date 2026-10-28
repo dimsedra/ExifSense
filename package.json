@@ -1,5 +1,11 @@
 {
+  "name": "exifsense",
+  "version": "1.0.0",
   "type": "module",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
   "dependencies": {
     "exifr": "^7.1.3"
   },
