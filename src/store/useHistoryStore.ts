@@ -1,7 +1,9 @@
 import { create } from 'zustand';
-import type { ForensicAsset, IntegrityAlert } from '../core/forensics/types';
+import type { ForensicAsset, IntegrityAlert, CategorizedExif } from '../core/forensics/types';
 import type { SanitizerOptions } from '../core/sanitizer/types';
 import { generateForensicId } from '../core/forensics/hashing';
+import { categorizeExif } from '../core/forensics/metadata';
+import { useAssetStore } from './useAssetStore';
 
 export const HISTORY_KEY = 'exif_forensic_history';
 export const MAX_HISTORY = 20;
@@ -17,7 +19,10 @@ export interface HistorySessionAsset {
   thumbUrl: string;
   sha256: string;
   sha1: string;
+  actualWidth?: number | null;
+  actualHeight?: number | null;
   exifData: Record<string, unknown>;
+  categorizedExif?: CategorizedExif;
   integrityAlerts: IntegrityAlert[];
   isSanitized?: boolean;
   sanitizeOptions?: SanitizerOptions | null;
@@ -166,7 +171,10 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
         thumbUrl: '',
         sha256: a.sha256,
         sha1: a.sha1,
+        actualWidth: a.actualWidth,
+        actualHeight: a.actualHeight,
         exifData: a.exifData,
+        categorizedExif: a.categorizedExif,
         integrityAlerts: a.integrityAlerts,
         isSanitized: !!meta.isSanitized,
         sanitizeOptions: meta.sanitizeOptions || null,
@@ -221,5 +229,28 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
       return true;
     });
   },
-  restoreSession: () => false,
+  restoreSession: (id) => {
+    const session = get().sessions.find((s) => s.id === id);
+    if (!session) return false;
+
+    const restoredAssets: ForensicAsset[] = session.assets.map((a) => ({
+      id: a.id,
+      fileName: a.fileName,
+      fileSize: a.fileSize,
+      fileType: a.fileType,
+      fileDate: a.fileDate,
+      sha256: a.sha256,
+      sha1: a.sha1,
+      actualWidth: a.actualWidth ?? null,
+      actualHeight: a.actualHeight ?? null,
+      exifData: a.exifData || {},
+      categorizedExif:
+        a.categorizedExif ||
+        categorizeExif(a.exifData || {}),
+      integrityAlerts: a.integrityAlerts || [],
+    }));
+
+    useAssetStore.getState().setAssets(restoredAssets, session.forensicId);
+    return true;
+  },
 }));
