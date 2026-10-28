@@ -611,7 +611,10 @@ export function generateJsonReport(
   const report: JsonReportSchema = {
     forensicId: meta.forensicId,
     sessionTitle: meta.sessionTitle,
-    generatedAt: meta.generatedAt.toISOString(),
+    generatedAt:
+      meta.generatedAt instanceof Date && !isNaN(meta.generatedAt.getTime())
+        ? meta.generatedAt.toISOString()
+        : new Date().toISOString(),
     investigator: meta.investigatorIdentity || null,
     assetCount: assets.length,
     collectiveIntelligence: collective,
