@@ -46,6 +46,7 @@ export function initRouter(
       const fallback = matchedRoute.redirectFallback || '#/';
       if (window.location.hash !== fallback) {
         window.location.hash = fallback;
+        window.dispatchEvent(new Event('hashchange'));
       }
       return;
     }
