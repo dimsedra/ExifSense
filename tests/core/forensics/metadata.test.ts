@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { categorizeExif } from '../../../src/core/forensics/metadata.ts';
+import { categorizeExif, parseExifDate } from '../../../src/core/forensics/metadata.ts';
 
 describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
   it('correctly maps properties across the 8 standardized categories', () => {
@@ -77,5 +77,50 @@ describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
     expect(categorized['Geospatial']).toEqual({});
     expect(categorized['Standards & Info']).toEqual({});
     expect(categorized['Miscellaneous']).toEqual({});
+  });
+
+  describe('Robust Date Parser (REQ-META-002)', () => {
+    it('parses standard EXIF colon-separated timestamp', () => {
+      const d = parseExifDate('2026:05:14 12:30:45');
+      expect(d).toBeInstanceOf(Date);
+      expect(d?.getFullYear()).toBe(2026);
+      expect(d?.getMonth()).toBe(4); // 0-indexed, May = 4
+      expect(d?.getDate()).toBe(14);
+      expect(d?.getHours()).toBe(12);
+      expect(d?.getMinutes()).toBe(30);
+      expect(d?.getSeconds()).toBe(45);
+    });
+
+    it('parses ISO-8601 and space-separated date strings', () => {
+      const dIso = parseExifDate('2026-05-14T12:30:45.000Z');
+      expect(dIso).toBeInstanceOf(Date);
+      expect(dIso?.toISOString()).toBe('2026-05-14T12:30:45.000Z');
+
+      const dSpace = parseExifDate('2026-05-14 12:30:45');
+      expect(dSpace).toBeInstanceOf(Date);
+      expect(dSpace?.getFullYear()).toBe(2026);
+    });
+
+    it('parses epoch millisecond timestamps (number and string)', () => {
+      const epochMs = 1778761845000;
+      const dNum = parseExifDate(epochMs);
+      expect(dNum?.getTime()).toBe(epochMs);
+
+      const dStr = parseExifDate(String(epochMs));
+      expect(dStr?.getTime()).toBe(epochMs);
+    });
+
+    it('returns the same Date if already a Date instance', () => {
+      const now = new Date();
+      expect(parseExifDate(now)).toBe(now);
+    });
+
+    it('returns null for empty, invalid or corrupt timestamps', () => {
+      expect(parseExifDate(null)).toBeNull();
+      expect(parseExifDate(undefined)).toBeNull();
+      expect(parseExifDate('')).toBeNull();
+      expect(parseExifDate('not-a-valid-date')).toBeNull();
+      expect(parseExifDate('0000:00:00 00:00:00')).toBeNull();
+    });
   });
 });
