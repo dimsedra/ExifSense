@@ -1,3 +1,4 @@
+import piexif from 'piexifjs';
 import {
   SanitizerOptions,
   SanitizerPreset,
@@ -91,4 +92,122 @@ export function evaluatePrivacyRisk(
     scoreStatus: isSafe ? 'safe' : 'risk',
     items
   };
+}
+
+/**
+ * Strips all metadata completely via Canvas 2D re-rasterization (REQ-SAN-004).
+ */
+export async function stripAllMetadata(file: File | Blob): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const objectUrl = URL.createObjectURL(file);
+    const img = new Image();
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth || img.width;
+        canvas.height = img.naturalHeight || img.height;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          URL.revokeObjectURL(objectUrl);
+          reject(new Error('Failed to acquire 2D canvas context'));
+          return;
+        }
+
+        ctx.drawImage(img, 0, 0);
+
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(objectUrl);
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error('Canvas toBlob conversion returned null'));
+            }
+          },
+          file.type || 'image/jpeg'
+        );
+      } catch (err) {
+        URL.revokeObjectURL(objectUrl);
+        reject(err);
+      }
+    };
+
+    img.onerror = (err) => {
+      URL.revokeObjectURL(objectUrl);
+      reject(err);
+    };
+
+    img.src = objectUrl;
+  });
+}
+
+/**
+ * Surgically removes target metadata categories from a JPEG file without re-encoding pixels (REQ-SAN-003).
+ * Decodes Base64 to Uint8Array directly to prevent CSP connect-src violations.
+ */
+export async function stripSpecificMetadata(
+  file: File | Blob,
+  options: SanitizerOptions
+): Promise<Blob> {
+  try {
+    const buffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(buffer);
+
+    // If file is too short or not JPEG magic bytes (FF D8 FF), fallback to total canvas strip
+    if (bytes.length < 3 || bytes[0] !== 0xff || bytes[1] !== 0xd8 || bytes[2] !== 0xff) {
+      return stripAllMetadata(file);
+    }
+
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const dataUrl = `data:image/jpeg;base64,${btoa(binary)}`;
+
+    const exifObj = piexif.load(dataUrl);
+
+    if (options.gps) {
+      exifObj['GPS'] = {};
+    }
+
+    if (options.device) {
+      if (exifObj['0th']) {
+        delete exifObj['0th'][piexif.ImageIFD.Make];
+        delete exifObj['0th'][piexif.ImageIFD.Model];
+        delete exifObj['0th'][piexif.ImageIFD.Software];
+      }
+    }
+
+    if (options.camera) {
+      exifObj['Exif'] = {};
+    }
+
+    if (options.date) {
+      if (exifObj['0th']) {
+        delete exifObj['0th'][piexif.ImageIFD.DateTime];
+      }
+      if (exifObj['Exif']) {
+        delete exifObj['Exif'][piexif.ExifIFD.DateTimeOriginal];
+        delete exifObj['Exif'][piexif.ExifIFD.DateTimeDigitized];
+      }
+    }
+
+    const exifBytes = piexif.dump(exifObj);
+    const newDataUrl = piexif.insert(exifBytes, dataUrl);
+
+    // Manual base64 decode to Uint8Array to avoid CSP connect-src issues with fetch(dataUrl)
+    const base64Str = newDataUrl.split(',')[1];
+    const decodedBinary = atob(base64Str);
+    const outputBytes = new Uint8Array(decodedBinary.length);
+    for (let i = 0; i < decodedBinary.length; i++) {
+      outputBytes[i] = decodedBinary.charCodeAt(i);
+    }
+
+    return new Blob([outputBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
+  } catch (_err) {
+    // If piexif throws (e.g. corrupt markers), automatically fallback to canvas total strip
+    return stripAllMetadata(file);
+  }
 }

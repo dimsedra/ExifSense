@@ -18,7 +18,7 @@ describe('Surgical JPEG Stripping (REQ-SAN-003)', () => {
   });
 
   it('strips GPS tags while keeping device, camera, and date metadata (Normal Path)', async () => {
-    const inputBlob = new Blob([fullFixtureBytes], { type: 'image/jpeg' });
+    const inputBlob = new Blob([fullFixtureBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
     const outputBlob = await stripSpecificMetadata(inputBlob, {
       gps: true,
       device: false,
@@ -42,7 +42,7 @@ describe('Surgical JPEG Stripping (REQ-SAN-003)', () => {
   });
 
   it('strips device identity while keeping GPS and camera metadata', async () => {
-    const inputBlob = new Blob([fullFixtureBytes], { type: 'image/jpeg' });
+    const inputBlob = new Blob([fullFixtureBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
     const outputBlob = await stripSpecificMetadata(inputBlob, {
       gps: false,
       device: true,
@@ -63,7 +63,7 @@ describe('Surgical JPEG Stripping (REQ-SAN-003)', () => {
   });
 
   it('strips date timestamps while keeping device and GPS', async () => {
-    const inputBlob = new Blob([fullFixtureBytes], { type: 'image/jpeg' });
+    const inputBlob = new Blob([fullFixtureBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
     const outputBlob = await stripSpecificMetadata(inputBlob, {
       gps: false,
       device: false,
@@ -81,7 +81,7 @@ describe('Surgical JPEG Stripping (REQ-SAN-003)', () => {
   });
 
   it('strips camera exposure settings while keeping device and GPS', async () => {
-    const inputBlob = new Blob([fullFixtureBytes], { type: 'image/jpeg' });
+    const inputBlob = new Blob([fullFixtureBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
     const outputBlob = await stripSpecificMetadata(inputBlob, {
       gps: false,
       device: false,
