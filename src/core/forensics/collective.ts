@@ -5,7 +5,27 @@ import type {
   CollectiveIntelligenceResult,
   ExifCategory,
   TimelineJump,
+  GeospatialJump,
 } from './types';
+
+export function calculateDistance(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const R = 6371; // Earth radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 const EXIF_CATEGORIES: ExifCategory[] = [
   'Device Hardware',
@@ -198,6 +218,114 @@ export function evaluateCollectiveIntelligence(
     }
   }
 
+  // Geospatial Analysis
+  const geoAssets = assets
+    .map((a) => {
+      const lat =
+        a.exifData?.latitude != null ? Number(a.exifData.latitude) : null;
+      const lng =
+        a.exifData?.longitude != null ? Number(a.exifData.longitude) : null;
+      const date = parseExifDate(
+        a.exifData?.DateTimeOriginal ||
+          a.exifData?.CreateDate ||
+          a.exifData?.DateTime,
+      );
+      return {
+        fileName: a.fileName,
+        lat,
+        lng,
+        date,
+        time: date ? date.getTime() : null,
+      };
+    })
+    .filter(
+      (g): g is typeof g & { lat: number; lng: number } =>
+        g.lat != null &&
+        g.lng != null &&
+        !Number.isNaN(g.lat) &&
+        !Number.isNaN(g.lng),
+    );
+
+  const missingCoordinatesCount = assets.length - geoAssets.length;
+  let maxSpreadKm = 0;
+  let totalPathDistanceKm = 0;
+  let spreadCategory: 'concentrated' | 'localized' | 'trail' | 'none' = 'none';
+  const geoJumps: GeospatialJump[] = [];
+  let velocityAlert: CollectiveIntelligenceResult['geospatial']['velocityAlert'] =
+    null;
+
+  if (geoAssets.length === 1) {
+    spreadCategory = 'concentrated';
+  } else if (geoAssets.length > 1) {
+    for (let i = 0; i < geoAssets.length; i++) {
+      for (let j = i + 1; j < geoAssets.length; j++) {
+        const d = calculateDistance(
+          geoAssets[i].lat,
+          geoAssets[i].lng,
+          geoAssets[j].lat,
+          geoAssets[j].lng,
+        );
+        if (d > maxSpreadKm) {
+          maxSpreadKm = d;
+        }
+      }
+    }
+
+    if (maxSpreadKm < 0.05) {
+      spreadCategory = 'concentrated';
+    } else if (maxSpreadKm < 1.0) {
+      spreadCategory = 'localized';
+    } else {
+      spreadCategory = 'trail';
+    }
+
+    const chronoPoints = geoAssets
+      .filter((g): g is typeof g & { time: number } => g.time != null)
+      .sort((a, b) => a.time - b.time);
+
+    let hasVelocityAnomaly = false;
+    let maxSpeed = 0;
+    let anomalyFrom: string | undefined;
+    let anomalyTo: string | undefined;
+
+    if (chronoPoints.length > 1) {
+      for (let i = 0; i < chronoPoints.length - 1; i++) {
+        const p1 = chronoPoints[i];
+        const p2 = chronoPoints[i + 1];
+        const distKm = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+        const distM = distKm * 1000;
+        totalPathDistanceKm += distKm;
+
+        geoJumps.push({
+          fromFileName: p1.fileName,
+          toFileName: p2.fileName,
+          distanceKm: distKm,
+          distanceMeters: distM,
+        });
+
+        const timeDiffHours = (p2.time - p1.time) / (1000 * 60 * 60);
+        if (timeDiffHours > 0) {
+          const speed = distKm / timeDiffHours;
+          if (speed > maxSpeed) {
+            maxSpeed = speed;
+          }
+          if (speed > 1200 && !hasVelocityAnomaly) {
+            hasVelocityAnomaly = true;
+            anomalyFrom = p1.fileName;
+            anomalyTo = p2.fileName;
+          }
+        }
+      }
+
+      velocityAlert = {
+        hasAnomaly: hasVelocityAnomaly,
+        maxSpeedKmh: Math.round(maxSpeed),
+        fromFileName: anomalyFrom,
+        toFileName: anomalyTo,
+      };
+    }
+  }
+
   return {
     integrity: {
       cleanCount,
@@ -221,12 +349,12 @@ export function evaluateCollectiveIntelligence(
       jumps: timelineJumps,
     },
     geospatial: {
-      totalPathDistanceKm: 0,
-      maxSpreadKm: 0,
-      spreadCategory: 'none',
-      missingCoordinatesCount: assets.length,
-      jumps: [],
-      velocityAlert: null,
+      totalPathDistanceKm,
+      maxSpreadKm,
+      spreadCategory,
+      missingCoordinatesCount,
+      jumps: geoJumps,
+      velocityAlert,
     },
   };
 }
