@@ -145,4 +145,91 @@ describe('evaluateCollectiveIntelligence - Integrity Matrix (REQ-COL-001)', () =
       expect(result.hardware.hasSerialMatch).toBe(false);
     });
   });
+
+  describe('Timeline Reconstruction & Step-by-Step Delta Jumps (REQ-COL-003)', () => {
+    it('reconstructs chronological timeline, calculates duration, and computes time jumps', () => {
+      const assetA: SingleAssetInput = {
+        fileName: 'second.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T10:15:30.000Z',
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const assetB: SingleAssetInput = {
+        fileName: 'first.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T10:00:00.000Z',
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const assetC: SingleAssetInput = {
+        fileName: 'third.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-11T11:20:00.000Z',
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const assetMissing: SingleAssetInput = {
+        fileName: 'no-date.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {},
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const result = evaluateCollectiveIntelligence([
+        assetA,
+        assetB,
+        assetC,
+        assetMissing,
+      ]);
+
+      expect(result.timeline.missingAssets).toEqual(['no-date.jpg']);
+      expect(result.timeline.startTime?.toISOString()).toBe(
+        '2025-05-10T10:00:00.000Z',
+      );
+      expect(result.timeline.endTime?.toISOString()).toBe(
+        '2025-05-11T11:20:00.000Z',
+      );
+
+      // Total duration between first and third
+      const expectedTotalMs =
+        new Date('2025-05-11T11:20:00.000Z').getTime() -
+        new Date('2025-05-10T10:00:00.000Z').getTime();
+      expect(result.timeline.totalDurationMs).toBe(expectedTotalMs);
+
+      // Check jumps
+      expect(result.timeline.jumps).toHaveLength(2);
+
+      const firstJump = result.timeline.jumps[0];
+      expect(firstJump.fromFileName).toBe('first.jpg');
+      expect(firstJump.toFileName).toBe('second.jpg');
+      expect(firstJump.deltaMs).toBe(15 * 60 * 1000 + 30 * 1000);
+      expect(firstJump.deltaDays).toBe(0);
+      expect(firstJump.deltaHours).toBe(0);
+      expect(firstJump.deltaMinutes).toBe(15);
+      expect(firstJump.deltaSeconds).toBe(30);
+
+      const secondJump = result.timeline.jumps[1];
+      expect(secondJump.fromFileName).toBe('second.jpg');
+      expect(secondJump.toFileName).toBe('third.jpg');
+      expect(secondJump.deltaDays).toBe(1);
+      expect(secondJump.deltaHours).toBe(1);
+      expect(secondJump.deltaMinutes).toBe(4);
+      expect(secondJump.deltaSeconds).toBe(30);
+    });
+  });
 });
