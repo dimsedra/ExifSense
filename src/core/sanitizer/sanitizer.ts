@@ -278,3 +278,17 @@ export async function sanitizeBatch(
   await Promise.all(workers);
   return results;
 }
+
+/**
+ * Triggers a client-side download of a Blob file and safely revokes the Object URL after 150ms.
+ */
+export function triggerBlobDownload(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 150);
+}
