@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateCollectiveIntelligence } from '../../../src/core/forensics/collective';
+import {
+  evaluateCollectiveIntelligence,
+  calculateDistance,
+} from '../../../src/core/forensics/collective';
 import type { SingleAssetInput } from '../../../src/core/forensics/types';
 
 describe('evaluateCollectiveIntelligence - Integrity Matrix (REQ-COL-001)', () => {
@@ -230,6 +233,90 @@ describe('evaluateCollectiveIntelligence - Integrity Matrix (REQ-COL-001)', () =
       expect(secondJump.deltaHours).toBe(1);
       expect(secondJump.deltaMinutes).toBe(4);
       expect(secondJump.deltaSeconds).toBe(30);
+    });
+  });
+
+  describe('Geospatial Haversine & Velocity Anomaly Warning (REQ-COL-004)', () => {
+    it('accurately computes Haversine distance between two coordinates', () => {
+      // Monas (-6.1754, 106.8272) to Bundaran HI (-6.1950, 106.8230) ~ 2.22 km
+      const dist = calculateDistance(-6.1754, 106.8272, -6.195, 106.823);
+      expect(dist).toBeGreaterThan(2.1);
+      expect(dist).toBeLessThan(2.3);
+    });
+
+    it('classifies spread category and calculates total path distance and jumps', () => {
+      // Two points ~2.2 km apart => category 'trail'
+      const assetA: SingleAssetInput = {
+        fileName: 'monas.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T10:00:00.000Z',
+          latitude: -6.1754,
+          longitude: 106.8272,
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const assetB: SingleAssetInput = {
+        fileName: 'bundaran-hi.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T11:00:00.000Z',
+          latitude: -6.195,
+          longitude: 106.823,
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const result = evaluateCollectiveIntelligence([assetA, assetB]);
+
+      expect(result.geospatial.spreadCategory).toBe('trail');
+      expect(result.geospatial.maxSpreadKm).toBeGreaterThan(2.1);
+      expect(result.geospatial.totalPathDistanceKm).toBeGreaterThan(2.1);
+      expect(result.geospatial.jumps).toHaveLength(1);
+      expect(result.geospatial.jumps[0].fromFileName).toBe('monas.jpg');
+      expect(result.geospatial.jumps[0].toFileName).toBe('bundaran-hi.jpg');
+      expect(result.geospatial.velocityAlert?.hasAnomaly).toBe(false);
+    });
+
+    it('flags velocity anomaly when consecutive points require travel exceeding 1,200 km/h', () => {
+      // Jakarta to Tokyo (~5,800 km) in 30 minutes => speed ~11,600 km/h
+      const jakartaAsset: SingleAssetInput = {
+        fileName: 'jakarta.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T10:00:00.000Z',
+          latitude: -6.2088,
+          longitude: 106.8456,
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const tokyoAsset: SingleAssetInput = {
+        fileName: 'tokyo.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T10:30:00.000Z', // 30 minutes later
+          latitude: 35.6762,
+          longitude: 139.6503,
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const result = evaluateCollectiveIntelligence([jakartaAsset, tokyoAsset]);
+
+      expect(result.geospatial.velocityAlert?.hasAnomaly).toBe(true);
+      expect(result.geospatial.velocityAlert?.maxSpeedKmh).toBeGreaterThan(1200);
+      expect(result.geospatial.velocityAlert?.fromFileName).toBe('jakarta.jpg');
+      expect(result.geospatial.velocityAlert?.toFileName).toBe('tokyo.jpg');
     });
   });
 });
