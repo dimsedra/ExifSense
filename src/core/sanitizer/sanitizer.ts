@@ -144,9 +144,29 @@ export async function stripAllMetadata(file: File | Blob): Promise<Blob> {
   });
 }
 
+function uint8ArrayToBinary(bytes: Uint8Array): string {
+  let binary = '';
+  const chunkSize = 8192;
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode.apply(
+      null,
+      bytes.subarray(i, i + chunkSize) as unknown as number[]
+    );
+  }
+  return binary;
+}
+
+function binaryToUint8Array(str: string): Uint8Array {
+  const bytes = new Uint8Array(str.length);
+  for (let i = 0; i < str.length; i++) {
+    bytes[i] = str.charCodeAt(i);
+  }
+  return bytes;
+}
+
 /**
  * Surgically removes target metadata categories from a JPEG file without re-encoding pixels (REQ-SAN-003).
- * Decodes Base64 to Uint8Array directly to prevent CSP connect-src violations.
+ * Operates directly on binary buffers in chunked operations to preserve event loop throughput and memory budget.
  */
 export async function stripSpecificMetadata(
   file: File | Blob,
@@ -161,13 +181,8 @@ export async function stripSpecificMetadata(
       return stripAllMetadata(file);
     }
 
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const dataUrl = `data:image/jpeg;base64,${btoa(binary)}`;
-
-    const exifObj = piexif.load(dataUrl);
+    const binary = uint8ArrayToBinary(bytes);
+    const exifObj = piexif.load(binary);
 
     if (options.gps) {
       exifObj['GPS'] = {};
@@ -182,7 +197,29 @@ export async function stripSpecificMetadata(
     }
 
     if (options.camera) {
-      exifObj['Exif'] = {};
+      if (options.date) {
+        exifObj['Exif'] = {};
+      } else {
+        const orig = exifObj['Exif']?.[piexif.ExifIFD.DateTimeOriginal];
+        const dig = exifObj['Exif']?.[piexif.ExifIFD.DateTimeDigitized];
+        const subSec = exifObj['Exif']?.[piexif.ExifIFD.SubSecTime];
+        const subSecOrig = exifObj['Exif']?.[piexif.ExifIFD.SubSecTimeOriginal];
+        const subSecDig = exifObj['Exif']?.[piexif.ExifIFD.SubSecTimeDigitized];
+        const offset = exifObj['Exif']?.[0x9010];
+        const offsetOrig = exifObj['Exif']?.[0x9011];
+        const offsetDig = exifObj['Exif']?.[0x9012];
+
+        exifObj['Exif'] = {};
+
+        if (orig !== undefined) exifObj['Exif'][piexif.ExifIFD.DateTimeOriginal] = orig;
+        if (dig !== undefined) exifObj['Exif'][piexif.ExifIFD.DateTimeDigitized] = dig;
+        if (subSec !== undefined) exifObj['Exif'][piexif.ExifIFD.SubSecTime] = subSec;
+        if (subSecOrig !== undefined) exifObj['Exif'][piexif.ExifIFD.SubSecTimeOriginal] = subSecOrig;
+        if (subSecDig !== undefined) exifObj['Exif'][piexif.ExifIFD.SubSecTimeDigitized] = subSecDig;
+        if (offset !== undefined) exifObj['Exif'][0x9010] = offset;
+        if (offsetOrig !== undefined) exifObj['Exif'][0x9011] = offsetOrig;
+        if (offsetDig !== undefined) exifObj['Exif'][0x9012] = offsetDig;
+      }
     }
 
     if (options.date) {
@@ -192,19 +229,18 @@ export async function stripSpecificMetadata(
       if (exifObj['Exif']) {
         delete exifObj['Exif'][piexif.ExifIFD.DateTimeOriginal];
         delete exifObj['Exif'][piexif.ExifIFD.DateTimeDigitized];
+        delete exifObj['Exif'][piexif.ExifIFD.SubSecTime];
+        delete exifObj['Exif'][piexif.ExifIFD.SubSecTimeOriginal];
+        delete exifObj['Exif'][piexif.ExifIFD.SubSecTimeDigitized];
+        delete exifObj['Exif'][0x9010];
+        delete exifObj['Exif'][0x9011];
+        delete exifObj['Exif'][0x9012];
       }
     }
 
     const exifBytes = piexif.dump(exifObj);
-    const newDataUrl = piexif.insert(exifBytes, dataUrl);
-
-    // Manual base64 decode to Uint8Array to avoid CSP connect-src issues with fetch(dataUrl)
-    const base64Str = newDataUrl.split(',')[1];
-    const decodedBinary = atob(base64Str);
-    const outputBytes = new Uint8Array(decodedBinary.length);
-    for (let i = 0; i < decodedBinary.length; i++) {
-      outputBytes[i] = decodedBinary.charCodeAt(i);
-    }
+    const newBinary = piexif.insert(exifBytes, binary);
+    const outputBytes = binaryToUint8Array(newBinary);
 
     return new Blob([outputBytes.buffer as ArrayBuffer], { type: 'image/jpeg' });
   } catch (_err) {

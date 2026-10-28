@@ -26,7 +26,7 @@ export function translate(
   let template = dictionary[key] || LOCALES.en[section]?.[key] || key;
 
   for (const [k, v] of Object.entries(params)) {
-    template = template.replace(new RegExp(`\\{${k}\\}`, 'g'), String(v ?? ''));
+    template = template.replace(new RegExp(`\\{${k}\\}`, 'g'), () => String(v ?? ''));
   }
 
   // Strip HTML tags for clean plain text output

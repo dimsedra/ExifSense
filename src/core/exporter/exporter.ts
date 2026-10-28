@@ -23,8 +23,8 @@ function escapeCsvCell(value: unknown): string {
   if (value === undefined || value === null) return '';
   let str = String(value);
 
-  // Neutralize CSV formula injection characters
-  if (/^[=+\-@]/.test(str)) {
+  // Neutralize CSV formula injection characters (including leading whitespace/tabs per OWASP)
+  if (/^[\s\t\r]*[=+\-@\t\r]/.test(str)) {
     str = `'${str}`;
   }
 
@@ -620,7 +620,10 @@ export function generateJsonReport(
       fileName: asset.fileName,
       fileSize: asset.fileSize,
       fileType: asset.fileType,
-      fileDate: new Date(asset.fileDate).toISOString(),
+      fileDate: (() => {
+        const d = new Date(asset.fileDate);
+        return !isNaN(d.getTime()) ? d.toISOString() : new Date(0).toISOString();
+      })(),
       sha256: asset.sha256,
       sha1: asset.sha1,
       dimensions: {
