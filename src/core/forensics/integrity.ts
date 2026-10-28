@@ -172,5 +172,29 @@ export function evaluateSingleAssetIntegrity(
     }
   }
 
+  // 6. Geospatial Spoofing Checks
+  if (exif.latitude != null && exif.longitude != null) {
+    const lat = Number(exif.latitude);
+    const lng = Number(exif.longitude);
+
+    if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
+      if (Math.abs(lat) < 0.0001 && Math.abs(lng) < 0.0001) {
+        alerts.push({
+          type: 'null_island',
+          severity: 'critical',
+          defaultMessage:
+            'Geospatial Spoofing: Coordinates point to Null Island (0, 0), indicating invalid or spoofed GPS data.',
+        });
+      } else if (Number.isInteger(lat) || Number.isInteger(lng)) {
+        alerts.push({
+          type: 'integer_coordinate_precision',
+          severity: 'warning',
+          defaultMessage:
+            'Synthetic Coordinates: Latitude or longitude has integer precision, suggesting manual or synthetic coordinate entry.',
+        });
+      }
+    }
+  }
+
   return alerts;
 }
