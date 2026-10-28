@@ -90,3 +90,29 @@ describe('useI18nStore - Language Switching & RTL Layout (Scenario 5.2, REQ-STA-
     expect(localStorage.getItem(LANG_STORAGE_KEY)).toBe('en');
   });
 });
+
+
+describe('useI18nStore - Resilience & Edge Cases (Blocker 1 Fix Verification)', () => {
+  beforeEach(() => {
+    useI18nStore.setState({
+      currentLang: 'en',
+      direction: 'ltr',
+      dictionary: {
+        ui: {
+          test_regex_key: 'Result is {count(total)} items',
+          test_dollar_value: 'File name is {fileName}',
+        },
+      },
+    });
+  });
+
+  it('safely interpolates parameter keys containing regex special characters without syntax error', () => {
+    const result = useI18nStore.getState().t('test_regex_key', { 'count(total)': 42 });
+    expect(result).toBe('Result is 42 items');
+  });
+
+  it('safely interpolates parameter values containing dollar signs without token corruption', () => {
+    const result = useI18nStore.getState().t('test_dollar_value', { fileName: 'photo$1_edited$2.jpg' });
+    expect(result).toBe('File name is photo$1_edited$2.jpg');
+  });
+});

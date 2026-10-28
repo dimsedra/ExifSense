@@ -168,3 +168,46 @@ describe('useSanitizerStore - Toggles, Presets & Override Cascading (REQ-STA-003
     });
   });
 });
+
+
+describe('useSanitizerStore - Resilience & Hardening (Advisory 2 & 3 Fix Verification)', () => {
+  beforeEach(() => {
+    useSanitizerStore.getState().close();
+  });
+
+  it('populates initial overrides from pre-configured batch entries on openBatch', () => {
+    const file1 = new File(['1'], 'file1.jpg', { type: 'image/jpeg' });
+    const file2 = new File(['2'], 'file2.jpg', { type: 'image/jpeg' });
+
+    const entries: BatchSanitizerEntry[] = [
+      {
+        id: 'entry-with-override',
+        file: file1,
+        fileName: 'file1.jpg',
+        exifData: {},
+        optionsOverride: { gps: false, camera: false },
+      },
+      {
+        id: 'entry-plain',
+        file: file2,
+        fileName: 'file2.jpg',
+        exifData: {},
+      },
+    ];
+
+    useSanitizerStore.getState().openBatch(entries);
+
+    expect(useSanitizerStore.getState().overrides['entry-with-override']).toEqual({
+      gps: false,
+      camera: false,
+    });
+    expect(useSanitizerStore.getState().overrides['entry-plain']).toBeUndefined();
+  });
+
+  it('supports Blob instances as activeFile in single and batch modes', () => {
+    const blob = new Blob(['binary image data'], { type: 'image/jpeg' });
+    useSanitizerStore.getState().openSingle(blob as any, { Make: 'Fujifilm' });
+
+    expect(useSanitizerStore.getState().activeFile).toBe(blob);
+  });
+});

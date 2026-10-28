@@ -419,3 +419,85 @@ describe('useHistoryStore - Session Restoration into Asset Store (Scenario 4.5, 
     expect(useAssetStore.getState().assets).toEqual([]);
   });
 });
+
+
+describe('useHistoryStore - Resilience & Edge Cases (Blocker 2 Fix Verification)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useHistoryStore.getState().clearAllSessions();
+  });
+
+  it('safely parses sessions with missing sessionTitle and corrupt asset entries without crashing search', () => {
+    const corruptPayload = JSON.stringify([
+      {
+        id: 9991,
+        forensicId: 'ES-CORRUPT-1',
+        // sessionTitle is missing entirely
+        assets: [
+          null,
+          undefined,
+          { id: 'corrupt-1' }, // missing fileName
+          { id: 'valid-1', fileName: 'safe_photo.jpg', fileSize: 100, fileType: 'image/jpeg', fileDate: 123 },
+        ],
+      },
+    ]);
+
+    localStorage.setItem('exif_forensic_history', corruptPayload);
+    useHistoryStore.getState().loadSessions();
+
+    const sessions = useHistoryStore.getState().sessions;
+    expect(sessions).toHaveLength(1);
+    expect(sessions[0].sessionTitle).toBe('Untitled Session');
+    expect(sessions[0].assets).toHaveLength(1);
+    expect(sessions[0].assets[0].fileName).toBe('safe_photo.jpg');
+
+    // Search query should not throw
+    useHistoryStore.getState().setSearchQuery('safe');
+    expect(() => useHistoryStore.getState().getFilteredSessions()).not.toThrow();
+    expect(useHistoryStore.getState().getFilteredSessions()).toHaveLength(1);
+  });
+});
+
+
+describe('useHistoryStore - Forensic ID Synchronization (Blocker 3 Fix Verification)', () => {
+  const dummyAsset: ForensicAsset = {
+    id: 'asset-sync',
+    fileName: 'sync.jpg',
+    fileSize: 1024,
+    fileType: 'image/jpeg',
+    fileDate: 1700000000000,
+    sha256: 'sha-sync',
+    sha1: 'sha1-sync',
+    actualWidth: 1000,
+    actualHeight: 800,
+    exifData: {},
+    categorizedExif: {
+      'Device Hardware': {},
+      'Exposure Settings': {},
+      'Optics & Lens': {},
+      'Image Quality': {},
+      'Timeline & Date': {},
+      'Geospatial': {},
+      'Standards & Info': {},
+      'Miscellaneous': {},
+    },
+    integrityAlerts: [],
+  };
+
+  it('preserves the active forensicId from useAssetStore during saveSession', () => {
+    useAssetStore.getState().setAssets([dummyAsset], 'ES-ACTIVE-FORENSIC-001');
+
+    const session = useHistoryStore.getState().saveSession([dummyAsset]);
+    expect(session?.forensicId).toBe('ES-ACTIVE-FORENSIC-001');
+    expect(useHistoryStore.getState().sessions[0].forensicId).toBe('ES-ACTIVE-FORENSIC-001');
+  });
+
+  it('allows explicit forensicId override in saveSession meta', () => {
+    useAssetStore.getState().setAssets([dummyAsset], 'ES-ACTIVE-FORENSIC-001');
+
+    const session = useHistoryStore.getState().saveSession([dummyAsset], {
+      forensicId: 'ES-CUSTOM-META-999',
+    });
+    expect(session?.forensicId).toBe('ES-CUSTOM-META-999');
+  });
+});

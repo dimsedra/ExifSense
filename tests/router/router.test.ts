@@ -155,3 +155,43 @@ describe('Client Hash Router - Route Guards & Redirection (Scenario 6.2, REQ-STA
     expect(current).toBe('#/dashboard');
   });
 });
+
+
+describe('Client Hash Router - Deduplication & Hardening (Advisory 1 Fix Verification)', () => {
+  let cleanup: (() => void) | null = null;
+
+  beforeEach(() => {
+    window.location.hash = '';
+  });
+
+  afterEach(() => {
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
+  });
+
+  it('does not re-execute action or listener on redundant hashchange events for same route', () => {
+    const actionSpy = vi.fn();
+    const routes: RouteDefinition[] = [
+      { path: '#/' },
+      { path: '#/guide', action: actionSpy },
+    ];
+
+    let listenerCallCount = 0;
+    cleanup = initRouter(routes, () => {
+      listenerCallCount++;
+    });
+
+    expect(listenerCallCount).toBe(1); // initial #/
+
+    navigateTo('#/guide');
+    expect(listenerCallCount).toBe(2);
+    expect(actionSpy).toHaveBeenCalledTimes(1);
+
+    // Simulate browser firing a redundant native hashchange event for the already handled hash
+    window.dispatchEvent(new Event('hashchange'));
+    expect(listenerCallCount).toBe(2);
+    expect(actionSpy).toHaveBeenCalledTimes(1);
+  });
+});

@@ -175,3 +175,42 @@ describe('useAssetStore - Active Asset Navigation & Session State (REQ-STA-002)'
     expect(state.stagedFiles).toEqual([]);
   });
 });
+
+
+describe('useAssetStore - Forensic Chain of Custody (Blocker 3 Fix Verification)', () => {
+  const dummyAsset = {
+    id: 'asset-x',
+    fileName: 'photo_x.jpg',
+    fileSize: 1024,
+    fileType: 'image/jpeg',
+    fileDate: 1700000000000,
+    sha256: 'sha256-x',
+    sha1: 'sha1-x',
+    actualWidth: 1920,
+    actualHeight: 1080,
+    exifData: {},
+    categorizedExif: {
+      'Device Hardware': {},
+      'Exposure Settings': {},
+      'Optics & Lens': {},
+      'Image Quality': {},
+      'Timeline & Date': {},
+      'Geospatial': {},
+      'Standards & Info': {},
+      'Miscellaneous': {},
+    },
+    integrityAlerts: [],
+  };
+
+  it('generates a fresh forensicId on consecutive setAssets calls without reusing stale ID', () => {
+    useAssetStore.getState().setAssets([dummyAsset]);
+    const id1 = useAssetStore.getState().forensicId;
+    expect(id1).not.toBeNull();
+
+    // Now analyze a new batch without explicit resetSession
+    useAssetStore.getState().setAssets([{ ...dummyAsset, id: 'asset-y', fileName: 'photo_y.jpg' }]);
+    const id2 = useAssetStore.getState().forensicId;
+    expect(id2).not.toBeNull();
+    expect(id2).not.toBe(id1);
+  });
+});
