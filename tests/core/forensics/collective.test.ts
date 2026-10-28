@@ -244,6 +244,18 @@ describe('evaluateCollectiveIntelligence - Integrity Matrix (REQ-COL-001)', () =
       expect(dist).toBeLessThan(2.3);
     });
 
+    it('does not return NaN for antipodal coordinates with floating-point rounding', () => {
+      // Near-antipodal floating point boundary
+      const dist = calculateDistance(
+        -88.40000000000009,
+        -180,
+        88.40000000000009,
+        0,
+      );
+      expect(Number.isNaN(dist)).toBe(false);
+      expect(dist).toBeGreaterThan(19000);
+    });
+
     it('classifies spread category and calculates total path distance and jumps', () => {
       // Two points ~2.2 km apart => category 'trail'
       const assetA: SingleAssetInput = {
@@ -317,6 +329,40 @@ describe('evaluateCollectiveIntelligence - Integrity Matrix (REQ-COL-001)', () =
       expect(result.geospatial.velocityAlert?.maxSpeedKmh).toBeGreaterThan(1200);
       expect(result.geospatial.velocityAlert?.fromFileName).toBe('jakarta.jpg');
       expect(result.geospatial.velocityAlert?.toFileName).toBe('tokyo.jpg');
+    });
+
+    it('flags velocity anomaly when two photos have identical timestamps but different locations (impossible teleportation)', () => {
+      const assetA: SingleAssetInput = {
+        fileName: 'place-a.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T10:00:00.000Z',
+          latitude: -6.2088,
+          longitude: 106.8456, // Jakarta
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const assetB: SingleAssetInput = {
+        fileName: 'place-b.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T10:00:00.000Z', // Exact same second
+          latitude: 51.5074,
+          longitude: -0.1278, // London
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const result = evaluateCollectiveIntelligence([assetA, assetB]);
+
+      expect(result.geospatial.velocityAlert?.hasAnomaly).toBe(true);
+      expect(result.geospatial.velocityAlert?.fromFileName).toBe('place-a.jpg');
+      expect(result.geospatial.velocityAlert?.toFileName).toBe('place-b.jpg');
     });
   });
 });

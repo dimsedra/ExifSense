@@ -20,6 +20,7 @@ describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
       latitude: -6.2088,
       longitude: 106.8456,
       ExifVersion: '0231',
+      ComponentsConfiguration: [1, 2, 3, 0],
       CustomVendorTag: 'ProprietaryValue'
     };
 
@@ -59,7 +60,8 @@ describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
     });
 
     expect(categorized['Standards & Info']).toMatchObject({
-      ExifVersion: '0231'
+      ExifVersion: '0231',
+      ComponentsConfiguration: [1, 2, 3, 0],
     });
 
     expect(categorized['Miscellaneous']).toMatchObject({

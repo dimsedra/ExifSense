@@ -225,4 +225,19 @@ describe('File Signature Detection (REQ-SIG-001)', () => {
       expect(res.rejected[0].reason).toBe('exceeds_batch_limit');
     });
   });
+
+  describe('Buffer Resilience and Memory Safety', () => {
+    it('safely handles large file buffers (e.g. 500KB) without call stack overflow', () => {
+      // 500 KB buffer with JPEG magic bytes at offset 0
+      const largeBuffer = new Uint8Array(500 * 1024);
+      largeBuffer[0] = 0xff;
+      largeBuffer[1] = 0xd8;
+      largeBuffer[2] = 0xff;
+
+      const result = detectFileType(largeBuffer);
+      expect(result.isValid).toBe(true);
+      expect(result.detectedFormat).toBe('JPEG');
+      expect(result.mimeType).toBe('image/jpeg');
+    });
+  });
 });
