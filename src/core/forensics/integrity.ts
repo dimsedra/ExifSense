@@ -1,4 +1,4 @@
-import { categorizeExif } from './metadata';
+import { categorizeExif, parseExifDate, formatFullDate } from './metadata';
 import type { SingleAssetInput, IntegrityAlert, ExifCategory } from './types';
 
 const MEANINGFUL_CATEGORIES: ExifCategory[] = [
@@ -85,6 +85,51 @@ export function evaluateSingleAssetIntegrity(
         defaultMessage: `Editing software signature found: "${software}". This image was likely saved or processed using an image editor.`,
       });
     }
+  }
+
+  // 4. Chronological Anomaly Detection
+  const originalDate = parseExifDate(
+    exif.DateTimeOriginal || exif.CreateDate || exif.DateTime,
+  );
+  const modifyDate = parseExifDate(exif.ModifyDate);
+  const fileDate =
+    typeof asset.fileDate === 'number' && !Number.isNaN(asset.fileDate)
+      ? new Date(asset.fileDate)
+      : null;
+
+  if (originalDate) {
+    // 5 minutes clock drift allowance
+    if (originalDate.getTime() > _now.getTime() + 5 * 60 * 1000) {
+      alerts.push({
+        type: 'future_capture_date',
+        severity: 'warning',
+        messageParam: { date: formatFullDate(originalDate) },
+        defaultMessage: `Chronological Anomaly: Capture date (${formatFullDate(originalDate)}) is in the future. This indicates possible timestamp manipulation.`,
+      });
+    }
+
+    // 5 seconds buffer compared to file system modification time
+    if (fileDate && originalDate.getTime() > fileDate.getTime() + 5000) {
+      alerts.push({
+        type: 'capture_after_file_modification',
+        severity: 'warning',
+        messageParam: {
+          date: formatFullDate(originalDate),
+          fileDate: formatFullDate(fileDate),
+        },
+        defaultMessage: `Chronological Mismatch: Capture date (${formatFullDate(originalDate)}) is newer than the file modification date (${formatFullDate(fileDate)}). This is chronologically impossible.`,
+      });
+    }
+  }
+
+  if (!originalDate && (modifyDate || software)) {
+    alerts.push({
+      type: 'missing_original_metadata',
+      severity: 'warning',
+      messageParam: { indicator: software || (modifyDate ? 'ModifyDate' : '') },
+      defaultMessage:
+        'Stripped Capture Metadata: Original capture timestamp is missing, but post-processing indicators are present.',
+    });
   }
 
   return alerts;
