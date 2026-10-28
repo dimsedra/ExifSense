@@ -59,6 +59,82 @@ export function evaluateCollectiveIntelligence(
     };
   });
 
+  // Hardware Analysis
+  const hardwareDetails: Array<{
+    fileName: string;
+    make: string;
+    model: string;
+    software: string;
+    lensModel: string;
+    bodySerial: string;
+    lensSerial: string;
+  }> = [];
+
+  const rawDevices: string[] = [];
+  const rawSerials: string[] = [];
+  let missingHwCount = 0;
+
+  for (const asset of assets) {
+    const exif = asset.exifData || {};
+    const make =
+      typeof exif.Make === 'string' && exif.Make.trim() ? exif.Make.trim() : '-';
+    const model =
+      typeof exif.Model === 'string' && exif.Model.trim()
+        ? exif.Model.trim()
+        : '-';
+    const software =
+      typeof exif.Software === 'string' && exif.Software.trim()
+        ? exif.Software.trim()
+        : '-';
+    const lensModel =
+      typeof exif.LensModel === 'string' && exif.LensModel.trim()
+        ? exif.LensModel.trim()
+        : '-';
+
+    const bodySerialVal =
+      exif.BodySerialNumber ?? exif.SerialNumber ?? exif.InternalSerialNumber;
+    const bodySerial =
+      bodySerialVal != null && String(bodySerialVal).trim()
+        ? String(bodySerialVal).trim()
+        : '-';
+
+    const lensSerialVal = exif.LensSerialNumber;
+    const lensSerial =
+      lensSerialVal != null && String(lensSerialVal).trim()
+        ? String(lensSerialVal).trim()
+        : '-';
+
+    hardwareDetails.push({
+      fileName: asset.fileName,
+      make,
+      model,
+      software,
+      lensModel,
+      bodySerial,
+      lensSerial,
+    });
+
+    const devStr = [make !== '-' ? make : '', model !== '-' ? model : '']
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    if (devStr) {
+      rawDevices.push(devStr);
+    } else {
+      missingHwCount += 1;
+    }
+
+    if (bodySerial !== '-') {
+      rawSerials.push(bodySerial);
+    }
+  }
+
+  const uniqueDevices = Array.from(new Set(rawDevices));
+  const uniqueSerials = Array.from(new Set(rawSerials));
+  const isConsistent = uniqueDevices.length <= 1;
+  const hasSerialMatch = uniqueSerials.length === 1 && assets.length > 1;
+
   return {
     integrity: {
       cleanCount,
@@ -67,12 +143,12 @@ export function evaluateCollectiveIntelligence(
       matrix,
     },
     hardware: {
-      isConsistent: true,
-      uniqueDevices: [],
-      uniqueSerials: [],
-      missingCount: 0,
-      hasSerialMatch: false,
-      details: [],
+      isConsistent,
+      uniqueDevices,
+      uniqueSerials,
+      missingCount: missingHwCount,
+      hasSerialMatch,
+      details: hardwareDetails,
     },
     timeline: {
       totalDurationMs: 0,
