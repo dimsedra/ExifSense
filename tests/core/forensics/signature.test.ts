@@ -92,4 +92,41 @@ describe('File Signature Detection (REQ-SIG-001)', () => {
       detectedFormat: 'HEIC/HEIF'
     });
   });
+
+  it('rejects short buffers with less than 4 bytes (REQ-SIG-001 Error Path)', () => {
+    const emptyBytes = new Uint8Array([]);
+    const shortBytes = new Uint8Array([0xFF, 0xD8]);
+    expect(detectFileType(emptyBytes)).toEqual({
+      isValid: false,
+      mimeType: null,
+      extension: null,
+      detectedFormat: null
+    });
+    expect(detectFileType(shortBytes)).toEqual({
+      isValid: false,
+      mimeType: null,
+      extension: null,
+      detectedFormat: null
+    });
+  });
+
+  it('rejects arbitrary non-image binaries (REQ-SIG-001 Error Path)', () => {
+    // PDF header %PDF
+    const pdfBytes = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E, 0x35, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    expect(detectFileType(pdfBytes)).toEqual({
+      isValid: false,
+      mimeType: null,
+      extension: null,
+      detectedFormat: null
+    });
+
+    // Random noise
+    const randomBytes = new Uint8Array([0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]);
+    expect(detectFileType(randomBytes)).toEqual({
+      isValid: false,
+      mimeType: null,
+      extension: null,
+      detectedFormat: null
+    });
+  });
 });
