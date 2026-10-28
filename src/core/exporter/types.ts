@@ -1,5 +1,3 @@
-import { ForensicAsset } from '../forensics/types';
-
 export interface ForensicExportMetadata {
   sessionTitle: string;
   forensicId: string;
