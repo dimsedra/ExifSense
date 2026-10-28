@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { categorizeExif, parseExifDate } from '../../../src/core/forensics/metadata.ts';
+import { categorizeExif, parseExifDate, formatExifValue, formatFullDate } from '../../../src/core/forensics/metadata.ts';
 
 describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
   it('correctly maps properties across the 8 standardized categories', () => {
@@ -121,6 +121,30 @@ describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
       expect(parseExifDate('')).toBeNull();
       expect(parseExifDate('not-a-valid-date')).toBeNull();
       expect(parseExifDate('0000:00:00 00:00:00')).toBeNull();
+    });
+  });
+
+  describe('Optical and EXIF Value Formatting (REQ-META-001)', () => {
+    it('formats exposure times below 1 second as clean fractions', () => {
+      expect(formatExifValue('ExposureTime', 0.002)).toBe('1/500');
+      expect(formatExifValue('ExposureTime', 0.004)).toBe('1/250');
+      expect(formatExifValue('ExposureTime', 2)).toBe('2');
+    });
+
+    it('formats aperture values with f/ prefix', () => {
+      expect(formatExifValue('FNumber', 2.8)).toBe('f/2.8');
+      expect(formatExifValue('FNumber', 1.4)).toBe('f/1.4');
+    });
+
+    it('formats focal lengths with mm suffix', () => {
+      expect(formatExifValue('FocalLength', 50)).toBe('50mm');
+      expect(formatExifValue('FocalLengthIn35mmFormat', 75)).toBe('75mm');
+    });
+
+    it('formats full dates into standard DD-MM-YYYY HH:mm:ss format', () => {
+      const d = new Date(2026, 4, 14, 9, 5, 2);
+      expect(formatFullDate(d)).toBe('14-05-2026 09:05:02');
+      expect(formatFullDate(null)).toBe('Unknown');
     });
   });
 });
