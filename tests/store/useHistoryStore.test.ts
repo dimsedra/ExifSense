@@ -205,16 +205,18 @@ describe('useHistoryStore - QuotaExceededError Resilience (Scenario 4.3, REQ-STA
 
     expect(useHistoryStore.getState().sessions).toHaveLength(10);
 
-    // Mock localStorage.setItem to throw QuotaExceededError on next call
-    const originalSetItem = localStorage.setItem.bind(localStorage);
+    const original = localStorage.setItem;
     let attempts = 0;
-    localStorage.setItem = (key: string, value: string) => {
-      attempts++;
-      if (attempts === 1) {
-        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
-      }
-      return originalSetItem(key, value);
-    };
+    Object.defineProperty(localStorage, 'setItem', {
+      value: (key: string, value: string) => {
+        attempts++;
+        if (attempts === 1) {
+          throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+        }
+        return original.call(localStorage, key, value);
+      },
+      configurable: true,
+    });
 
     useHistoryStore.getState().saveSession([createMockAsset('overflow')], {
       sessionTitle: 'Overflow Session',
@@ -224,7 +226,10 @@ describe('useHistoryStore - QuotaExceededError Resilience (Scenario 4.3, REQ-STA
     expect(useHistoryStore.getState().sessions).toHaveLength(6);
     expect(useHistoryStore.getState().sessions[0].sessionTitle).toBe('Overflow Session');
 
-    localStorage.setItem = originalSetItem;
+    Object.defineProperty(localStorage, 'setItem', {
+      value: original,
+      configurable: true,
+    });
   });
 
   it('strips thumbnail payloads if quota is still exceeded after 5-session purge', () => {
@@ -235,16 +240,19 @@ describe('useHistoryStore - QuotaExceededError Resilience (Scenario 4.3, REQ-STA
       });
     }
 
-    const originalSetItem = localStorage.setItem.bind(localStorage);
+    const original = localStorage.setItem;
     let attempts = 0;
-    localStorage.setItem = (key: string, value: string) => {
-      attempts++;
-      // Throw on attempt 1 (initial save) and attempt 2 (after 5-session purge)
-      if (attempts <= 2) {
-        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
-      }
-      return originalSetItem(key, value);
-    };
+    Object.defineProperty(localStorage, 'setItem', {
+      value: (key: string, value: string) => {
+        attempts++;
+        // Throw on attempt 1 (initial save) and attempt 2 (after 5-session purge)
+        if (attempts <= 2) {
+          throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+        }
+        return original.call(localStorage, key, value);
+      },
+      configurable: true,
+    });
 
     useHistoryStore.getState().saveSession([createMockAsset('big-thumb')], {
       sessionTitle: 'Big Thumb Session',
@@ -258,6 +266,9 @@ describe('useHistoryStore - QuotaExceededError Resilience (Scenario 4.3, REQ-STA
       expect(s.mainThumb).toBe('');
     });
 
-    localStorage.setItem = originalSetItem;
+    Object.defineProperty(localStorage, 'setItem', {
+      value: original,
+      configurable: true,
+    });
   });
 });

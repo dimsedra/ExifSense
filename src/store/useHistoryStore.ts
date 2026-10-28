@@ -66,6 +66,45 @@ function generateSessionId(): number {
   return lastSessionId;
 }
 
+function persistSessionsWithQuotaFallback(
+  sessions: HistorySession[]
+): HistorySession[] {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions));
+    return sessions;
+  } catch (err: any) {
+    const isQuota =
+      Boolean(err) &&
+      (typeof err === 'object' &&
+        (('name' in (err as any) && (err as any).name === 'QuotaExceededError') ||
+          ('code' in (err as any) && (err as any).code === 22)));
+
+    if (!isQuota) {
+      return sessions;
+    }
+
+    // Step 1: Purge oldest 5 sessions and retry
+    const reduced = sessions.slice(0, Math.max(1, sessions.length - 5));
+    try {
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(reduced));
+      return reduced;
+    } catch {
+      // Step 2: Strip thumbnail payloads and retry
+      const noThumbs = reduced.map((s) => ({
+        ...s,
+        mainThumb: '',
+        assets: s.assets.map((a) => ({ ...a, thumbUrl: '' })),
+      }));
+      try {
+        localStorage.setItem(HISTORY_KEY, JSON.stringify(noThumbs));
+        return noThumbs;
+      } catch {
+        return noThumbs;
+      }
+    }
+  }
+}
+
 export function sanitizeLoadedHistory(rawJson: string | null): HistorySession[] {
   if (!rawJson) return [];
   try {
@@ -78,7 +117,7 @@ export function sanitizeLoadedHistory(rawJson: string | null): HistorySession[] 
         typeof item.forensicId === 'string' &&
         Array.isArray(item.assets)
     );
-  } catch (err) {
+  } catch (err: any) {
     return [];
   }
 }
@@ -136,12 +175,8 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
 
     let updated: HistorySession[] = [];
     set((state) => {
-      updated = [session, ...state.sessions].slice(0, MAX_HISTORY);
-      try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-      } catch (err) {
-        // Quota handling will be enhanced in 4.3
-      }
+      const candidate = [session, ...state.sessions].slice(0, MAX_HISTORY);
+      updated = persistSessionsWithQuotaFallback(candidate);
       return { sessions: updated };
     });
 
