@@ -1,5 +1,6 @@
+// @vitest-environment happy-dom
 import { describe, it, expect, beforeEach } from 'vitest';
-import { useI18nStore } from '../../src/store/useI18nStore';
+import { useI18nStore, LANG_STORAGE_KEY } from '../../src/store/useI18nStore';
 
 describe('useI18nStore - Translation Formatting & Token Interpolation (Scenario 5.1, REQ-STA-006)', () => {
   beforeEach(() => {
@@ -42,5 +43,50 @@ describe('useI18nStore - Translation Formatting & Token Interpolation (Scenario 
 
     // Completely missing key returns the raw key string
     expect(useI18nStore.getState().t('totally_unknown_key')).toBe('totally_unknown_key');
+  });
+});
+
+describe('useI18nStore - Language Switching & RTL Layout (Scenario 5.2, REQ-STA-006)', () => {
+  beforeEach(() => {
+    localStorage.clear();
+    document.documentElement.lang = 'en';
+    document.documentElement.dir = 'ltr';
+  });
+
+  it('switches to Arabic and applies RTL direction and document attributes', async () => {
+    await useI18nStore.getState().setLanguage('ar');
+
+    const state = useI18nStore.getState();
+    expect(state.currentLang).toBe('ar');
+    expect(state.direction).toBe('rtl');
+    expect(document.documentElement.dir).toBe('rtl');
+    expect(document.documentElement.lang).toBe('ar');
+    expect(localStorage.getItem(LANG_STORAGE_KEY)).toBe('ar');
+
+    // Dictionary for Arabic should be loaded
+    expect(Object.keys(state.dictionary).length).toBeGreaterThan(0);
+  });
+
+  it('switches to Indonesian with LTR direction and document attributes', async () => {
+    await useI18nStore.getState().setLanguage('id');
+
+    const state = useI18nStore.getState();
+    expect(state.currentLang).toBe('id');
+    expect(state.direction).toBe('ltr');
+    expect(document.documentElement.dir).toBe('ltr');
+    expect(document.documentElement.lang).toBe('id');
+    expect(localStorage.getItem(LANG_STORAGE_KEY)).toBe('id');
+  });
+
+  it('switches back to English with LTR direction', async () => {
+    await useI18nStore.getState().setLanguage('id');
+    await useI18nStore.getState().setLanguage('en');
+
+    const state = useI18nStore.getState();
+    expect(state.currentLang).toBe('en');
+    expect(state.direction).toBe('ltr');
+    expect(document.documentElement.dir).toBe('ltr');
+    expect(document.documentElement.lang).toBe('en');
+    expect(localStorage.getItem(LANG_STORAGE_KEY)).toBe('en');
   });
 });
