@@ -72,3 +72,105 @@ describe('useAssetStore - Staged Queue Management (REQ-STA-001)', () => {
     expect(useAssetStore.getState().stagedFiles).toEqual([]);
   });
 });
+
+
+describe('useAssetStore - Active Asset Navigation & Session State (REQ-STA-002)', () => {
+  const dummyAsset1 = {
+    id: 'asset-1',
+    fileName: 'photo1.jpg',
+    fileSize: 1024,
+    fileType: 'image/jpeg',
+    fileDate: 1700000000000,
+    sha256: 'sha256-1',
+    sha1: 'sha1-1',
+    actualWidth: 1920,
+    actualHeight: 1080,
+    exifData: {},
+    categorizedExif: {
+      camera: [],
+      device: [],
+      dateTime: [],
+      location: [],
+      optics: [],
+      quality: [],
+      other: [],
+    },
+    integrityAlerts: [],
+  };
+
+  const dummyAsset2 = {
+    ...dummyAsset1,
+    id: 'asset-2',
+    fileName: 'photo2.jpg',
+    sha256: 'sha256-2',
+  };
+
+  beforeEach(() => {
+    useAssetStore.getState().resetSession();
+  });
+
+  it('sets assets and auto-generates forensicId if none provided', () => {
+    useAssetStore.getState().setAssets([dummyAsset1, dummyAsset2]);
+    const state = useAssetStore.getState();
+    expect(state.assets).toHaveLength(2);
+    expect(state.activeAssetIndex).toBe(0);
+    expect(state.forensicId).toMatch(/^ES-[A-Z0-9]+-[A-Z0-9]+$/);
+  });
+
+  it('preserves explicitly provided forensicId on setAssets', () => {
+    useAssetStore.getState().setAssets([dummyAsset1], 'EXIF-CUSTOM-999');
+    expect(useAssetStore.getState().forensicId).toBe('EXIF-CUSTOM-999');
+  });
+
+  it('navigates activeAssetIndex within valid bounds and notifies subscribers', () => {
+    useAssetStore.getState().setAssets([dummyAsset1, dummyAsset2]);
+    
+    let notifiedIndex = -1;
+    const unsub = useAssetStore.subscribe((state) => {
+      notifiedIndex = state.activeAssetIndex;
+    });
+
+    useAssetStore.getState().setActiveAssetIndex(1);
+    expect(useAssetStore.getState().activeAssetIndex).toBe(1);
+    expect(notifiedIndex).toBe(1);
+
+    // Out of bounds indices should be rejected
+    useAssetStore.getState().setActiveAssetIndex(5);
+    expect(useAssetStore.getState().activeAssetIndex).toBe(1);
+
+    useAssetStore.getState().setActiveAssetIndex(-1);
+    expect(useAssetStore.getState().activeAssetIndex).toBe(1);
+
+    unsub();
+  });
+
+  it('updates investigatorIdentity and isAnalyzing', () => {
+    useAssetStore.getState().setInvestigatorIdentity('Agent Mulder');
+    expect(useAssetStore.getState().investigatorIdentity).toBe('Agent Mulder');
+
+    useAssetStore.getState().setIsAnalyzing(true);
+    expect(useAssetStore.getState().isAnalyzing).toBe(true);
+
+    useAssetStore.getState().setIsAnalyzing(false);
+    expect(useAssetStore.getState().isAnalyzing).toBe(false);
+  });
+
+  it('resets entire session state back to initial values', () => {
+    useAssetStore.getState().setAssets([dummyAsset1, dummyAsset2], 'EXIF-TEST-123');
+    useAssetStore.getState().setActiveAssetIndex(1);
+    useAssetStore.getState().setInvestigatorIdentity('Detective');
+    useAssetStore.getState().setIsAnalyzing(true);
+    useAssetStore.getState().setUploadMode('batch');
+    useAssetStore.getState().stageFiles([new File([''], 'test.jpg')]);
+
+    useAssetStore.getState().resetSession();
+    const state = useAssetStore.getState();
+    expect(state.assets).toEqual([]);
+    expect(state.activeAssetIndex).toBe(0);
+    expect(state.forensicId).toBeNull();
+    expect(state.investigatorIdentity).toBeNull();
+    expect(state.isAnalyzing).toBe(false);
+    expect(state.uploadMode).toBe('single');
+    expect(state.stagedFiles).toEqual([]);
+  });
+});
