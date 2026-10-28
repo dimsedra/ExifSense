@@ -65,3 +65,47 @@ export function detectFileType(headerBytes: Uint8Array): FileDetectionResult {
 
   return { isValid: false, mimeType: null, extension: null, detectedFormat: null };
 }
+
+const EXTENSION_EQUIVALENTS: Record<string, string[]> = {
+  jpg: ['jpg', 'jpeg'],
+  jpeg: ['jpg', 'jpeg'],
+  tif: ['tif', 'tiff'],
+  tiff: ['tif', 'tiff'],
+  heic: ['heic', 'heif'],
+  heif: ['heic', 'heif']
+};
+
+/**
+ * Reconciles the file extension of a file against detected format signature.
+ * @param originalFileName The original file name.
+ * @param detection Result from detectFileType.
+ */
+export function reconcileFileExtension(
+  originalFileName: string,
+  detection: FileDetectionResult
+): { isEquivalent: boolean; resolvedFileName: string } {
+  if (!detection.isValid || !detection.extension) {
+    return { isEquivalent: false, resolvedFileName: originalFileName };
+  }
+
+  const lastDotIndex = originalFileName.lastIndexOf('.');
+  const hasExtension = lastDotIndex !== -1 && lastDotIndex < originalFileName.length - 1;
+  const originalExt = hasExtension ? originalFileName.substring(lastDotIndex + 1).toLowerCase() : '';
+  const detectedExt = detection.extension.toLowerCase();
+
+  const isExact = originalExt === detectedExt;
+  const isEquivalent =
+    isExact ||
+    (EXTENSION_EQUIVALENTS[detectedExt] != null &&
+      EXTENSION_EQUIVALENTS[detectedExt].includes(originalExt));
+
+  if (isEquivalent) {
+    return { isEquivalent: true, resolvedFileName: originalFileName };
+  }
+
+  const baseName = hasExtension ? originalFileName.substring(0, lastDotIndex) : originalFileName;
+  return {
+    isEquivalent: false,
+    resolvedFileName: `${baseName}.${detectedExt}`
+  };
+}
