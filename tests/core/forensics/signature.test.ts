@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { detectFileType, reconcileFileExtension } from '../../../src/core/forensics/signature.ts';
+import { detectFileType, reconcileFileExtension, validateBatchLimits } from '../../../src/core/forensics/signature.ts';
 import type { FileDetectionResult } from '../../../src/core/forensics/types.ts';
 
 describe('File Signature Detection (REQ-SIG-001)', () => {
@@ -188,6 +188,41 @@ describe('File Signature Detection (REQ-SIG-001)', () => {
         isEquivalent: false,
         resolvedFileName: 'avatar.png'
       });
+    });
+  });
+
+  describe('Batch and File Size Enforcement (REQ-SIG-003)', () => {
+    it('accepts files within 100MB and batch size <= 50', () => {
+      const files = [
+        { name: 'pic1.jpg', size: 5 * 1024 * 1024 },
+        { name: 'pic2.png', size: 10 * 1024 * 1024 }
+      ];
+      const res = validateBatchLimits(files);
+      expect(res.accepted).toHaveLength(2);
+      expect(res.rejected).toHaveLength(0);
+    });
+
+    it('rejects files exceeding 100MB threshold (104,857,600 bytes)', () => {
+      const files = [
+        { name: 'small.jpg', size: 1024 },
+        { name: 'huge.tiff', size: 105 * 1024 * 1024 }
+      ];
+      const res = validateBatchLimits(files);
+      expect(res.accepted).toEqual([{ name: 'small.jpg', size: 1024 }]);
+      expect(res.rejected).toEqual([
+        { file: { name: 'huge.tiff', size: 105 * 1024 * 1024 }, reason: 'exceeds_file_size' }
+      ]);
+    });
+
+    it('rejects files beyond 50-file batch quota', () => {
+      const files = Array.from({ length: 55 }, (_, i) => ({
+        name: `photo_${i}.jpg`,
+        size: 1000
+      }));
+      const res = validateBatchLimits(files);
+      expect(res.accepted).toHaveLength(50);
+      expect(res.rejected).toHaveLength(5);
+      expect(res.rejected[0].reason).toBe('exceeds_batch_limit');
     });
   });
 });
