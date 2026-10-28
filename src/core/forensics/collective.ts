@@ -1,9 +1,10 @@
-import { categorizeExif } from './metadata';
+import { categorizeExif, parseExifDate } from './metadata';
 import { evaluateSingleAssetIntegrity } from './integrity';
 import type {
   SingleAssetInput,
   CollectiveIntelligenceResult,
   ExifCategory,
+  TimelineJump,
 } from './types';
 
 const EXIF_CATEGORIES: ExifCategory[] = [
@@ -135,6 +136,68 @@ export function evaluateCollectiveIntelligence(
   const isConsistent = uniqueDevices.length <= 1;
   const hasSerialMatch = uniqueSerials.length === 1 && assets.length > 1;
 
+  // Timeline Analysis
+  const validTimeAssets: Array<{
+    fileName: string;
+    date: Date;
+    time: number;
+  }> = [];
+  const missingAssets: string[] = [];
+
+  for (const asset of assets) {
+    const exif = asset.exifData || {};
+    const d = parseExifDate(
+      exif.DateTimeOriginal || exif.CreateDate || exif.DateTime,
+    );
+    if (d) {
+      validTimeAssets.push({
+        fileName: asset.fileName,
+        date: d,
+        time: d.getTime(),
+      });
+    } else {
+      missingAssets.push(asset.fileName);
+    }
+  }
+
+  validTimeAssets.sort((a, b) => a.time - b.time);
+
+  const timelineJumps: TimelineJump[] = [];
+  let startTime: Date | null = null;
+  let endTime: Date | null = null;
+  let totalDurationMs = 0;
+
+  if (validTimeAssets.length > 0) {
+    startTime = validTimeAssets[0].date;
+    endTime = validTimeAssets[validTimeAssets.length - 1].date;
+    totalDurationMs = endTime.getTime() - startTime.getTime();
+
+    for (let i = 0; i < validTimeAssets.length - 1; i++) {
+      const curr = validTimeAssets[i];
+      const next = validTimeAssets[i + 1];
+      const diffMs = next.time - curr.time;
+
+      const deltaDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const deltaHours = Math.floor(
+        (diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60),
+      );
+      const deltaMinutes = Math.floor(
+        (diffMs % (1000 * 60 * 60)) / (1000 * 60),
+      );
+      const deltaSeconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+
+      timelineJumps.push({
+        fromFileName: curr.fileName,
+        toFileName: next.fileName,
+        deltaMs: diffMs,
+        deltaDays,
+        deltaHours,
+        deltaMinutes,
+        deltaSeconds,
+      });
+    }
+  }
+
   return {
     integrity: {
       cleanCount,
@@ -151,11 +214,11 @@ export function evaluateCollectiveIntelligence(
       details: hardwareDetails,
     },
     timeline: {
-      totalDurationMs: 0,
-      startTime: null,
-      endTime: null,
-      missingAssets: [],
-      jumps: [],
+      totalDurationMs,
+      startTime,
+      endTime,
+      missingAssets,
+      jumps: timelineJumps,
     },
     geospatial: {
       totalPathDistanceKm: 0,
