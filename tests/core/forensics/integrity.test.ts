@@ -201,4 +201,89 @@ describe('evaluateSingleAssetIntegrity - Stripped Metadata (REQ-INT-001)', () =>
       expect(alert?.defaultMessage).toContain('Stripped Capture Metadata');
     });
   });
+
+  describe('Dimension Mismatch Detection (REQ-INT-004)', () => {
+    it('flags dimension_mismatch when natural dimensions differ from EXIF dimensions', () => {
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        actualWidth: 1200,
+        actualHeight: 800,
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          ExifImageWidth: 6000,
+          ExifImageHeight: 4000,
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset);
+      const alert = alerts.find((a) => a.type === 'dimension_mismatch');
+
+      expect(alert).toBeDefined();
+      expect(alert?.severity).toBe('warning');
+      expect(alert?.messageParam).toEqual({
+        exifWidth: 6000,
+        exifHeight: 4000,
+        actualWidth: 1200,
+        actualHeight: 800,
+      });
+      expect(alert?.defaultMessage).toContain('6000x4000');
+      expect(alert?.defaultMessage).toContain('1200x800');
+    });
+
+    it('falls back to PixelXDimension or ImageWidth if ExifImageWidth is not present', () => {
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        actualWidth: 800,
+        actualHeight: 600,
+        exifData: {
+          Make: 'Nikon',
+          Model: 'Z6',
+          PixelXDimension: 1920,
+          PixelYDimension: 1080,
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset);
+      const alert = alerts.find((a) => a.type === 'dimension_mismatch');
+
+      expect(alert).toBeDefined();
+      expect(alert?.messageParam?.exifWidth).toBe(1920);
+      expect(alert?.messageParam?.exifHeight).toBe(1080);
+    });
+
+    it('does not flag dimension_mismatch when natural and EXIF dimensions match', () => {
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        actualWidth: 1920,
+        actualHeight: 1080,
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          ImageWidth: 1920,
+          ImageHeight: 1080,
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset);
+      expect(alerts.find((a) => a.type === 'dimension_mismatch')).toBeUndefined();
+    });
+
+    it('does not flag dimension_mismatch when actual dimensions are missing or null', () => {
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        actualWidth: null,
+        actualHeight: null,
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          ImageWidth: 1920,
+          ImageHeight: 1080,
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset);
+      expect(alerts.find((a) => a.type === 'dimension_mismatch')).toBeUndefined();
+    });
+  });
 });
