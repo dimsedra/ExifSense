@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { stripAllMetadata } from '../../../src/core/sanitizer/sanitizer';
+import { stripAllMetadata, stripSpecificMetadata } from '../../../src/core/sanitizer/sanitizer';
 
 describe('Total Canvas Metadata Stripping (REQ-SAN-004)', () => {
   let originalImage: typeof Image;
@@ -91,5 +91,18 @@ describe('Total Canvas Metadata Stripping (REQ-SAN-004)', () => {
 
     const inputBlob = new Blob(['corrupt-data'], { type: 'image/jpeg' });
     await expect(stripAllMetadata(inputBlob)).rejects.toThrow('Corrupt image payload');
+  });
+
+  it('falls back to canvas total stripping when stripSpecificMetadata receives non-JPEG bytes (Error Path)', async () => {
+    const nonJpegBlob = new Blob(['not-a-jpeg-payload'], { type: 'image/png' });
+    const cleanedBlob = await stripSpecificMetadata(nonJpegBlob, {
+      gps: true,
+      device: true,
+      camera: true,
+      date: true
+    });
+
+    expect(cleanedBlob).toBeInstanceOf(Blob);
+    expect(cleanedBlob.type).toBe('image/png');
   });
 });

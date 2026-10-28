@@ -38,4 +38,14 @@ describe('Sanitizer Presets (REQ-SAN-001)', () => {
     const options2 = getPresetOptions('max-privacy');
     expect(options2.gps).toBe(true);
   });
+
+  it('falls back safely to balanced preset when given an unknown preset name (Boundary)', () => {
+    const fallback = getPresetOptions('unknown_custom_preset' as any);
+    expect(fallback).toEqual({
+      gps: true,
+      device: true,
+      camera: false,
+      date: false
+    });
+  });
 });

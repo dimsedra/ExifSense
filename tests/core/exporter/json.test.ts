@@ -79,4 +79,16 @@ describe('Machine-Readable JSON Report Export (REQ-EXP-002)', () => {
     const parsed = JSON.parse(generateJsonReport([malformedAsset], meta));
     expect(parsed.assets[0].fileDate).toBe(new Date(0).toISOString());
   });
+
+  it('safely handles invalid or NaN meta.generatedAt date without throwing RangeError (Boundary)', () => {
+    const invalidMeta: ForensicExportMetadata = {
+      ...meta,
+      generatedAt: new Date(NaN)
+    };
+
+    expect(() => generateJsonReport([asset1], invalidMeta)).not.toThrow();
+    const parsed = JSON.parse(generateJsonReport([asset1], invalidMeta));
+    expect(parsed.generatedAt).toBeDefined();
+    expect(new Date(parsed.generatedAt).getTime()).not.toBeNaN();
+  });
 });

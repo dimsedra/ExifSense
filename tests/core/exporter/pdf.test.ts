@@ -82,6 +82,12 @@ describe('Multi-Page Forensic PDF Generation (REQ-EXP-001)', () => {
     const bytes = new Uint8Array(buffer);
     const header = String.fromCharCode(...bytes.subarray(0, 5));
     expect(header).toBe('%PDF-');
+
+    // Matrix indicators must use WinAnsi-compatible ASCII text ('YES' / '-') instead of unencoded Unicode dingbats
+    const pdfContent = new TextDecoder('latin1').decode(bytes);
+    expect(pdfContent).toContain('YES');
+    expect(pdfContent).not.toContain('✓');
+    expect(pdfContent).not.toContain('✗');
   });
 
   it('handles empty assets array returning valid PDF with cover page (Boundary & Limits)', async () => {
