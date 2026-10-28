@@ -37,6 +37,21 @@ function escapeCsvCell(value: unknown): string {
 }
 
 /**
+ * Flattens categorized EXIF metadata map into a flat tuple array of [category, key, value].
+ */
+function flattenCategorizedExif(
+  categorized: Record<string, Record<string, unknown>>
+): Array<[category: string, key: string, value: string]> {
+  const flattened: Array<[string, string, string]> = [];
+  for (const [category, properties] of Object.entries(categorized)) {
+    for (const [key, val] of Object.entries(properties)) {
+      flattened.push([category, key, String(val ?? '')]);
+    }
+  }
+  return flattened;
+}
+
+/**
  * Generates tabular CSV matrix export with UTF-8 BOM and formula injection protection (REQ-EXP-003).
  */
 export function generateCsvReport(
@@ -89,10 +104,9 @@ export function generateCsvReport(
     ]);
 
     // Categorized metadata
-    for (const [category, properties] of Object.entries(asset.categorizedExif)) {
-      for (const [key, val] of Object.entries(properties)) {
-        rows.push([asset.fileName, category, key, String(val ?? '')]);
-      }
+    const flatProps = flattenCategorizedExif(asset.categorizedExif);
+    for (const [category, key, val] of flatProps) {
+      rows.push([asset.fileName, category, key, val]);
     }
   }
 
@@ -399,7 +413,7 @@ export async function generatePdfReport(
       const row = [a.fileName];
       categories.forEach((cat) => {
         const props = a.categorizedExif[cat.name];
-        row.push(props && Object.keys(props).length > 0 ? '✓' : '✗');
+        row.push(props && Object.keys(props).length > 0 ? 'YES' : '-');
       });
       return row;
     });
@@ -570,14 +584,9 @@ export async function generatePdfReport(
       currentY = 20;
     }
 
-    const tableData: string[][] = [];
-    for (const [cat, props] of Object.entries(asset.categorizedExif)) {
-      for (const [key, val] of Object.entries(props)) {
-        tableData.push([cat, key, String(val ?? '')]);
-      }
-    }
+    const metadataRows = flattenCategorizedExif(asset.categorizedExif);
 
-    if (tableData.length > 0) {
+    if (metadataRows.length > 0) {
       autoTable(doc, {
         startY: currentY + 4,
         head: [[
@@ -585,7 +594,7 @@ export async function generatePdfReport(
           translate('property', {}, locale, 'reports'),
           translate('value', {}, locale, 'reports')
         ]],
-        body: tableData,
+        body: metadataRows,
         theme: 'striped',
         headStyles: { fillColor: [37, 99, 235] },
         styles: { fontSize: 8 },
