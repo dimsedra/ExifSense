@@ -109,3 +109,39 @@ export function reconcileFileExtension(
     resolvedFileName: `${baseName}.${detectedExt}`
   };
 }
+
+export interface FileLike {
+  name: string;
+  size: number;
+}
+
+/**
+ * Validates batch files against 100MB file size limit and 50-file batch quota (REQ-SIG-003).
+ */
+export function validateBatchLimits<T extends FileLike>(
+  files: T[],
+  maxCount = 50,
+  maxSizeBytes = 100 * 1024 * 1024
+): {
+  accepted: T[];
+  rejected: Array<{ file: T; reason: 'exceeds_file_size' | 'exceeds_batch_limit' }>;
+} {
+  const accepted: T[] = [];
+  const rejected: Array<{ file: T; reason: 'exceeds_file_size' | 'exceeds_batch_limit' }> = [];
+
+  for (const file of files) {
+    if (file.size > maxSizeBytes) {
+      rejected.push({ file, reason: 'exceeds_file_size' });
+      continue;
+    }
+
+    if (accepted.length >= maxCount) {
+      rejected.push({ file, reason: 'exceeds_batch_limit' });
+      continue;
+    }
+
+    accepted.push(file);
+  }
+
+  return { accepted, rejected };
+}
