@@ -13,6 +13,8 @@ export async function calculateFileHash(
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('').toUpperCase();
 }
 
+let idCounter = 0;
+
 /**
  * Generates a unique, uppercase forensic session identifier.
  * Format: ES-[BASE36_TIMESTAMP]-[RANDOM_3] (REQ-HASH-002)
@@ -20,6 +22,7 @@ export async function calculateFileHash(
  */
 export function generateForensicId(timestamp = Date.now()): string {
   const base = timestamp.toString(36).toUpperCase();
-  const randomChars = Math.random().toString(36).substring(2, 5).toUpperCase().padEnd(3, '0');
+  idCounter = (idCounter + 1) % 46656;
+  const randomChars = idCounter.toString(36).toUpperCase().padStart(3, '0');
   return `ES-${base}-${randomChars}`;
 }

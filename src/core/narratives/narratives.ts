@@ -1,6 +1,6 @@
-import { ForensicAsset } from '../forensics/types';
+import { ForensicAsset, CollectiveIntelligenceResult } from '../forensics/types';
 import { parseExifDate, formatFullDate } from '../forensics/metadata';
-import { SupportedLocale } from './types';
+import { SupportedLocale, NarrativeSection } from './types';
 import enLocale from '../../locales/en.json';
 import idLocale from '../../locales/id.json';
 import arLocale from '../../locales/ar.json';
@@ -260,4 +260,144 @@ export function generateGeospatialNarrative(
   const lng = longitude.toFixed(5);
 
   return translate('geospatial', { locationName: locName, lat, lng }, locale);
+}
+
+/**
+ * Generates natural language multi-asset collective narratives for PDF, Markdown, and UI displays.
+ */
+export function generateCollectiveNarratives(
+  collective: CollectiveIntelligenceResult,
+  totalAssets: number,
+  locale: string = 'en'
+): NarrativeSection[] {
+  const sections: NarrativeSection[] = [];
+
+  // 1. Digital Integrity
+  let integrityText = '';
+  if (collective.integrity.fullyStrippedCount === totalAssets) {
+    integrityText = translate(
+      'combined_integrity_stripped_all',
+      { count: totalAssets, total: totalAssets },
+      locale
+    );
+  } else if (collective.integrity.cleanCount === totalAssets) {
+    integrityText = translate('combined_integrity_clean', { total: totalAssets }, locale);
+  } else {
+    integrityText = translate(
+      'combined_integrity_mix',
+      {
+        total: totalAssets,
+        fully: collective.integrity.fullyStrippedCount,
+        partially: collective.integrity.partiallyStrippedCount,
+        clean: collective.integrity.cleanCount
+      },
+      locale
+    );
+  }
+  sections.push({
+    title: translate('analysis_integrity', {}, locale, 'ui'),
+    narrative: integrityText
+  });
+
+  // 2. Device Hardware
+  let hwText = '';
+  if (
+    collective.hardware.uniqueDevices.length === 1 &&
+    collective.hardware.missingCount === 0
+  ) {
+    hwText = translate(
+      'combined_hw_consistent',
+      { device: collective.hardware.uniqueDevices[0] },
+      locale
+    );
+  } else if (collective.hardware.uniqueDevices.length > 1) {
+    hwText = translate(
+      'combined_hw_discrepancy',
+      { deviceList: collective.hardware.uniqueDevices.join(', ') },
+      locale
+    );
+  } else if (
+    collective.hardware.uniqueDevices.length === 1 &&
+    collective.hardware.missingCount > 0
+  ) {
+    const count = totalAssets - collective.hardware.missingCount;
+    hwText = translate(
+      'combined_hw_sparse_consistent',
+      { count, total: totalAssets, device: collective.hardware.uniqueDevices[0] },
+      locale
+    );
+  }
+
+  if (
+    collective.hardware.hasSerialMatch &&
+    collective.hardware.uniqueSerials.length === 1
+  ) {
+    const serialNote = translate(
+      'combined_serial_match',
+      { serial: collective.hardware.uniqueSerials[0] },
+      locale
+    );
+    hwText = hwText ? `${hwText}\n\n${serialNote}` : serialNote;
+  }
+  sections.push({
+    title: translate('analysis_hardware', {}, locale, 'ui'),
+    narrative: hwText
+  });
+
+  // 3. Timeline
+  let timelineText = '';
+  if (
+    collective.timeline.totalDurationMs > 0 &&
+    collective.timeline.startTime &&
+    collective.timeline.endTime
+  ) {
+    const diffHours = (
+      collective.timeline.totalDurationMs /
+      (1000 * 60 * 60)
+    )
+      .toFixed(1)
+      .replace('.0', '');
+    timelineText = translate(
+      'combined_timeline',
+      {
+        diffHours,
+        start: formatFullDate(collective.timeline.startTime),
+        end: formatFullDate(collective.timeline.endTime)
+      },
+      locale
+    );
+  } else if (collective.timeline.missingAssets.length === totalAssets - 1) {
+    timelineText = translate(
+      'combined_timeline_sparse',
+      { total: totalAssets },
+      locale
+    );
+  }
+  sections.push({
+    title: translate('analysis_timeline', {}, locale, 'ui'),
+    narrative: timelineText
+  });
+
+  // 4. Geospatial
+  let geoText = '';
+  const dist = collective.geospatial.totalPathDistanceKm;
+  if (collective.geospatial.spreadCategory === 'concentrated') {
+    geoText = translate('combined_geo_concentrated', {}, locale);
+  } else if (collective.geospatial.spreadCategory === 'localized') {
+    geoText = translate('combined_geo_localized', { dist: Math.round(dist * 1000) }, locale);
+  } else if (collective.geospatial.spreadCategory === 'trail') {
+    geoText = translate('combined_geo_trail', { dist: dist.toFixed(1) }, locale);
+  }
+
+  if (collective.geospatial.velocityAlert?.hasAnomaly) {
+    const speed = collective.geospatial.velocityAlert.maxSpeedKmh;
+    const velNote = translate('velocity_warning', { speed }, locale);
+    geoText = geoText ? `${geoText}\n\n${velNote}` : velNote;
+  }
+  sections.push({
+    title: translate('analysis_geospatial', {}, locale, 'ui'),
+    narrative: geoText
+  });
+
+  return sections;
 }
