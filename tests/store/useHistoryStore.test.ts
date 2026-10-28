@@ -163,3 +163,101 @@ describe('useHistoryStore - Session Persistence & 20-Entry Cap (Scenario 4.2, RE
     expect(localStorage.getItem('exif_forensic_history')).toBeNull();
   });
 });
+
+
+describe('useHistoryStore - QuotaExceededError Resilience (Scenario 4.3, REQ-STA-004)', () => {
+  const createMockAsset = (id: string): ForensicAsset => ({
+    id,
+    fileName: `asset_${id}.jpg`,
+    fileSize: 1024,
+    fileType: 'image/jpeg',
+    fileDate: 1700000000000,
+    sha256: 'sha256',
+    sha1: 'sha1',
+    actualWidth: 800,
+    actualHeight: 600,
+    exifData: {},
+    categorizedExif: {
+      'Device Hardware': {},
+      'Exposure Settings': {},
+      'Optics & Lens': {},
+      'Image Quality': {},
+      'Timeline & Date': {},
+      'Geospatial': {},
+      'Standards & Info': {},
+      'Miscellaneous': {},
+    },
+    integrityAlerts: [],
+  });
+
+  beforeEach(() => {
+    localStorage.clear();
+    useHistoryStore.getState().clearAllSessions();
+  });
+
+  it('purges oldest 5 sessions when localStorage throws QuotaExceededError', () => {
+    // Populate 10 sessions first
+    for (let i = 1; i <= 10; i++) {
+      useHistoryStore.getState().saveSession([createMockAsset(`file-${i}`)], {
+        sessionTitle: `Session ${i}`,
+      });
+    }
+
+    expect(useHistoryStore.getState().sessions).toHaveLength(10);
+
+    // Mock localStorage.setItem to throw QuotaExceededError on next call
+    const originalSetItem = localStorage.setItem.bind(localStorage);
+    let attempts = 0;
+    localStorage.setItem = (key: string, value: string) => {
+      attempts++;
+      if (attempts === 1) {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      }
+      return originalSetItem(key, value);
+    };
+
+    useHistoryStore.getState().saveSession([createMockAsset('overflow')], {
+      sessionTitle: 'Overflow Session',
+    });
+
+    // 11 sessions total -> 5 oldest purged -> 6 sessions remaining
+    expect(useHistoryStore.getState().sessions).toHaveLength(6);
+    expect(useHistoryStore.getState().sessions[0].sessionTitle).toBe('Overflow Session');
+
+    localStorage.setItem = originalSetItem;
+  });
+
+  it('strips thumbnail payloads if quota is still exceeded after 5-session purge', () => {
+    for (let i = 1; i <= 8; i++) {
+      useHistoryStore.getState().saveSession([createMockAsset(`file-${i}`)], {
+        sessionTitle: `Session ${i}`,
+        mainThumb: 'data:image/jpeg;base64,large-thumbnail-payload',
+      });
+    }
+
+    const originalSetItem = localStorage.setItem.bind(localStorage);
+    let attempts = 0;
+    localStorage.setItem = (key: string, value: string) => {
+      attempts++;
+      // Throw on attempt 1 (initial save) and attempt 2 (after 5-session purge)
+      if (attempts <= 2) {
+        throw new DOMException('The quota has been exceeded.', 'QuotaExceededError');
+      }
+      return originalSetItem(key, value);
+    };
+
+    useHistoryStore.getState().saveSession([createMockAsset('big-thumb')], {
+      sessionTitle: 'Big Thumb Session',
+      mainThumb: 'data:image/jpeg;base64,huge-thumb',
+    });
+
+    const stored = JSON.parse(localStorage.getItem('exif_forensic_history') || '[]');
+    expect(stored.length).toBeGreaterThan(0);
+    // All stored thumbnails must have been stripped to empty strings
+    stored.forEach((s: any) => {
+      expect(s.mainThumb).toBe('');
+    });
+
+    localStorage.setItem = originalSetItem;
+  });
+});
