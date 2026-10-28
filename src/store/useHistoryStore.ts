@@ -201,6 +201,25 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
     }),
   setSearchQuery: (query) => set({ searchQuery: query }),
   setFilter: (filter) => set({ filter }),
-  getFilteredSessions: () => get().sessions,
+  getFilteredSessions: () => {
+    const { sessions, filter, searchQuery } = get();
+    const query = searchQuery.trim().toLowerCase();
+
+    return sessions.filter((session) => {
+      if (filter === 'single' && session.isBatch) return false;
+      if (filter === 'batch' && !session.isBatch) return false;
+
+      if (query.length > 0) {
+        const matchesTitle = session.sessionTitle.toLowerCase().includes(query);
+        const matchesForensicId = session.forensicId.toLowerCase().includes(query);
+        const matchesAsset = session.assets.some((a) =>
+          a.fileName.toLowerCase().includes(query)
+        );
+        return matchesTitle || matchesForensicId || matchesAsset;
+      }
+
+      return true;
+    });
+  },
   restoreSession: () => false,
 }));
