@@ -23,7 +23,9 @@ export function calculateDistance(
       Math.cos((lat2 * Math.PI) / 180) *
       Math.sin(dLon / 2) *
       Math.sin(dLon / 2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const clampedA = Math.min(1, Math.max(0, a));
+  const c =
+    2 * Math.atan2(Math.sqrt(clampedA), Math.sqrt(Math.max(0, 1 - clampedA)));
   return R * c;
 }
 
@@ -304,7 +306,12 @@ export function evaluateCollectiveIntelligence(
         });
 
         const timeDiffHours = (p2.time - p1.time) / (1000 * 60 * 60);
-        if (timeDiffHours > 0) {
+        if (timeDiffHours === 0 && distKm > 0.05) {
+          hasVelocityAnomaly = true;
+          anomalyFrom = p1.fileName;
+          anomalyTo = p2.fileName;
+          maxSpeed = Math.max(maxSpeed, 999999);
+        } else if (timeDiffHours > 0) {
           const speed = distKm / timeDiffHours;
           if (speed > maxSpeed) {
             maxSpeed = speed;

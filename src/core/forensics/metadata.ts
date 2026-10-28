@@ -86,7 +86,12 @@ export function categorizeExif(data: Record<string, unknown>): CategorizedExif {
 
   for (const [key, value] of Object.entries(data)) {
     if (value == null) continue;
-    if (typeof value === 'object' && !(value instanceof Date)) continue;
+    if (
+      typeof value === 'object' &&
+      !(value instanceof Date) &&
+      !Array.isArray(value)
+    )
+      continue;
 
     let category = PROPERTY_MAP[key];
     if (!category) {
