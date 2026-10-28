@@ -70,7 +70,9 @@ const PROPERTY_MAP: Record<string, ExifCategory> = {
 /**
  * Categorizes arbitrary parsed EXIF tags into 8 standardized forensic domains (REQ-META-001).
  */
-export function categorizeExif(data: Record<string, unknown>): CategorizedExif {
+export function categorizeExif(
+  rawExif: Record<string, unknown>,
+): CategorizedExif {
   const categories: CategorizedExif = {
     'Device Hardware': {},
     'Exposure Settings': {},
@@ -79,12 +81,12 @@ export function categorizeExif(data: Record<string, unknown>): CategorizedExif {
     'Timeline & Date': {},
     'Geospatial': {},
     'Standards & Info': {},
-    'Miscellaneous': {}
+    'Miscellaneous': {},
   };
 
-  if (!data) return categories;
+  if (!rawExif) return categories;
 
-  for (const [key, value] of Object.entries(data)) {
+  for (const [key, value] of Object.entries(rawExif)) {
     if (value == null) continue;
     if (
       typeof value === 'object' &&
