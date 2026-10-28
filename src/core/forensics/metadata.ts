@@ -143,3 +143,56 @@ export function parseExifDate(dateVal: unknown): Date | null {
 
   return null;
 }
+
+/**
+ * Formats a Date instance into standard DD-MM-YYYY HH:mm:ss string.
+ */
+export function formatFullDate(dateVal: unknown): string {
+  const d = parseExifDate(dateVal);
+  if (!d || isNaN(d.getTime())) return 'Unknown';
+
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const day = pad(d.getDate());
+  const month = pad(d.getMonth() + 1);
+  const year = d.getFullYear();
+  const hours = pad(d.getHours());
+  const minutes = pad(d.getMinutes());
+  const seconds = pad(d.getSeconds());
+
+  return `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+}
+
+/**
+ * Formats specialized EXIF values for human-readable presentation (REQ-META-001).
+ */
+export function formatExifValue(key: string, value: unknown): string {
+  if (value == null) return '';
+
+  if (value instanceof Date) {
+    return formatFullDate(value);
+  }
+
+  if (key === 'ExposureTime') {
+    const num = Number(value);
+    if (!isNaN(num) && num > 0 && num < 1) {
+      return `1/${Math.round(1 / num)}`;
+    }
+    return String(value);
+  }
+
+  if (key === 'FNumber') {
+    return `f/${value}`;
+  }
+
+  if (key.includes('FocalLength')) {
+    return `${value}mm`;
+  }
+
+  const lowerKey = key.toLowerCase();
+  if (lowerKey.includes('date') || lowerKey.includes('time')) {
+    const parsed = parseExifDate(value);
+    if (parsed) return formatFullDate(parsed);
+  }
+
+  return String(value);
+}
