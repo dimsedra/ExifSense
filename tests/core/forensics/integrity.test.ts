@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { evaluateSingleAssetIntegrity } from '../../src/core/forensics/integrity';
-import type { SingleAssetInput } from '../../src/core/forensics/types';
+import { evaluateSingleAssetIntegrity } from '../../../src/core/forensics/integrity';
+import type { SingleAssetInput } from '../../../src/core/forensics/types';
 
 describe('evaluateSingleAssetIntegrity - Stripped Metadata (REQ-INT-001)', () => {
   const baseAsset: SingleAssetInput = {
