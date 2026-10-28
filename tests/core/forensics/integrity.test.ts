@@ -64,4 +64,59 @@ describe('evaluateSingleAssetIntegrity - Stripped Metadata (REQ-INT-001)', () =>
     expect(alertTypes).not.toContain('missing_datetime');
     expect(alertTypes).not.toContain('missing_device');
   });
+
+  describe('Editing Software Signature (REQ-INT-002)', () => {
+    const editors = [
+      'Adobe Photoshop 2024',
+      'Adobe Lightroom Classic 13.0',
+      'GIMP 2.10.34',
+      'Canva',
+      'Snapseed 2.19',
+      'Pixlr Editor',
+      'CorelDRAW Graphics Suite',
+      'Affinity Photo 2',
+      'Picsart AI Photo Editor',
+      'paint.net 5.0.11',
+      'Adobe Illustrator 28.0',
+    ];
+
+    it.each(editors)('flags editing software alert for "%s"', (softwareName) => {
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        exifData: {
+          Make: 'Canon',
+          Model: 'EOS R5',
+          DateTimeOriginal: '2025:05:10 14:30:00',
+          latitude: -6.2,
+          longitude: 106.8,
+          Software: softwareName,
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset);
+      const editorAlert = alerts.find((a) => a.type === 'editing_software');
+
+      expect(editorAlert).toBeDefined();
+      expect(editorAlert?.severity).toBe('info');
+      expect(editorAlert?.messageParam).toEqual({ software: softwareName });
+      expect(editorAlert?.defaultMessage).toContain(`"${softwareName}"`);
+    });
+
+    it('does not flag editing software for standard camera firmware', () => {
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          DateTimeOriginal: '2025:05:10 14:30:00',
+          latitude: -6.2,
+          longitude: 106.8,
+          Software: 'ILCE-7M4 v2.00',
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset);
+      expect(alerts.find((a) => a.type === 'editing_software')).toBeUndefined();
+    });
+  });
 });
