@@ -10,6 +10,21 @@ const MEANINGFUL_CATEGORIES: ExifCategory[] = [
   'Geospatial',
 ];
 
+const EDITING_SOFTWARE_KEYWORDS = [
+  'adobe',
+  'photoshop',
+  'lightroom',
+  'gimp',
+  'canva',
+  'snapseed',
+  'pixlr',
+  'corel',
+  'affinity',
+  'picsart',
+  'paint.net',
+  'illustrator',
+];
+
 export function evaluateSingleAssetIntegrity(
   asset: SingleAssetInput,
   _now: Date = new Date(),
@@ -51,6 +66,23 @@ export function evaluateSingleAssetIntegrity(
         type: `missing_${pillar}` as 'missing_gps' | 'missing_datetime' | 'missing_device',
         severity: 'info',
         defaultMessage: `Selective Metadata Removal: ${pillar.toUpperCase()} data is absent while other metadata is present.`,
+      });
+    }
+  }
+
+  // 3. Editing Software Signature
+  const software = typeof exif.Software === 'string' ? exif.Software : '';
+  if (software) {
+    const softwareLower = software.toLowerCase();
+    const isEditingTool = EDITING_SOFTWARE_KEYWORDS.some((kw) =>
+      softwareLower.includes(kw),
+    );
+    if (isEditingTool) {
+      alerts.push({
+        type: 'editing_software',
+        severity: 'info',
+        messageParam: { software },
+        defaultMessage: `Editing software signature found: "${software}". This image was likely saved or processed using an image editor.`,
       });
     }
   }
