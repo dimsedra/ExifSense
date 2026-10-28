@@ -272,3 +272,88 @@ describe('useHistoryStore - QuotaExceededError Resilience (Scenario 4.3, REQ-STA
     });
   });
 });
+
+
+describe('useHistoryStore - Search & Mode Filtering (Scenario 4.4)', () => {
+  const createMockAsset = (id: string, name: string): ForensicAsset => ({
+    id,
+    fileName: name,
+    fileSize: 1024,
+    fileType: 'image/jpeg',
+    fileDate: 1700000000000,
+    sha256: `sha-${id}`,
+    sha1: `sha1-${id}`,
+    actualWidth: 800,
+    actualHeight: 600,
+    exifData: {},
+    categorizedExif: {
+      'Device Hardware': {},
+      'Exposure Settings': {},
+      'Optics & Lens': {},
+      'Image Quality': {},
+      'Timeline & Date': {},
+      'Geospatial': {},
+      'Standards & Info': {},
+      'Miscellaneous': {},
+    },
+    integrityAlerts: [],
+  });
+
+  beforeEach(() => {
+    localStorage.clear();
+    useHistoryStore.getState().clearAllSessions();
+    useHistoryStore.getState().setSearchQuery('');
+    useHistoryStore.getState().setFilter('all');
+  });
+
+  it('filters sessions by upload mode (all, single, batch)', () => {
+    const asset1 = createMockAsset('1', 'single_car.jpg');
+    const asset2 = createMockAsset('2', 'batch_dog.jpg');
+    const asset3 = createMockAsset('3', 'batch_cat.jpg');
+
+    useHistoryStore.getState().saveSession([asset1], { sessionTitle: 'Single Car' });
+    useHistoryStore.getState().saveSession([asset2, asset3], { sessionTitle: 'Batch Pets' });
+
+    expect(useHistoryStore.getState().getFilteredSessions()).toHaveLength(2);
+
+    useHistoryStore.getState().setFilter('single');
+    const singleFiltered = useHistoryStore.getState().getFilteredSessions();
+    expect(singleFiltered).toHaveLength(1);
+    expect(singleFiltered[0].sessionTitle).toBe('Single Car');
+
+    useHistoryStore.getState().setFilter('batch');
+    const batchFiltered = useHistoryStore.getState().getFilteredSessions();
+    expect(batchFiltered).toHaveLength(1);
+    expect(batchFiltered[0].sessionTitle).toBe('Batch Pets');
+
+    useHistoryStore.getState().setFilter('all');
+    expect(useHistoryStore.getState().getFilteredSessions()).toHaveLength(2);
+  });
+
+  it('searches sessions by query matching title, forensicId, or asset fileName', () => {
+    const asset1 = createMockAsset('1', 'tokyo_street.jpg');
+    const asset2 = createMockAsset('2', 'osaka_night.jpg');
+
+    const s1 = useHistoryStore.getState().saveSession([asset1], { sessionTitle: 'Japan Trip 1' });
+    const s2 = useHistoryStore.getState().saveSession([asset2], { sessionTitle: 'Japan Trip 2' });
+
+    // Search by title substring
+    useHistoryStore.getState().setSearchQuery('Trip 1');
+    expect(useHistoryStore.getState().getFilteredSessions()).toHaveLength(1);
+    expect(useHistoryStore.getState().getFilteredSessions()[0].id).toBe(s1?.id);
+
+    // Search by asset fileName (case-insensitive)
+    useHistoryStore.getState().setSearchQuery('OSAKA');
+    expect(useHistoryStore.getState().getFilteredSessions()).toHaveLength(1);
+    expect(useHistoryStore.getState().getFilteredSessions()[0].id).toBe(s2?.id);
+
+    // Search by forensic ID
+    useHistoryStore.getState().setSearchQuery(s1!.forensicId);
+    expect(useHistoryStore.getState().getFilteredSessions()).toHaveLength(1);
+    expect(useHistoryStore.getState().getFilteredSessions()[0].id).toBe(s1?.id);
+
+    // Non-matching query returns empty array
+    useHistoryStore.getState().setSearchQuery('non-existent-keyword-999');
+    expect(useHistoryStore.getState().getFilteredSessions()).toHaveLength(0);
+  });
+});
