@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ForensicAsset } from '../core/forensics/types';
+import { generateForensicId } from '../core/forensics/hashing';
 
 export const MAX_STAGED_FILES = 50;
 
@@ -62,7 +63,7 @@ export const useAssetStore = create<AssetStoreState>((set) => ({
     set((state) => ({
       assets,
       activeAssetIndex: 0,
-      forensicId: forensicId ?? state.forensicId,
+      forensicId: forensicId ?? state.forensicId ?? generateForensicId(),
     })),
 
   setActiveAssetIndex: (index) =>
