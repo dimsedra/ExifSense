@@ -132,5 +132,45 @@ export function evaluateSingleAssetIntegrity(
     });
   }
 
+  // 5. Dimension Mismatch Detection
+  const rawExifWidth =
+    exif.ExifImageWidth ?? exif.PixelXDimension ?? exif.ImageWidth;
+  const rawExifHeight =
+    exif.ExifImageHeight ?? exif.PixelYDimension ?? exif.ImageHeight;
+  const actualWidth = asset.actualWidth;
+  const actualHeight = asset.actualHeight;
+
+  if (
+    rawExifWidth != null &&
+    rawExifHeight != null &&
+    actualWidth != null &&
+    actualHeight != null
+  ) {
+    const exifWidth = Number(rawExifWidth);
+    const exifHeight = Number(rawExifHeight);
+    const numActualWidth = Number(actualWidth);
+    const numActualHeight = Number(actualHeight);
+
+    if (
+      !Number.isNaN(exifWidth) &&
+      !Number.isNaN(exifHeight) &&
+      !Number.isNaN(numActualWidth) &&
+      !Number.isNaN(numActualHeight) &&
+      (exifWidth !== numActualWidth || exifHeight !== numActualHeight)
+    ) {
+      alerts.push({
+        type: 'dimension_mismatch',
+        severity: 'warning',
+        messageParam: {
+          exifWidth,
+          exifHeight,
+          actualWidth: numActualWidth,
+          actualHeight: numActualHeight,
+        },
+        defaultMessage: `Dimension Mismatch: EXIF metadata reports image dimensions as ${exifWidth}x${exifHeight}, but the actual pixel array size is ${numActualWidth}x${numActualHeight}. This suggests the image was cropped or resized without updating the EXIF metadata.`,
+      });
+    }
+  }
+
   return alerts;
 }
