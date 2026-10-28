@@ -206,6 +206,112 @@ export function generateMarkdownReport(
 }
 
 /**
+ * Generates formatted ASCII plain-text clipboard representation (REQ-EXP-005).
+ */
+export function generateClipboardReport(
+  assets: ForensicAsset[],
+  meta: ForensicExportMetadata,
+  locale: string = 'en'
+): string {
+  let content = `${translate('title', {}, locale, 'reports')}\n`;
+  content += `===================================\n`;
+  content += `${translate('session', {}, locale, 'reports')}: ${meta.sessionTitle}\n`;
+  content += `${translate('forensic_id', {}, locale, 'reports')}: ${meta.forensicId}\n`;
+  content += `${translate('generated', {}, locale, 'reports')}: ${formatFullDate(meta.generatedAt)}\n`;
+  content += `${translate('asset_count', {}, locale, 'reports')}: ${assets.length}\n\n`;
+  content += `-----------------------------------\n\n`;
+
+  if (assets.length > 1) {
+    content += `${translate('combined_intel', {}, locale, 'reports')}\n`;
+    content += `-----------------------------\n`;
+    const collective = evaluateCollectiveIntelligence(assets);
+    const sections = generateCollectiveNarratives(collective, assets.length, locale);
+    for (const section of sections) {
+      content += `${section.title.toUpperCase()}\n`;
+      content += `${section.narrative}\n\n`;
+    }
+  }
+
+  for (let idx = 0; idx < assets.length; idx++) {
+    const asset = assets[idx];
+    const assetHeader = translate('asset_header', { n: idx + 1 }, locale, 'reports');
+    content += `${assetHeader}: ${asset.fileName}\n`;
+    content += `===================================\n\n`;
+
+    content += `[${translate('tech_details', {}, locale, 'reports')}]\n`;
+    content += `${translate('file_name', {}, locale, 'ui')}: ${asset.fileName}\n`;
+    content += `${translate('file_type', {}, locale, 'ui')}: ${asset.fileType}\n`;
+    const sizeMb = (asset.fileSize / (1024 * 1024)).toFixed(2);
+    content += `${translate('file_size', {}, locale, 'ui')}: ${sizeMb} MB\n`;
+    content += `${translate('file_date', {}, locale, 'ui')}: ${formatFullDate(new Date(asset.fileDate))}\n`;
+    if (asset.sha256) content += `SHA-256: ${asset.sha256}\n`;
+    if (asset.sha1) content += `SHA-1: ${asset.sha1}\n`;
+    content += `\n`;
+
+    content += `[${translate('forensic_analysis', {}, locale, 'reports')}]\n`;
+    content += `${translate('analysis_integrity', {}, locale, 'ui')}: ${generateIntegrityNarrative(asset, locale)}\n`;
+
+    const lat = asset.exifData.latitude as number | undefined;
+    const lng = asset.exifData.longitude as number | undefined;
+    if (lat !== undefined && lng !== undefined) {
+      content += `${translate('analysis_geospatial', {}, locale, 'ui')}: ${generateGeospatialNarrative(lat, lng, null, locale)}\n`;
+    }
+
+    const hw = asset.categorizedExif['Device Hardware'];
+    if (hw && Object.keys(hw).length > 0) {
+      content += `${translate('analysis_hardware', {}, locale, 'ui')}: ${generateHardwareNarrative(hw, locale)}\n`;
+    }
+
+    const exp = asset.categorizedExif['Exposure Settings'];
+    if (exp && Object.keys(exp).length > 0) {
+      content += `${translate('analysis_exposure', {}, locale, 'ui')}: ${generateExposureNarrative(exp, locale)}\n`;
+    }
+
+    const opt = asset.categorizedExif['Optics & Lens'];
+    if (opt && Object.keys(opt).length > 0) {
+      content += `${translate('analysis_optics', {}, locale, 'ui')}: ${generateOpticsNarrative(opt, locale)}\n`;
+    }
+
+    const qual = asset.categorizedExif['Image Quality'];
+    if (qual && Object.keys(qual).length > 0) {
+      content += `${translate('analysis_quality', {}, locale, 'ui')}: ${generateQualityNarrative(qual, locale)}\n`;
+    }
+
+    const time = asset.categorizedExif['Timeline & Date'];
+    if (time && Object.keys(time).length > 0) {
+      content += `${translate('analysis_timeline', {}, locale, 'ui')}: ${generateTimelineNarrative(time, locale)}\n`;
+    }
+    content += `\n`;
+
+    content += `[${translate('raw_metadata', {}, locale, 'reports')}]\n`;
+    for (const [catName, props] of Object.entries(asset.categorizedExif)) {
+      const keys = Object.keys(props);
+      if (keys.length === 0) continue;
+
+      content += `--- ${catName} ---\n`;
+      for (const [propKey, propVal] of Object.entries(props)) {
+        content += `${propKey}: ${String(propVal ?? '')}\n`;
+      }
+      content += `\n`;
+    }
+  }
+
+  return content.trim();
+}
+
+/**
+ * Copies generated forensic report directly to system clipboard via navigator.clipboard.
+ */
+export async function copyReportToClipboard(
+  assets: ForensicAsset[],
+  meta: ForensicExportMetadata,
+  locale: string = 'en'
+): Promise<void> {
+  const content = generateClipboardReport(assets, meta, locale);
+  await navigator.clipboard.writeText(content);
+}
+
+/**
  * Generates machine-readable JSON forensic report (REQ-EXP-002).
  * Formatted with 2-space indentation.
  */
