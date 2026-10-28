@@ -78,3 +78,80 @@ describe('Client Hash Router - Navigation & Lifecycle (Scenario 6.1, REQ-STA-007
     expect(triggerCount).toBe(1);
   });
 });
+
+
+describe('Client Hash Router - Route Guards & Redirection (Scenario 6.2, REQ-STA-007)', () => {
+  let cleanup: (() => void) | null = null;
+
+  beforeEach(() => {
+    window.location.hash = '';
+  });
+
+  afterEach(() => {
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
+  });
+
+  it('allows navigation when route guard returns true', () => {
+    const dashboardAction = vi.fn();
+    const routes: RouteDefinition[] = [
+      { path: '#/' },
+      {
+        path: '#/dashboard',
+        guard: () => true,
+        action: dashboardAction,
+      },
+    ];
+
+    let current = '';
+    cleanup = initRouter(routes, (route) => {
+      current = route;
+    });
+
+    navigateTo('#/dashboard');
+    expect(window.location.hash).toBe('#/dashboard');
+    expect(getCurrentRoute()).toBe('#/dashboard');
+    expect(current).toBe('#/dashboard');
+    expect(dashboardAction).toHaveBeenCalled();
+  });
+
+  it('blocks navigation and redirects to fallback when guard returns false', () => {
+    let hasAssets = false;
+    const dashboardAction = vi.fn();
+    const homeAction = vi.fn();
+
+    const routes: RouteDefinition[] = [
+      { path: '#/', action: homeAction },
+      {
+        path: '#/dashboard',
+        guard: () => hasAssets,
+        redirectFallback: '#/',
+        action: dashboardAction,
+      },
+    ];
+
+    let current = '';
+    cleanup = initRouter(routes, (route) => {
+      current = route;
+    });
+
+    // Attempt navigating to dashboard when hasAssets is false
+    navigateTo('#/dashboard');
+
+    expect(dashboardAction).not.toHaveBeenCalled();
+    expect(window.location.hash).toBe('#/');
+    expect(getCurrentRoute()).toBe('#/');
+    expect(current).toBe('#/');
+
+    // Now set hasAssets to true and navigate again
+    hasAssets = true;
+    navigateTo('#/dashboard');
+
+    expect(dashboardAction).toHaveBeenCalled();
+    expect(window.location.hash).toBe('#/dashboard');
+    expect(getCurrentRoute()).toBe('#/dashboard');
+    expect(current).toBe('#/dashboard');
+  });
+});
