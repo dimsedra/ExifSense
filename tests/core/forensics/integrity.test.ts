@@ -119,4 +119,86 @@ describe('evaluateSingleAssetIntegrity - Stripped Metadata (REQ-INT-001)', () =>
       expect(alerts.find((a) => a.type === 'editing_software')).toBeUndefined();
     });
   });
+
+  describe('Chronological Anomaly Detection (REQ-INT-003)', () => {
+    const fixedNow = new Date('2025-06-01T12:00:00Z');
+
+    it('flags future_capture_date when capture date exceeds current time by more than 5 minutes', () => {
+      // 10 minutes in the future relative to fixedNow
+      const futureDate = new Date(fixedNow.getTime() + 10 * 60 * 1000);
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        fileDate: fixedNow.getTime(),
+        exifData: {
+          DateTimeOriginal: futureDate.toISOString(),
+          Make: 'Sony',
+          Model: 'A7IV',
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset, fixedNow);
+      const alert = alerts.find((a) => a.type === 'future_capture_date');
+
+      expect(alert).toBeDefined();
+      expect(alert?.severity).toBe('warning');
+      expect(alert?.defaultMessage).toContain('Chronological Anomaly');
+    });
+
+    it('does not flag future_capture_date when within 5 minutes clock drift tolerance', () => {
+      // 3 minutes in the future relative to fixedNow
+      const slightDrift = new Date(fixedNow.getTime() + 3 * 60 * 1000);
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        fileDate: fixedNow.getTime(),
+        exifData: {
+          DateTimeOriginal: slightDrift.toISOString(),
+          Make: 'Sony',
+          Model: 'A7IV',
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset, fixedNow);
+      expect(alerts.find((a) => a.type === 'future_capture_date')).toBeUndefined();
+    });
+
+    it('flags capture_after_file_modification when capture date is newer than file modification date beyond 5s buffer', () => {
+      const fileDate = new Date('2025-05-01T10:00:00Z').getTime();
+      const captureDate = new Date(fileDate + 60 * 1000); // 1 minute after file modified
+
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        fileDate,
+        exifData: {
+          DateTimeOriginal: captureDate.toISOString(),
+          Make: 'Sony',
+          Model: 'A7IV',
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset, fixedNow);
+      const alert = alerts.find((a) => a.type === 'capture_after_file_modification');
+
+      expect(alert).toBeDefined();
+      expect(alert?.severity).toBe('warning');
+      expect(alert?.defaultMessage).toContain('Chronological Mismatch');
+    });
+
+    it('flags missing_original_metadata when capture date is absent but ModifyDate or Software is present', () => {
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          ModifyDate: '2025:05:10 15:00:00',
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset, fixedNow);
+      const alert = alerts.find((a) => a.type === 'missing_original_metadata');
+
+      expect(alert).toBeDefined();
+      expect(alert?.severity).toBe('warning');
+      expect(alert?.defaultMessage).toContain('Stripped Capture Metadata');
+    });
+  });
 });
