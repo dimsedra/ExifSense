@@ -286,4 +286,60 @@ describe('evaluateSingleAssetIntegrity - Stripped Metadata (REQ-INT-001)', () =>
       expect(alerts.find((a) => a.type === 'dimension_mismatch')).toBeUndefined();
     });
   });
+
+  describe('Geospatial Spoofing & Precision Checks (REQ-INT-005)', () => {
+    it('flags null_island with critical severity when coordinates are within 0.0001 of (0, 0)', () => {
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          latitude: 0.00005,
+          longitude: -0.00004,
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset);
+      const alert = alerts.find((a) => a.type === 'null_island');
+
+      expect(alert).toBeDefined();
+      expect(alert?.severity).toBe('critical');
+      expect(alert?.defaultMessage).toContain('Null Island');
+    });
+
+    it('flags integer_coordinate_precision when latitude or longitude is a whole integer', () => {
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          latitude: -6,
+          longitude: 106.84567,
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset);
+      const alert = alerts.find((a) => a.type === 'integer_coordinate_precision');
+
+      expect(alert).toBeDefined();
+      expect(alert?.severity).toBe('warning');
+      expect(alert?.defaultMessage).toContain('Synthetic Coordinates');
+    });
+
+    it('does not flag geospatial spoofing for realistic high-precision non-zero GPS coordinates', () => {
+      const asset: SingleAssetInput = {
+        ...baseAsset,
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          latitude: -6.208763,
+          longitude: 106.845599,
+        },
+      };
+
+      const alerts = evaluateSingleAssetIntegrity(asset);
+      expect(alerts.find((a) => a.type === 'null_island')).toBeUndefined();
+      expect(alerts.find((a) => a.type === 'integer_coordinate_precision')).toBeUndefined();
+    });
+  });
 });
