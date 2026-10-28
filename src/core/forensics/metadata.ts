@@ -165,7 +165,11 @@ export function formatFullDate(dateVal: unknown): string {
 /**
  * Formats specialized EXIF values for human-readable presentation (REQ-META-001).
  */
-export function formatExifValue(key: string, value: unknown): string {
+export function formatExifValue(
+  key: string,
+  value: unknown,
+  _locale?: string,
+): string {
   if (value == null) return '';
 
   if (value instanceof Date) {

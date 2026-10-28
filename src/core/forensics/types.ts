@@ -44,6 +44,21 @@ export interface SingleAssetInput {
   actualHeight: number | null;
 }
 
+export interface ForensicAsset {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  fileType: string;
+  fileDate: number;
+  sha256: string;
+  sha1: string;
+  actualWidth: number | null;
+  actualHeight: number | null;
+  exifData: Record<string, unknown>;
+  categorizedExif: CategorizedExif;
+  integrityAlerts: IntegrityAlert[];
+}
+
 export interface TimelineJump {
   fromFileName: string;
   toFileName: string;
