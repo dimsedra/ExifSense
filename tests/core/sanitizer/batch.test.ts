@@ -16,6 +16,7 @@ describe('Batch Sanitization Engine (REQ-SAN-005)', () => {
     make: 'Canon',
     model: 'R5',
     latitude: [37, 46],
+    longitude: [122, 25],
     dateTimeOriginal: '2026:10:28 10:00:00'
   });
 

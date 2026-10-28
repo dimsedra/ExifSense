@@ -3,7 +3,8 @@ import {
   SanitizerOptions,
   SanitizerPreset,
   PrivacyRiskItem,
-  PrivacyScoreResult
+  PrivacyScoreResult,
+  BatchSanitizerEntry
 } from './types';
 
 const PRESET_DEFINITIONS: Record<SanitizerPreset, SanitizerOptions> = {
@@ -210,4 +211,70 @@ export async function stripSpecificMetadata(
     // If piexif throws (e.g. corrupt markers), automatically fallback to canvas total strip
     return stripAllMetadata(file);
   }
+}
+
+/**
+ * Sanitizes a batch of images with per-file overrides and a concurrency throttle of 3 (REQ-SAN-005).
+ */
+export async function sanitizeBatch(
+  entries: BatchSanitizerEntry[],
+  globalOptions: SanitizerOptions,
+  onProgress?: (completed: number, total: number) => void
+): Promise<Array<{ id: string; fileName: string; cleanedBlob: Blob }>> {
+  if (!entries || entries.length === 0) {
+    return [];
+  }
+
+  const results: Array<{ id: string; fileName: string; cleanedBlob: Blob }> = new Array(
+    entries.length
+  );
+  const total = entries.length;
+  let completed = 0;
+  const concurrency = 3;
+
+  let currentIndex = 0;
+
+  async function worker(): Promise<void> {
+    while (currentIndex < total) {
+      const index = currentIndex++;
+      const entry = entries[index];
+      const effectiveOptions: SanitizerOptions = {
+        ...globalOptions,
+        ...(entry.optionsOverride || {})
+      };
+
+      const isStripAll =
+        effectiveOptions.gps &&
+        effectiveOptions.device &&
+        effectiveOptions.camera &&
+        effectiveOptions.date;
+
+      let cleanedBlob: Blob;
+      if (isStripAll) {
+        cleanedBlob = await stripAllMetadata(entry.file);
+      } else {
+        cleanedBlob = await stripSpecificMetadata(entry.file, effectiveOptions);
+      }
+
+      results[index] = {
+        id: entry.id,
+        fileName: `cleaned_${entry.fileName}`,
+        cleanedBlob
+      };
+
+      completed++;
+      if (onProgress) {
+        onProgress(completed, total);
+      }
+    }
+  }
+
+  const workerCount = Math.min(concurrency, total);
+  const workers: Promise<void>[] = [];
+  for (let i = 0; i < workerCount; i++) {
+    workers.push(worker());
+  }
+
+  await Promise.all(workers);
+  return results;
 }
