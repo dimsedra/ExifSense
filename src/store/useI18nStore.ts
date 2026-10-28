@@ -44,7 +44,9 @@ export const useI18nStore = create<I18nStoreState>((set, get) => ({
 
     try {
       localStorage.setItem(LANG_STORAGE_KEY, lang);
-    } catch {}
+    } catch (err) {
+      console.warn('Failed to persist language preference to localStorage:', err);
+    }
 
     if (typeof document !== 'undefined' && document.documentElement) {
       document.documentElement.lang = lang;

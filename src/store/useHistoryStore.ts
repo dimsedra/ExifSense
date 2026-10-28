@@ -72,43 +72,54 @@ function generateSessionId(): number {
   return lastSessionId;
 }
 
+function isQuotaError(err: unknown): boolean {
+  return (
+    Boolean(err) &&
+    typeof err === 'object' &&
+    (('name' in (err as any) && (err as any).name === 'QuotaExceededError') ||
+      ('code' in (err as any) && (err as any).code === 22))
+  );
+}
+
 function persistSessionsWithQuotaFallback(
   sessions: HistorySession[]
 ): HistorySession[] {
+  // Step 1: Normal persistence
   try {
     localStorage.setItem(HISTORY_KEY, JSON.stringify(sessions));
     return sessions;
-  } catch (err: any) {
-    const isQuota =
-      Boolean(err) &&
-      (typeof err === 'object' &&
-        (('name' in (err as any) && (err as any).name === 'QuotaExceededError') ||
-          ('code' in (err as any) && (err as any).code === 22)));
-
-    if (!isQuota) {
+  } catch (err) {
+    if (!isQuotaError(err)) {
+      console.warn('Failed to persist history sessions to localStorage:', err);
       return sessions;
     }
+  }
 
-    // Step 1: Purge oldest 5 sessions and retry
-    const reduced = sessions.slice(0, Math.max(1, sessions.length - 5));
-    try {
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(reduced));
+  // Step 2: Purge 5 oldest sessions and retry
+  const reduced = sessions.slice(0, Math.max(1, sessions.length - 5));
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(reduced));
+    return reduced;
+  } catch (err) {
+    if (!isQuotaError(err)) {
+      console.warn('Failed to persist reduced history sessions:', err);
       return reduced;
-    } catch {
-      // Step 2: Strip thumbnail payloads and retry
-      const noThumbs = reduced.map((s) => ({
-        ...s,
-        mainThumb: '',
-        assets: s.assets.map((a) => ({ ...a, thumbUrl: '' })),
-      }));
-      try {
-        localStorage.setItem(HISTORY_KEY, JSON.stringify(noThumbs));
-        return noThumbs;
-      } catch {
-        return noThumbs;
-      }
     }
   }
+
+  // Step 3: Strip thumbnail payloads to minimize payload size
+  const noThumbs = reduced.map((s) => ({
+    ...s,
+    mainThumb: '',
+    assets: s.assets.map((a) => ({ ...a, thumbUrl: '' })),
+  }));
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(noThumbs));
+  } catch (err) {
+    console.warn('Failed to persist thumbnail-stripped history sessions:', err);
+  }
+
+  return noThumbs;
 }
 
 export function sanitizeLoadedHistory(rawJson: string | null): HistorySession[] {
@@ -215,7 +226,9 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
       const updated = state.sessions.filter((s) => s.id !== id);
       try {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
-      } catch {}
+      } catch (err) {
+        console.warn('Failed to update localStorage after deleting session:', err);
+      }
       return { sessions: updated };
     }),
 
@@ -223,7 +236,9 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
     set(() => {
       try {
         localStorage.removeItem(HISTORY_KEY);
-      } catch {}
+      } catch (err) {
+        console.warn('Failed to clear history sessions from localStorage:', err);
+      }
       return { sessions: [] };
     }),
   setSearchQuery: (query) => set({ searchQuery: query }),
