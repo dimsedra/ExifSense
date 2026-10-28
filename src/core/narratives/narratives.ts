@@ -1,4 +1,5 @@
 import { ForensicAsset } from '../forensics/types';
+import { parseExifDate, formatFullDate } from '../forensics/metadata';
 import { SupportedLocale } from './types';
 import enLocale from '../../locales/en.json';
 import idLocale from '../../locales/id.json';
@@ -202,4 +203,61 @@ export function generateQualityNarrative(
     { width, height, contrast, sharpness, colorSpace },
     locale
   );
+}
+
+/**
+ * Generates plain-text narrative summarizing chronology, UTC conversion, and modification divergence.
+ */
+export function generateTimelineNarrative(
+  props: Record<string, unknown>,
+  locale: string = 'en'
+): string {
+  const rawCapture = props.DateTimeOriginal || props.CreateDate || props.DateTime;
+  if (!rawCapture) {
+    return translate('no_chrono', {}, locale);
+  }
+
+  const dateObj = parseExifDate(rawCapture);
+  const rawStr = String(rawCapture);
+  const dateStr = dateObj ? formatFullDate(dateObj) : rawStr;
+  const gmtStr = dateObj ? dateObj.toUTCString() : rawStr;
+
+  let narrative = translate('timeline_capture', { dateStr }, locale);
+  narrative += `\n${translate('timeline_format', { rawStr }, locale)}`;
+  narrative += `\n${translate('timeline_gmt', { gmtStr }, locale)}`;
+
+  const parsedMod = props.ModifyDate ? parseExifDate(props.ModifyDate) : null;
+  if (parsedMod && dateObj && parsedMod.getTime() !== dateObj.getTime()) {
+    const modStr = formatFullDate(parsedMod);
+    narrative += `\n${translate('timeline_mod_note', { modStr }, locale)}`;
+  } else {
+    narrative += `\n${translate('timeline_integrity', {}, locale)}`;
+  }
+
+  return narrative.trim();
+}
+
+/**
+ * Generates plain-text geospatial coordinates and location summary narrative.
+ */
+export function generateGeospatialNarrative(
+  latitude: number,
+  longitude: number,
+  locationName?: string | null,
+  locale: string = 'en'
+): string {
+  if (
+    latitude === undefined ||
+    longitude === undefined ||
+    isNaN(latitude) ||
+    isNaN(longitude)
+  ) {
+    return translate('no_geo', {}, locale);
+  }
+
+  const locName = locationName || translate('remote_location', {}, locale);
+  const lat = latitude.toFixed(5);
+  const lng = longitude.toFixed(5);
+
+  return translate('geospatial', { locationName: locName, lat, lng }, locale);
 }
