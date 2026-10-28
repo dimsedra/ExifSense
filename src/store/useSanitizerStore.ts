@@ -9,7 +9,7 @@ import { getPresetOptions } from '../core/sanitizer/sanitizer';
 export interface SanitizerStoreState {
   isActive: boolean;
   isBatch: boolean;
-  activeFile: File | null;
+  activeFile: File | Blob | null;
   activeExif: Record<string, unknown> | null;
   batchEntries: BatchSanitizerEntry[];
   batchActiveIndex: number;
@@ -17,7 +17,7 @@ export interface SanitizerStoreState {
   overrides: Record<string, Partial<SanitizerOptions>>;
   isProcessing: boolean;
 
-  openSingle: (file: File, exif: Record<string, unknown>) => void;
+  openSingle: (file: File | Blob, exif: Record<string, unknown>) => void;
   openBatch: (entries: BatchSanitizerEntry[]) => void;
   setGlobalOption: (key: keyof SanitizerOptions, value: boolean) => void;
   applyPreset: (preset: SanitizerPreset) => void;
@@ -40,7 +40,7 @@ const defaultOptions: SanitizerOptions = {
 const initialState = {
   isActive: false,
   isBatch: false,
-  activeFile: null as File | null,
+  activeFile: null as File | Blob | null,
   activeExif: null as Record<string, unknown> | null,
   batchEntries: [] as BatchSanitizerEntry[],
   batchActiveIndex: 0,
@@ -63,16 +63,23 @@ export const useSanitizerStore = create<SanitizerStoreState>((set, get) => ({
       overrides: {},
     }),
 
-  openBatch: (entries) =>
+  openBatch: (entries) => {
+    const initialOverrides: Record<string, Partial<SanitizerOptions>> = {};
+    for (const entry of entries) {
+      if (entry.optionsOverride) {
+        initialOverrides[entry.id] = { ...entry.optionsOverride };
+      }
+    }
     set({
       isActive: true,
       isBatch: true,
       batchEntries: entries,
       batchActiveIndex: 0,
-      activeFile: entries[0]?.file instanceof File ? (entries[0].file as File) : null,
+      activeFile: entries[0]?.file ?? null,
       activeExif: entries[0]?.exifData || null,
-      overrides: {},
-    }),
+      overrides: initialOverrides,
+    });
+  },
 
   setGlobalOption: (key, value) =>
     set((state) => ({
@@ -99,7 +106,7 @@ export const useSanitizerStore = create<SanitizerStoreState>((set, get) => ({
       const entry = state.batchEntries[index];
       return {
         batchActiveIndex: index,
-        activeFile: entry?.file instanceof File ? (entry.file as File) : null,
+        activeFile: entry?.file ?? null,
         activeExif: entry?.exifData || null,
       };
     }),

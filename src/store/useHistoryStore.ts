@@ -42,6 +42,7 @@ export interface HistorySession {
 }
 
 export interface SaveSessionMeta {
+  forensicId?: string;
   isSanitized?: boolean;
   sanitizeOptions?: SanitizerOptions;
   sessionTitle?: string;
@@ -115,14 +116,29 @@ export function sanitizeLoadedHistory(rawJson: string | null): HistorySession[] 
   try {
     const parsed = JSON.parse(rawJson);
     if (!Array.isArray(parsed)) return [];
-    return parsed.filter(
-      (item): item is HistorySession =>
-        Boolean(item) &&
-        typeof item.id === 'number' &&
-        typeof item.forensicId === 'string' &&
-        Array.isArray(item.assets)
-    );
-  } catch (err: any) {
+    return parsed
+      .filter(
+        (item): item is HistorySession =>
+          Boolean(item) &&
+          typeof item.id === 'number' &&
+          typeof item.forensicId === 'string' &&
+          Array.isArray(item.assets)
+      )
+      .map((item) => ({
+        ...item,
+        sessionTitle:
+          typeof item.sessionTitle === 'string' && item.sessionTitle.trim().length > 0
+            ? item.sessionTitle
+            : 'Untitled Session',
+        assets: item.assets.filter(
+          (a: any) =>
+            Boolean(a) &&
+            typeof a === 'object' &&
+            typeof a.fileName === 'string' &&
+            a.fileName.trim().length > 0
+        ),
+      }));
+  } catch {
     return [];
   }
 }
@@ -154,7 +170,10 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
 
     const session: HistorySession = {
       id: generateSessionId(),
-      forensicId: generateForensicId(),
+      forensicId:
+        meta.forensicId ||
+        useAssetStore.getState().forensicId ||
+        generateForensicId(),
       date: new Date().toISOString(),
       isBatch: assets.length > 1,
       assetCount: assets.length,

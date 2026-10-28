@@ -10,6 +10,7 @@ export interface RouteDefinition {
 let activeRoutes: RouteDefinition[] = [];
 let routeListener: ((route: AppRoute) => void) | null = null;
 let currentRoute: AppRoute = '#/';
+let lastHandledHash: string | null = null;
 
 export function getCurrentRoute(): AppRoute {
   return currentRoute;
@@ -35,6 +36,8 @@ export function initRouter(
       hash = '#/';
     }
 
+    if (hash === lastHandledHash) return;
+
     const matchedRoute =
       activeRoutes.find((r) => r.path === hash) ||
       activeRoutes.find((r) => r.path === '#/') ||
@@ -51,6 +54,7 @@ export function initRouter(
       return;
     }
 
+    lastHandledHash = matchedRoute.path;
     currentRoute = matchedRoute.path;
 
     if (typeof window.scrollTo === 'function') {
@@ -76,5 +80,6 @@ export function initRouter(
   return () => {
     window.removeEventListener('hashchange', onHashChange);
     routeListener = null;
+    lastHandledHash = null;
   };
 }

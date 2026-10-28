@@ -60,11 +60,11 @@ export const useAssetStore = create<AssetStoreState>((set) => ({
   clearStagedFiles: () => set({ stagedFiles: [] }),
 
   setAssets: (assets, forensicId) =>
-    set((state) => ({
+    set({
       assets,
       activeAssetIndex: 0,
-      forensicId: forensicId ?? state.forensicId ?? generateForensicId(),
-    })),
+      forensicId: forensicId ?? generateForensicId(),
+    }),
 
   setActiveAssetIndex: (index) =>
     set((state) => {

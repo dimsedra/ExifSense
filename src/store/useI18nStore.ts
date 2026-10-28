@@ -29,7 +29,7 @@ export function interpolateParams(
 ): string {
   if (!params) return template;
   return Object.entries(params).reduce((str, [k, v]) => {
-    return str.replace(new RegExp(`{${k}}`, 'g'), String(v));
+    return str.replaceAll(`{${k}}`, () => String(v));
   }, template);
 }
 
