@@ -80,3 +80,91 @@ describe('useSanitizerStore - Session Lifecycle', () => {
     expect(state.isProcessing).toBe(false);
   });
 });
+
+
+describe('useSanitizerStore - Toggles, Presets & Override Cascading (REQ-STA-003)', () => {
+  beforeEach(() => {
+    useSanitizerStore.getState().close();
+  });
+
+  it('updates individual global options via setGlobalOption', () => {
+    useSanitizerStore.getState().setGlobalOption('gps', false);
+    expect(useSanitizerStore.getState().globalOptions.gps).toBe(false);
+    expect(useSanitizerStore.getState().globalOptions.device).toBe(true);
+
+    useSanitizerStore.getState().setGlobalOption('device', false);
+    expect(useSanitizerStore.getState().globalOptions.device).toBe(false);
+  });
+
+  it('applies presets to global options', () => {
+    useSanitizerStore.getState().applyPreset('photo-share');
+    expect(useSanitizerStore.getState().globalOptions).toEqual({
+      gps: true,
+      device: false,
+      camera: false,
+      date: true,
+    });
+
+    useSanitizerStore.getState().applyPreset('location-only');
+    expect(useSanitizerStore.getState().globalOptions).toEqual({
+      gps: true,
+      device: false,
+      camera: false,
+      date: false,
+    });
+
+    useSanitizerStore.getState().applyPreset('max-privacy');
+    expect(useSanitizerStore.getState().globalOptions).toEqual({
+      gps: true,
+      device: true,
+      camera: true,
+      date: true,
+    });
+  });
+
+  it('cascades global options to entries without overrides', () => {
+    useSanitizerStore.getState().applyPreset('photo-share');
+    const effective = useSanitizerStore.getState().getEffectiveOptions('file-non-existent');
+    expect(effective).toEqual({
+      gps: true,
+      device: false,
+      camera: false,
+      date: true,
+    });
+  });
+
+  it('merges per-file overrides and restores inheritance on resetOverride', () => {
+    useSanitizerStore.getState().applyPreset('photo-share');
+    // photo-share has gps: true, device: false, camera: false, date: true
+
+    // Custom override for entry file-1: keep GPS (gps: false), remove camera (camera: true)
+    useSanitizerStore.getState().setOverride('file-1', { gps: false, camera: true });
+
+    const effective1 = useSanitizerStore.getState().getEffectiveOptions('file-1');
+    expect(effective1).toEqual({
+      gps: false,
+      device: false,
+      camera: true,
+      date: true,
+    });
+
+    // Another file still gets global options
+    const effective2 = useSanitizerStore.getState().getEffectiveOptions('file-2');
+    expect(effective2).toEqual({
+      gps: true,
+      device: false,
+      camera: false,
+      date: true,
+    });
+
+    // Reset override for file-1
+    useSanitizerStore.getState().resetOverride('file-1');
+    expect(useSanitizerStore.getState().overrides['file-1']).toBeUndefined();
+    expect(useSanitizerStore.getState().getEffectiveOptions('file-1')).toEqual({
+      gps: true,
+      device: false,
+      camera: false,
+      date: true,
+    });
+  });
+});
