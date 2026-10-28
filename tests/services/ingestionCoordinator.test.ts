@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import {
   processSingleAsset,
   processBatchAssets,
@@ -22,7 +22,7 @@ function createMockTxtFile(name = 'test.txt'): File {
 describe('ingestionCoordinator', () => {
   beforeEach(() => {
     useAssetStore.getState().resetSession();
-    useSanitizerStore.getState().reset();
+    useSanitizerStore.getState().close();
   });
 
   describe('Normal Path', () => {
