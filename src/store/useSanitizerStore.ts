@@ -24,6 +24,7 @@ export interface SanitizerStoreState {
   setBatchActiveIndex: (index: number) => void;
   setOverride: (id: string, options: Partial<SanitizerOptions>) => void;
   resetOverride: (id: string) => void;
+  resetAllOverrides: () => void;
   getEffectiveOptions: (id?: string) => SanitizerOptions;
   setIsProcessing: (isProcessing: boolean) => void;
   close: () => void;
@@ -120,6 +121,8 @@ export const useSanitizerStore = create<SanitizerStoreState>((set, get) => ({
       delete rest[id];
       return { overrides: rest };
     }),
+
+  resetAllOverrides: () => set({ overrides: {} }),
 
   getEffectiveOptions: (id) => {
     const { globalOptions, overrides } = get();
