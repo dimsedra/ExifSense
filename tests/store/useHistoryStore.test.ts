@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import type { ForensicAsset } from '../../src/core/forensics/types';
 import { sanitizeLoadedHistory, useHistoryStore } from '../../src/store/useHistoryStore';
+import { useAssetStore } from '../../src/store/useAssetStore';
 
 describe('useHistoryStore - Schema Validation & Defensive Parsing (Scenario 4.1)', () => {
   it('returns empty array on null, empty string, or undefined input', () => {
@@ -355,5 +356,66 @@ describe('useHistoryStore - Search & Mode Filtering (Scenario 4.4)', () => {
     // Non-matching query returns empty array
     useHistoryStore.getState().setSearchQuery('non-existent-keyword-999');
     expect(useHistoryStore.getState().getFilteredSessions()).toHaveLength(0);
+  });
+});
+
+
+describe('useHistoryStore - Session Restoration into Asset Store (Scenario 4.5, REQ-STA-005)', () => {
+  const createMockAsset = (id: string, name: string): ForensicAsset => ({
+    id,
+    fileName: name,
+    fileSize: 2048,
+    fileType: 'image/jpeg',
+    fileDate: 1700000000000,
+    sha256: `sha256-${id}`,
+    sha1: `sha1-${id}`,
+    actualWidth: 1024,
+    actualHeight: 768,
+    exifData: { Make: 'Nikon', Model: 'Z9' },
+    categorizedExif: {
+      'Device Hardware': { Make: 'Nikon', Model: 'Z9' },
+      'Exposure Settings': {},
+      'Optics & Lens': {},
+      'Image Quality': {},
+      'Timeline & Date': {},
+      'Geospatial': {},
+      'Standards & Info': {},
+      'Miscellaneous': {},
+    },
+    integrityAlerts: [],
+  });
+
+  beforeEach(() => {
+    localStorage.clear();
+    useHistoryStore.getState().clearAllSessions();
+    useAssetStore.getState().resetSession();
+  });
+
+  it('restores historical session and hydrates useAssetStore with assets and original forensicId', () => {
+    const asset1 = createMockAsset('1', 'restored_photo1.jpg');
+    const asset2 = createMockAsset('2', 'restored_photo2.jpg');
+
+    const session = useHistoryStore.getState().saveSession([asset1, asset2], {
+      sessionTitle: 'Restoration Target',
+    });
+
+    expect(session).not.toBeNull();
+    useAssetStore.getState().resetSession();
+    expect(useAssetStore.getState().assets).toEqual([]);
+
+    const restored = useHistoryStore.getState().restoreSession(session!.id);
+    expect(restored).toBe(true);
+
+    const assetState = useAssetStore.getState();
+    expect(assetState.assets).toHaveLength(2);
+    expect(assetState.assets[0].fileName).toBe('restored_photo1.jpg');
+    expect(assetState.assets[1].fileName).toBe('restored_photo2.jpg');
+    expect(assetState.forensicId).toBe(session!.forensicId);
+  });
+
+  it('returns false and does not alter asset store when session ID is not found', () => {
+    const restored = useHistoryStore.getState().restoreSession(999999999);
+    expect(restored).toBe(false);
+    expect(useAssetStore.getState().assets).toEqual([]);
   });
 });
