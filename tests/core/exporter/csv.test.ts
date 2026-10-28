@@ -75,6 +75,24 @@ describe('Tabular CSV Matrix Export (REQ-EXP-003)', () => {
     expect(csv).toContain("'=cmd");
   });
 
+  it('sanitizes CSV formula injection padded with leading spaces or tabs (Security)', () => {
+    const maliciousAsset: ForensicAsset = {
+      ...asset1,
+      id: 'mal-1',
+      categorizedExif: {
+        ...asset1.categorizedExif,
+        'Device Hardware': {
+          Make: '  =SUM(1+1)',
+          Model: '\t+1234'
+        }
+      }
+    };
+
+    const csv = generateCsvReport([maliciousAsset], meta, 'en');
+    expect(csv).toContain("'  =SUM(1+1)");
+    expect(csv).toContain("'\t+1234");
+  });
+
   it('produces valid CSV header without rows when assets array is empty (Boundary)', () => {
     const csv = generateCsvReport([], meta, 'en');
     expect(csv.charCodeAt(0)).toBe(0xfeff);

@@ -84,4 +84,10 @@ describe('Integrity & Hardware Forensic Narratives (Scenario 3.1)', () => {
     const narrative = generateHardwareNarrative(hwProps, 'id');
     expect(narrative).toContain('Foto ini diambil menggunakan kamera Sony A7 IV');
   });
+
+  it('safely interpolates metadata containing special replacement tokens like $& or $1 without corruption', () => {
+    const hwProps = { Make: 'Vendor $1', Model: 'Model $& Special' };
+    const narrative = generateHardwareNarrative(hwProps, 'en');
+    expect(narrative).toContain('Vendor $1 Model $& Special');
+  });
 });

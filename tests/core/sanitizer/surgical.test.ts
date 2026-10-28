@@ -96,5 +96,6 @@ describe('Surgical JPEG Stripping (REQ-SAN-003)', () => {
     expect(parsed?.ExposureTime).toBeUndefined();
     expect(parsed?.FNumber).toBeUndefined();
     expect(parsed?.Make).toBe('Canon');
+    expect(parsed?.DateTimeOriginal).toBeDefined();
   });
 });

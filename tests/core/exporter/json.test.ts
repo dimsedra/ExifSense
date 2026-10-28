@@ -67,4 +67,16 @@ describe('Machine-Readable JSON Report Export (REQ-EXP-002)', () => {
     expect(parsed.assets).toEqual([]);
     expect(parsed.collectiveIntelligence).toBeNull();
   });
+
+  it('safely handles corrupt or NaN fileDate timestamps without throwing RangeError (Boundary)', () => {
+    const malformedAsset: ForensicAsset = {
+      ...asset1,
+      id: 'asset-nan',
+      fileDate: NaN
+    };
+
+    expect(() => generateJsonReport([malformedAsset], meta)).not.toThrow();
+    const parsed = JSON.parse(generateJsonReport([malformedAsset], meta));
+    expect(parsed.assets[0].fileDate).toBe(new Date(0).toISOString());
+  });
 });
