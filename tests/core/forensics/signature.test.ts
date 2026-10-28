@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { detectFileType } from '../../../src/core/forensics/signature.ts';
+import { detectFileType, reconcileFileExtension } from '../../../src/core/forensics/signature.ts';
+import type { FileDetectionResult } from '../../../src/core/forensics/types.ts';
 
 describe('File Signature Detection (REQ-SIG-001)', () => {
   it('detects JPEG magic bytes correctly', () => {
@@ -127,6 +128,66 @@ describe('File Signature Detection (REQ-SIG-001)', () => {
       mimeType: null,
       extension: null,
       detectedFormat: null
+    });
+  });
+
+  describe('Extension Reconciliation & Filename Repair (REQ-SIG-002)', () => {
+    it('accepts exact matching extension', () => {
+      const detection: FileDetectionResult = {
+        isValid: true,
+        mimeType: 'image/png',
+        extension: 'png',
+        detectedFormat: 'PNG'
+      };
+      const res = reconcileFileExtension('sample.png', detection);
+      expect(res).toEqual({
+        isEquivalent: true,
+        resolvedFileName: 'sample.png'
+      });
+    });
+
+    it('treats equivalent pairs (jpg/jpeg, tif/tiff, heic/heif) as valid equivalents', () => {
+      const jpgDetection: FileDetectionResult = {
+        isValid: true,
+        mimeType: 'image/jpeg',
+        extension: 'jpg',
+        detectedFormat: 'JPEG'
+      };
+      expect(reconcileFileExtension('photo.jpeg', jpgDetection)).toEqual({
+        isEquivalent: true,
+        resolvedFileName: 'photo.jpeg'
+      });
+
+      const tiffDetection: FileDetectionResult = {
+        isValid: true,
+        mimeType: 'image/tiff',
+        extension: 'tiff',
+        detectedFormat: 'TIFF'
+      };
+      expect(reconcileFileExtension('scan.tif', tiffDetection)).toEqual({
+        isEquivalent: true,
+        resolvedFileName: 'scan.tif'
+      });
+    });
+
+    it('corrects mismatched or missing file extensions', () => {
+      const pngDetection: FileDetectionResult = {
+        isValid: true,
+        mimeType: 'image/png',
+        extension: 'png',
+        detectedFormat: 'PNG'
+      };
+      // Mismatched: photo.jpg is actually a PNG
+      expect(reconcileFileExtension('photo.jpg', pngDetection)).toEqual({
+        isEquivalent: false,
+        resolvedFileName: 'photo.png'
+      });
+
+      // Missing extension
+      expect(reconcileFileExtension('avatar', pngDetection)).toEqual({
+        isEquivalent: false,
+        resolvedFileName: 'avatar.png'
+      });
     });
   });
 });
