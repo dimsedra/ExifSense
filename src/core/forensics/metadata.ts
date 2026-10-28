@@ -107,3 +107,39 @@ export function categorizeExif(data: Record<string, unknown>): CategorizedExif {
 
   return categories;
 }
+
+/**
+ * Robustly parses camera EXIF date representations into a valid Date object (REQ-META-002).
+ * Returns null if the value is empty, invalid, or unparseable.
+ */
+export function parseExifDate(dateVal: unknown): Date | null {
+  if (!dateVal) return null;
+  if (dateVal instanceof Date) {
+    return isNaN(dateVal.getTime()) ? null : dateVal;
+  }
+
+  let cleaned = String(dateVal).trim();
+  if (!cleaned || cleaned.startsWith('0000:00:00')) return null;
+
+  // EXIF standard: YYYY:MM:DD HH:MM:SS -> YYYY-MM-DD
+  if (/^\d{4}:\d{2}:\d{2}/.test(cleaned)) {
+    cleaned = cleaned.replace(/^(\d{4}):(\d{2}):(\d{2})/, '$1-$2-$3');
+  }
+
+  // Pure numeric digits (epoch millisecond timestamp)
+  if (/^\d+$/.test(cleaned)) {
+    const d = new Date(Number(cleaned));
+    if (!isNaN(d.getTime())) return d;
+  }
+
+  // Standard ISO or default Date parsing
+  const dDefault = new Date(cleaned);
+  if (!isNaN(dDefault.getTime())) return dDefault;
+
+  // Space-separated time to ISO separator T
+  const tSeparated = cleaned.replace(' ', 'T');
+  const d2 = new Date(tSeparated);
+  if (!isNaN(d2.getTime())) return d2;
+
+  return null;
+}
