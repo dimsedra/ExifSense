@@ -4,8 +4,6 @@ import {
   Layers,
   ShieldCheck,
   ShieldAlert,
-  MapPin,
-  Clock,
   ArrowRight,
 } from 'lucide-react';
 import { useAssetStore } from '../store/useAssetStore';
@@ -144,42 +142,33 @@ export const HomeView: React.FC = () => {
 
       {/* Feature Bento Grid */}
       <div className="intro-features">
+        <div className="feature-card">
+          <div className="feature-icon">
+            <ShieldCheck size={28} />
+          </div>
+          <div className="feature-text">
+            <h3>{t('feature_secure_title')}</h3>
+            <p>{t('feature_secure_desc')}</p>
+          </div>
+        </div>
+
         <div className="feature-card col-span-2">
+          <div className="feature-icon">
+            <Layers size={28} />
+          </div>
+          <div className="feature-text">
+            <h3>{t('feature_image_analysis_title')}</h3>
+            <p>{t('feature_image_analysis_desc')}</p>
+          </div>
+        </div>
+
+        <div className="feature-card">
           <div className="feature-icon">
             <ShieldAlert size={28} />
           </div>
           <div className="feature-text">
-            <h3>{t('feat_integrity_title') || 'Digital Integrity & Tamper Heuristics'}</h3>
-            <p>
-              {t('feat_integrity_desc') ||
-                'Detect editing software signatures, chronological anomalies, dimension mismatches, and stripped EXIF tags.'}
-            </p>
-          </div>
-        </div>
-
-        <div className="feature-card">
-          <div className="feature-icon">
-            <MapPin size={28} />
-          </div>
-          <div className="feature-text">
-            <h3>{t('feat_geo_title') || 'Geospatial & Timeline Paths'}</h3>
-            <p>
-              {t('feat_geo_desc') ||
-                'Reconstruct flight paths, travel velocities, and GPS coordinates directly on an interactive map.'}
-            </p>
-          </div>
-        </div>
-
-        <div className="feature-card">
-          <div className="feature-icon">
-            <Clock size={28} />
-          </div>
-          <div className="feature-text">
-            <h3>{t('feat_collective_title') || 'Collective Intelligence'}</h3>
-            <p>
-              {t('feat_collective_desc') ||
-                'Compare multi-asset serial numbers, hardware models, and chronological capture jumps across sets.'}
-            </p>
+            <h3>{t('feature_spoof_title')}</h3>
+            <p>{t('feature_spoof_desc')}</p>
           </div>
         </div>
 
@@ -188,11 +177,8 @@ export const HomeView: React.FC = () => {
             <ShieldCheck size={28} />
           </div>
           <div className="feature-text">
-            <h3>{t('feat_sanitizer_title') || 'Zero-Knowledge Privacy Sanitizer'}</h3>
-            <p>
-              {t('feat_sanitizer_desc') ||
-                'Surgically eliminate location, device, and timestamp tracking tags 100% locally in your browser memory.'}
-            </p>
+            <h3>{t('feature_sanitize_title')}</h3>
+            <p>{t('feature_sanitize_desc')}</p>
           </div>
           <div style={{ marginTop: '1rem' }}>
             <button
@@ -202,7 +188,7 @@ export const HomeView: React.FC = () => {
               }}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
             >
-              <span>{t('open_sanitizer_studio') || 'Open Sanitizer Studio'}</span>
+              <span>{t('mode_remove')}</span>
               <ArrowRight size={14} />
             </button>
           </div>
