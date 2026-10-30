@@ -22,6 +22,18 @@ export interface ExtendedForensicAsset extends ForensicAsset {
 
 export interface ExtendedBatchSanitizerEntry extends BatchSanitizerEntry {
   name: string;
+  thumbUrl?: string;
+}
+
+function createSafePreviewUrl(file: File): string {
+  try {
+    if (typeof URL !== 'undefined' && typeof URL.createObjectURL === 'function') {
+      return URL.createObjectURL(file);
+    }
+  } catch {
+    // Fallback to empty string when object URLs are unavailable
+  }
+  return '';
 }
 
 /**
@@ -84,6 +96,8 @@ export async function processSingleAsset(file: File): Promise<ExtendedForensicAs
     exifData: rawExif,
     categorizedExif,
     integrityAlerts,
+    thumbUrl: createSafePreviewUrl(file),
+    fileObject: file,
     hashes: {
       sha256,
       sha1,
@@ -158,6 +172,8 @@ export async function processBatchAssets(
       exifData: rawExif,
       categorizedExif,
       integrityAlerts,
+      thumbUrl: createSafePreviewUrl(file),
+      fileObject: file,
       hashes: {
         sha256,
         sha1,
@@ -199,6 +215,7 @@ export async function processSanitizerIntake(
       fileName: file.name,
       name: file.name,
       exifData: rawExif,
+      thumbUrl: createSafePreviewUrl(file),
     };
     entries.push(entry);
   }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Play, Trash2, FileImage } from 'lucide-react';
+import { X, Play, Layers, FileImage } from 'lucide-react';
 import { useI18nStore } from '../store/useI18nStore';
 
 export interface StagedQueueProps {
@@ -30,39 +30,42 @@ export const StagedQueue: React.FC<StagedQueueProps> = ({
   }
 
   return (
-    <div className="staged-files-container">
+    <div id="staged-files-container" className="staged-files-container">
       <div className="staged-files-header">
         <div className="staged-files-title">
-          <FileImage size={18} />
-          <span>
-            {t('staged_files_title') || 'Staged for Analysis'} ({stagedFiles.length}/50)
+          <Layers size={18} />
+          <span>{t('staged_files_title')}</span>
+          <span id="staged-count-badge" className="badge">
+            {stagedFiles.length}
           </span>
         </div>
         <button
+          id="clear-staging-btn"
+          type="button"
           className="clear-staged-btn"
           onClick={onClear}
           disabled={isProcessing}
-          title={t('clear_all') || 'Clear all'}
         >
-          <Trash2 size={14} style={{ display: 'inline', marginRight: '4px' }} />
-          {t('clear_all') || 'Clear All'}
+          {t('clear_staging')}
         </button>
       </div>
 
-      <div className="staged-files-list">
+      <div id="staged-files-list" className="staged-files-list">
         {stagedFiles.map((file, idx) => (
           <div key={`${file.name}-${idx}`} className="staged-file-item">
             <div className="staged-file-info">
+              <FileImage size={16} />
               <span className="staged-file-name" title={file.name}>
                 {file.name}
               </span>
-              <span className="staged-file-size">{formatFileSize(file.size)}</span>
+              <span className="staged-file-size">({formatFileSize(file.size)})</span>
             </div>
             <button
+              type="button"
               className="remove-staged-item"
               onClick={() => onRemove(idx)}
               disabled={isProcessing}
-              title={t('remove') || 'Remove'}
+              title={t('remove')}
             >
               <X size={16} />
             </button>
@@ -70,17 +73,17 @@ export const StagedQueue: React.FC<StagedQueueProps> = ({
         ))}
       </div>
 
-      <div style={{ textAlign: 'right' }}>
-        <button
-          className="btn btn-primary"
-          onClick={onProcess}
-          disabled={isProcessing || stagedFiles.length === 0}
-          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-        >
-          <Play size={16} />
-          <span>{t('process_assets_btn') || 'Process Assets'}</span>
-        </button>
-      </div>
+      <button
+        id="process-staged-btn"
+        type="button"
+        className="btn-primary-large"
+        style={{ width: '100%', justifyContent: 'center' }}
+        onClick={onProcess}
+        disabled={isProcessing || stagedFiles.length === 0}
+      >
+        <Play size={18} />
+        <span>{t('process_staged_btn')}</span>
+      </button>
     </div>
   );
 };

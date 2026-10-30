@@ -51,6 +51,7 @@ export const useI18nStore = create<I18nStoreState>((set, get) => ({
     if (typeof document !== 'undefined' && document.documentElement) {
       document.documentElement.lang = lang;
       document.documentElement.dir = direction;
+      document.title = dict['ui']?.['title'] || 'ExifSense | Photo Analysis & Privacy';
     }
 
     set({

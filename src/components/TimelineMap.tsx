@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
+import { MapPin, Navigation, ExternalLink, Map as MapIcon } from 'lucide-react';
 import type { ForensicAsset } from '../core/forensics/types';
 import { extractAssetCoordinates } from '../services/mapHelpers';
 import { parseExifDate, formatFullDate } from '../core/forensics/metadata';
@@ -23,12 +24,18 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.FeatureGroup | null>(null);
   const polylineLayerRef = useRef<L.Polyline | null>(null);
+  const [routeEnabled, setRouteEnabled] = useState(showPath);
 
   const waypoints = extractAssetCoordinates(assets);
+  const activeWaypoint =
+    waypoints.find((wp) => wp.assetId === activeAssetId) || waypoints[0] || null;
 
-  // Initialize and tear down Leaflet map
   useEffect(() => {
-    if (!mapContainerRef.current) return;
+    setRouteEnabled(showPath);
+  }, [showPath]);
+
+  useEffect(() => {
+    if (!mapContainerRef.current || waypoints.length === 0) return;
 
     if (!mapInstanceRef.current) {
       const initialLat = waypoints[0]?.lat ?? 20.0;
@@ -53,14 +60,12 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [waypoints.length]);
 
-  // Update markers, polyline route, and active highlight
   useEffect(() => {
     const map = mapInstanceRef.current;
     if (!map) return;
 
-    // Clean previous markers and polylines
     if (markersLayerRef.current) {
       map.removeLayer(markersLayerRef.current);
       markersLayerRef.current = null;
@@ -85,13 +90,13 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
         asset?.exifData?.CreateDate ||
         asset?.exifData?.DateTime;
       const parsedDate = captureDate ? parseExifDate(captureDate) : null;
-      const dateStr = parsedDate ? formatFullDate(parsedDate) : 'Unknown';
+      const dateStr = parsedDate ? formatFullDate(parsedDate) : t('unknown', {}, 'reports');
 
       const popupHtml = `
         <div style="font-family: var(--font-sans); font-size: 13px; line-height: 1.4; color: #111;">
           <strong style="display:block; margin-bottom: 4px;">${wp.fileName}</strong>
           <div>GPS: ${wp.lat.toFixed(5)}, ${wp.lng.toFixed(5)}</div>
-          <div>Date: ${dateStr}</div>
+          <div>${t('file_date')}: ${dateStr}</div>
         </div>
       `;
 
@@ -146,8 +151,7 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
     const featureGroup = L.featureGroup(markers).addTo(map);
     markersLayerRef.current = featureGroup;
 
-    // Render connecting polyline if batch mode and showPath is true
-    if (showPath && latLngs.length >= 2) {
+    if (routeEnabled && latLngs.length >= 2) {
       const polyline = L.polyline(latLngs, {
         color: '#f59e0b',
         weight: 3,
@@ -160,40 +164,73 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
     try {
       map.fitBounds(featureGroup.getBounds(), { padding: [50, 50], maxZoom: 15 });
     } catch {
-      // fitBounds on point or small container fallback
+      // fitBounds fallback
     }
-  }, [waypoints.length, activeAssetId, showPath, assets, onMarkerClick]);
+  }, [waypoints.length, activeAssetId, routeEnabled, assets, onMarkerClick, t]);
 
   if (waypoints.length === 0) {
-    return (
-      <div className="card map-card" style={{ marginBottom: '1.5rem' }}>
-        <div className="card-header">
-          <h3>{t('geospatial_map') || 'Geospatial Travel Mapping'}</h3>
-        </div>
-        <div
-          style={{
-            padding: '2rem',
-            textAlign: 'center',
-            color: 'var(--text-muted)',
-            fontSize: '0.875rem',
-            backgroundColor: 'var(--bg-surface)',
-          }}
-        >
-          {t('no_gps_recorded') || 'No GPS coordinates found in loaded image metadata.'}
-        </div>
-      </div>
-    );
+    return null;
   }
 
   return (
-    <div className="card map-card" style={{ marginBottom: '1.5rem' }}>
+    <div id="map-container-card" className="card map-card mb-6">
       <div className="card-header">
-        <h3>
-          {t('geospatial_map') || 'Geospatial Travel Mapping'} ({waypoints.length} {t('geotagged_assets') || 'Geotagged'})
-        </h3>
+        <div className="header-group">
+          <MapPin size={18} />
+          <h3>{t('geospatial_data')}</h3>
+        </div>
+        {waypoints.length > 1 && (
+          <div className="map-controls">
+            <label id="route-toggle-container" className="route-toggle">
+              <input
+                type="checkbox"
+                id="route-toggle-checkbox"
+                checked={routeEnabled}
+                onChange={(e) => setRouteEnabled(e.target.checked)}
+              />
+              <span className="toggle-slider" />
+              <span className="toggle-label">{t('show_route')}</span>
+            </label>
+          </div>
+        )}
       </div>
-      <div className="card-body" style={{ padding: 0 }}>
-        <div id="map" ref={mapContainerRef} style={{ height: '420px', width: '100%' }} />
+      <div className="card-body p-0">
+        <div id="map" ref={mapContainerRef} className="map-container" />
+        <div className="map-footer">
+          <div id="gps-coordinates" className="gps-coords">
+            <Navigation size={14} />
+            <span>
+              {activeWaypoint
+                ? t('gps_coords', {
+                    lat: activeWaypoint.lat.toFixed(6),
+                    lng: activeWaypoint.lng.toFixed(6),
+                  })
+                : t('no_gps')}
+            </span>
+          </div>
+          {activeWaypoint && (
+            <div className="map-actions">
+              <a
+                id="gmaps-link"
+                href={`https://www.google.com/maps?q=${activeWaypoint.lat},${activeWaypoint.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-link"
+              >
+                <ExternalLink size={14} /> Google Maps
+              </a>
+              <a
+                id="osm-link"
+                href={`https://www.openstreetmap.org/?mlat=${activeWaypoint.lat}&mlon=${activeWaypoint.lng}#map=16/${activeWaypoint.lat}/${activeWaypoint.lng}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="btn-link"
+              >
+                <MapIcon size={14} /> OpenStreetMap
+              </a>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

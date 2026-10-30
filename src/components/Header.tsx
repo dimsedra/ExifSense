@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   ShieldCheck,
+  ShieldOff,
   BookOpen,
   Languages,
   ChevronDown,
@@ -18,16 +19,20 @@ import type { SupportedLanguage } from '../store/useI18nStore';
 export interface HeaderProps {
   onReset?: () => void;
   onOpenGuide?: () => void;
+  onSanitize?: () => void;
   showResetButton?: boolean;
   showExportButton?: boolean;
+  showSanitizeButton?: boolean;
   onExport?: (format: 'pdf' | 'json' | 'csv' | 'md' | 'clipboard') => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   onReset,
   onOpenGuide,
+  onSanitize,
   showResetButton = false,
   showExportButton = false,
+  showSanitizeButton = false,
   onExport,
 }) => {
   const { currentLang, setLanguage, t } = useI18nStore();
@@ -37,7 +42,6 @@ export const Header: React.FC<HeaderProps> = ({
   const langRef = useRef<HTMLDivElement>(null);
   const exportRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns on outside click
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (langRef.current && !langRef.current.contains(e.target as Node)) {
@@ -74,6 +78,8 @@ export const Header: React.FC<HeaderProps> = ({
       <div className="header-container">
         <div
           className="logo"
+          id="home-logo"
+          dir="ltr"
           style={{ cursor: 'pointer' }}
           onClick={() => {
             window.location.hash = '#/';
@@ -86,11 +92,10 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
 
         <div className="header-actions">
-          {/* Guide Action */}
           <button
             className="btn btn-secondary"
             id="guide-btn"
-            title={t('guide_btn') || 'Guide'}
+            title={t('guide_btn')}
             onClick={() => {
               if (onOpenGuide) {
                 onOpenGuide();
@@ -99,41 +104,40 @@ export const Header: React.FC<HeaderProps> = ({
               }
             }}
           >
-            <BookOpen size={16} />
-            <span>{t('guide_btn') || 'Guide'}</span>
+            <BookOpen size={18} />
+            <span>{t('guide_btn')}</span>
           </button>
 
-          {/* Language Switcher */}
           <div className="lang-selector" id="lang-selector-container" ref={langRef}>
             <button
               className="btn btn-secondary"
               id="lang-toggle"
-              title="Switch Language"
+              title={t('guide_nav_header_title')}
               onClick={(e) => {
                 e.stopPropagation();
                 setLangMenuOpen((prev) => !prev);
               }}
             >
-              <Languages size={16} />
+              <Languages size={18} />
               <span id="current-lang-label">{langLabels[currentLang] || 'EN'}</span>
               <ChevronDown size={14} className="chevron-icon" />
             </button>
             {langMenuOpen && (
-              <div className="lang-dropdown" id="lang-dropdown">
+              <div className="lang-dropdown active" id="lang-dropdown">
                 <button
-                  className="lang-option"
+                  className={`lang-option ${currentLang === 'en' ? 'active' : ''}`}
                   onClick={() => handleSelectLang('en')}
                 >
                   English
                 </button>
                 <button
-                  className="lang-option"
+                  className={`lang-option ${currentLang === 'id' ? 'active' : ''}`}
                   onClick={() => handleSelectLang('id')}
                 >
                   Bahasa Indonesia
                 </button>
                 <button
-                  className="lang-option"
+                  className={`lang-option ${currentLang === 'ar' ? 'active' : ''}`}
                   onClick={() => handleSelectLang('ar')}
                 >
                   العربية
@@ -142,53 +146,63 @@ export const Header: React.FC<HeaderProps> = ({
             )}
           </div>
 
-          {/* Export Menu Dropdown */}
           {showExportButton && (
             <div className="export-dropdown" id="export-container" ref={exportRef}>
               <button
                 className="btn btn-secondary"
                 id="export-main-btn"
-                title={t('export_report') || 'Export Report'}
+                title={t('export_report')}
                 onClick={(e) => {
                   e.stopPropagation();
                   setExportMenuOpen((prev) => !prev);
                 }}
               >
-                <Download size={16} />
-                <span>{t('export_report') || 'Export Report'}</span>
+                <Download size={18} />
+                <span>{t('export_report')}</span>
               </button>
               {exportMenuOpen && (
-                <div className="export-menu" id="export-menu">
-                  <button onClick={() => handleExportClick('pdf')}>
-                    <FileText size={16} /> {t('pdf_doc') || 'PDF Document'}
+                <div className="export-menu active" id="export-menu">
+                  <button id="export-pdf-btn" onClick={() => handleExportClick('pdf')}>
+                    <FileText size={16} /> {t('pdf_doc')}
                   </button>
-                  <button onClick={() => handleExportClick('json')}>
-                    <FileJson size={16} /> {t('json_file') || 'JSON Metadata'}
+                  <button id="export-md-btn" onClick={() => handleExportClick('md')}>
+                    <FileCode size={16} /> {t('md_file')}
                   </button>
-                  <button onClick={() => handleExportClick('csv')}>
-                    <Table size={16} /> {t('csv_dataset') || 'CSV Dataset'}
+                  <button id="export-json-btn" onClick={() => handleExportClick('json')}>
+                    <FileJson size={16} /> {t('json_file')}
                   </button>
-                  <button onClick={() => handleExportClick('md')}>
-                    <FileCode size={16} /> {t('md_file') || 'Markdown File'}
+                  <button id="export-csv-btn" onClick={() => handleExportClick('csv')}>
+                    <Table size={16} /> {t('csv_dataset')}
                   </button>
-                  <button onClick={() => handleExportClick('clipboard')}>
-                    <ClipboardCopy size={16} /> {t('copy_clipboard') || 'Copy to Clipboard'}
+                  <button id="export-copy-btn" onClick={() => handleExportClick('clipboard')}>
+                    <ClipboardCopy size={16} /> {t('copy_clipboard')}
                   </button>
                 </div>
               )}
             </div>
           )}
 
-          {/* Reset Action */}
           {showResetButton && onReset && (
             <button
-              className="btn btn-ghost"
+              className="btn btn-secondary"
               id="reset-btn"
-              title={t('go_to_upload') || 'Reset Session'}
+              title={t('analyze_new')}
               onClick={onReset}
             >
-              <RotateCcw size={16} />
-              <span>{t('go_to_upload') || 'Reset'}</span>
+              <RotateCcw size={18} />
+              <span>{t('analyze_new')}</span>
+            </button>
+          )}
+
+          {showSanitizeButton && onSanitize && (
+            <button
+              className="btn btn-primary"
+              id="sanitize-main-btn"
+              title={t('sanitize_asset')}
+              onClick={onSanitize}
+            >
+              <ShieldOff size={18} />
+              <span>{t('sanitize_asset')}</span>
             </button>
           )}
         </div>

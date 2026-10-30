@@ -1,21 +1,29 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  FileText,
-  Layers,
-  ShieldCheck,
+  Shield,
+  Play,
+  History,
+  UploadCloud,
+  Activity,
+  Lock,
   ShieldAlert,
-  ArrowRight,
+  ShieldOff,
+  Smartphone,
 } from 'lucide-react';
 import { useAssetStore } from '../store/useAssetStore';
 import { useI18nStore } from '../store/useI18nStore';
 import { Dropzone } from '../components/Dropzone';
 import { StagedQueue } from '../components/StagedQueue';
+import { ConfirmModal } from '../components/ConfirmModal';
+import { HistoryView } from './HistoryView';
 import { showToast } from '../components/ToastContainer';
 import {
   processSingleAsset,
   processBatchAssets,
   processSanitizerIntake,
 } from '../services/ingestionCoordinator';
+
+export type HomeTab = 'upload' | 'history';
 
 export const HomeView: React.FC = () => {
   const { t } = useI18nStore();
@@ -28,7 +36,19 @@ export const HomeView: React.FC = () => {
     clearStagedFiles,
   } = useAssetStore();
 
+  const [activeTab, setActiveTab] = useState<HomeTab>('upload');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isBatchConfirmOpen, setIsBatchConfirmOpen] = useState(false);
+  const actionZoneRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleSwitchToHistory = () => {
+      setActiveTab('history');
+      actionZoneRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    window.addEventListener('switch-to-history', handleSwitchToHistory);
+    return () => window.removeEventListener('switch-to-history', handleSwitchToHistory);
+  }, []);
 
   const handleFilesAccepted = async (files: File[]) => {
     if (files.length === 0) return;
@@ -37,25 +57,23 @@ export const HomeView: React.FC = () => {
       try {
         setIsProcessing(true);
         await processSingleAsset(files[0]!);
-        showToast(t('analysis_complete') || 'Forensic analysis completed');
         window.location.hash = '#/dashboard';
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to analyze asset';
+        const msg = err instanceof Error ? err.message : t('err_invalid_files');
         showToast(msg);
       } finally {
         setIsProcessing(false);
       }
     } else if (uploadMode === 'batch') {
       stageFiles(files);
-      showToast(`${files.length} file(s) staged for batch analysis`);
+      setIsBatchConfirmOpen(true);
     } else if (uploadMode === 'remove') {
       try {
         setIsProcessing(true);
         await processSanitizerIntake(files);
-        showToast(t('sanitizer_ready') || 'Photos ready for sanitization');
         window.location.hash = '#/sanitize';
       } catch (err: unknown) {
-        const msg = err instanceof Error ? err.message : 'Failed to ingest files for sanitization';
+        const msg = err instanceof Error ? err.message : t('err_sanitize_failed');
         showToast(msg);
       } finally {
         setIsProcessing(false);
@@ -64,15 +82,16 @@ export const HomeView: React.FC = () => {
   };
 
   const handleProcessBatch = async () => {
-    if (stagedFiles.length === 0) return;
+    setIsBatchConfirmOpen(false);
+    const currentStaged = useAssetStore.getState().stagedFiles;
+    if (currentStaged.length === 0) return;
     try {
       setIsProcessing(true);
-      await processBatchAssets(stagedFiles);
+      await processBatchAssets(currentStaged);
       clearStagedFiles();
-      showToast(t('batch_analysis_complete') || 'Batch forensic analysis completed');
       window.location.hash = '#/dashboard';
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to analyze batch assets';
+      const msg = err instanceof Error ? err.message : t('err_invalid_files');
       showToast(msg);
     } finally {
       setIsProcessing(false);
@@ -80,81 +99,126 @@ export const HomeView: React.FC = () => {
   };
 
   return (
-    <div className="intro-container">
+    <div id="intro-state" className="intro-container">
       {/* Hero Section */}
-      <section className="intro-hero">
+      <div className="intro-hero">
+        <div className="intro-badge">
+          <Shield size={16} />
+          <span>{t('hero_badge')}</span>
+        </div>
         <h1>
-          FORENSIC <span>INTELLIGENCE</span>
+          {t('hero_title_part1')}{' '}
+          <span className="highlight">{t('hero_title_span')}</span>
         </h1>
-        <p>
-          {t('hero_subtitle') ||
-            'Client-side image verification, manipulation heuristics, timeline reconstruction, and surgical privacy sanitization.'}
-        </p>
+        <p>{t('hero_desc')}</p>
 
-        {/* Mode Switcher */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
-          <div className="upload-mode-toggle">
+        <div className="intro-cta">
+          <button
+            id="start-analysis-btn"
+            type="button"
+            className="btn-primary-large"
+            onClick={() => {
+              setActiveTab('upload');
+              actionZoneRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+              });
+            }}
+          >
+            <Play size={20} className="rtl-flip-icon" />
+            <span>{t('begin_investigation')}</span>
+          </button>
+          <button
+            id="view-history-btn"
+            type="button"
+            className="btn-outline-large"
+            onClick={() => {
+              setActiveTab('history');
+              actionZoneRef.current?.scrollIntoView({
+                behavior: 'smooth',
+                block: 'start',
+              });
+            }}
+          >
+            <History size={20} />
+            <span>{t('review_history')}</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main Action Zone (Tabs) */}
+      <div className="action-zone" ref={actionZoneRef}>
+        <div className="tabs-container">
+          <div className="tabs">
             <button
-              className={`mode-btn ${uploadMode === 'single' ? 'active' : ''}`}
-              onClick={() => setUploadMode('single')}
               type="button"
+              className={`tab-btn ${activeTab === 'upload' ? 'active' : ''}`}
+              data-tab="tab-upload"
+              onClick={() => setActiveTab('upload')}
             >
-              <FileText size={14} style={{ display: 'inline', marginRight: '6px' }} />
-              {t('mode_single') || 'Single Asset'}
+              <UploadCloud size={18} />
+              <span>{t('tab_new')}</span>
             </button>
             <button
-              className={`mode-btn ${uploadMode === 'batch' ? 'active' : ''}`}
-              onClick={() => setUploadMode('batch')}
               type="button"
+              className={`tab-btn ${activeTab === 'history' ? 'active' : ''}`}
+              data-tab="tab-history"
+              onClick={() => setActiveTab('history')}
             >
-              <Layers size={14} style={{ display: 'inline', marginRight: '6px' }} />
-              {t('mode_batch') || 'Batch Analysis'}
-            </button>
-            <button
-              className={`mode-btn ${uploadMode === 'remove' ? 'active' : ''}`}
-              onClick={() => setUploadMode('remove')}
-              type="button"
-            >
-              <ShieldCheck size={14} style={{ display: 'inline', marginRight: '6px' }} />
-              {t('mode_remove') || 'Remove Metadata'}
+              <History size={18} />
+              <span>{t('tab_history')}</span>
             </button>
           </div>
+
+          <div className="tab-panes-wrapper">
+            {activeTab === 'upload' ? (
+              <div id="tab-upload" className="tab-content active">
+                <section className="analysis-section" id="analysis-section">
+                  <Dropzone
+                    uploadMode={uploadMode}
+                    onModeChange={setUploadMode}
+                    onFilesAccepted={handleFilesAccepted}
+                    isProcessing={isProcessing}
+                  />
+
+                  {uploadMode === 'batch' && (
+                    <StagedQueue
+                      stagedFiles={stagedFiles}
+                      onRemove={removeStagedFile}
+                      onClear={clearStagedFiles}
+                      onProcess={handleProcessBatch}
+                      isProcessing={isProcessing}
+                    />
+                  )}
+
+                  <div className="forensic-advisory mt-6">
+                    <div className="advisory-header">
+                      <Smartphone size={18} />
+                      <span>{t('advisory_title')}</span>
+                    </div>
+                    <div className="advisory-body">
+                      <p>
+                        <strong>{t('advisory_mobile_warn')}</strong>
+                      </p>
+                      <p>{t('advisory_recommend')}</p>
+                    </div>
+                  </div>
+                </section>
+              </div>
+            ) : (
+              <div id="tab-history" className="tab-content active">
+                <HistoryView embedded />
+              </div>
+            )}
+          </div>
         </div>
-
-        {/* File Ingestion Dropzone */}
-        <Dropzone
-          uploadMode={uploadMode}
-          onFilesAccepted={handleFilesAccepted}
-          isProcessing={isProcessing}
-        />
-
-        {/* Staged Queue for Batch Upload */}
-        {uploadMode === 'batch' && (
-          <StagedQueue
-            stagedFiles={stagedFiles}
-            onRemove={removeStagedFile}
-            onClear={clearStagedFiles}
-            onProcess={handleProcessBatch}
-            isProcessing={isProcessing}
-          />
-        )}
-      </section>
+      </div>
 
       {/* Feature Bento Grid */}
       <div className="intro-features">
-        <div className="feature-card">
-          <div className="feature-icon">
-            <ShieldCheck size={28} />
-          </div>
-          <div className="feature-text">
-            <h3>{t('feature_secure_title')}</h3>
-            <p>{t('feature_secure_desc')}</p>
-          </div>
-        </div>
-
         <div className="feature-card col-span-2">
           <div className="feature-icon">
-            <Layers size={28} />
+            <Activity size={24} />
           </div>
           <div className="feature-text">
             <h3>{t('feature_image_analysis_title')}</h3>
@@ -164,7 +228,17 @@ export const HomeView: React.FC = () => {
 
         <div className="feature-card">
           <div className="feature-icon">
-            <ShieldAlert size={28} />
+            <Lock size={24} />
+          </div>
+          <div className="feature-text">
+            <h3>{t('feature_secure_title')}</h3>
+            <p>{t('feature_secure_desc')}</p>
+          </div>
+        </div>
+
+        <div className="feature-card">
+          <div className="feature-icon">
+            <ShieldAlert size={24} />
           </div>
           <div className="feature-text">
             <h3>{t('feature_spoof_title')}</h3>
@@ -174,26 +248,25 @@ export const HomeView: React.FC = () => {
 
         <div className="feature-card col-span-2">
           <div className="feature-icon">
-            <ShieldCheck size={28} />
+            <ShieldOff size={24} />
           </div>
           <div className="feature-text">
             <h3>{t('feature_sanitize_title')}</h3>
             <p>{t('feature_sanitize_desc')}</p>
           </div>
-          <div style={{ marginTop: '1rem' }}>
-            <button
-              className="btn btn-secondary"
-              onClick={() => {
-                setUploadMode('remove');
-              }}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <span>{t('mode_remove')}</span>
-              <ArrowRight size={14} />
-            </button>
-          </div>
         </div>
       </div>
+
+      <ConfirmModal
+        isOpen={isBatchConfirmOpen}
+        title={t('batch_confirm_title')}
+        message={t('batch_confirm_msg', { count: stagedFiles.length })}
+        confirmLabel={t('process_now')}
+        cancelLabel={t('add_more')}
+        isDanger={false}
+        onConfirm={() => void handleProcessBatch()}
+        onCancel={() => setIsBatchConfirmOpen(false)}
+      />
     </div>
   );
 };

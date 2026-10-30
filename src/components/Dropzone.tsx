@@ -1,16 +1,28 @@
 import React, { useRef, useState } from 'react';
-import { UploadCloud, Layers, ShieldCheck, Loader2 } from 'lucide-react';
+import {
+  ImagePlus,
+  FileImage,
+  Layers,
+  ShieldOff,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+} from 'lucide-react';
 import { useI18nStore } from '../store/useI18nStore';
 import type { UploadMode } from '../store/useAssetStore';
 
 export interface DropzoneProps {
   uploadMode: UploadMode;
+  onModeChange?: (mode: UploadMode) => void;
   onFilesAccepted: (files: File[]) => void;
   isProcessing?: boolean;
 }
 
+const MODES: UploadMode[] = ['single', 'batch', 'remove'];
+
 export const Dropzone: React.FC<DropzoneProps> = ({
   uploadMode,
+  onModeChange,
   onFilesAccepted,
   isProcessing = false,
 }) => {
@@ -49,7 +61,6 @@ export const Dropzone: React.FC<DropzoneProps> = ({
     if (e.target.files && e.target.files.length > 0) {
       const filesArray = Array.from(e.target.files);
       onFilesAccepted(filesArray);
-      // Reset input value so re-selecting same file triggers change
       e.target.value = '';
     }
   };
@@ -60,35 +71,34 @@ export const Dropzone: React.FC<DropzoneProps> = ({
     }
   };
 
-  const getModeDetails = () => {
-    switch (uploadMode) {
-      case 'batch':
-        return {
-          icon: <Layers size={48} />,
-          title: t('dropzone_title_batch') || 'Drop Photos for Collective Analysis',
-          subtitle: t('dropzone_subtitle_batch') || 'Compare hardware signatures & timeline spread (up to 50)',
-        };
-      case 'remove':
-        return {
-          icon: <ShieldCheck size={48} />,
-          title: t('dropzone_title_remove') || 'Drop Image for Instant Sanitization',
-          subtitle: t('dropzone_subtitle_remove') || 'Surgically strip GPS, device, and timeline metadata',
-        };
-      case 'single':
-      default:
-        return {
-          icon: <UploadCloud size={48} />,
-          title: t('dropzone_title_single') || 'Drop Image for Forensic Inspection',
-          subtitle: t('dropzone_subtitle_single') || 'Inspect EXIF, detect manipulation, calculate hashes',
-        };
+  const handleSelectMode = (e: React.MouseEvent, mode: UploadMode) => {
+    e.stopPropagation();
+    if (onModeChange) {
+      onModeChange(mode);
     }
   };
 
-  const details = getModeDetails();
+  const handleCycleMode = (e: React.MouseEvent, delta: number) => {
+    e.stopPropagation();
+    if (!onModeChange) return;
+    const idx = MODES.indexOf(uploadMode);
+    const nextIdx = (idx + delta + MODES.length) % MODES.length;
+    onModeChange(MODES[nextIdx]!);
+  };
+
+  const modeDescriptionKey =
+    uploadMode === 'batch'
+      ? 'mode_batch_desc'
+      : uploadMode === 'remove'
+      ? 'mode_remove_desc'
+      : 'mode_single_desc';
 
   return (
     <div
-      className={`dropzone ${isDragOver ? 'dragover' : ''} ${uploadMode === 'remove' ? 'remove-mode' : ''}`}
+      id="dropzone"
+      className={`dropzone ${isDragOver ? 'dragover' : ''} ${
+        uploadMode === 'remove' ? 'remove-mode' : ''
+      }`}
       onDragOver={handleDragOver}
       onDragEnter={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -104,21 +114,76 @@ export const Dropzone: React.FC<DropzoneProps> = ({
     >
       <input
         ref={fileInputRef}
+        id="file-input"
         type="file"
         style={{ display: 'none' }}
-        multiple={uploadMode === 'batch'}
-        accept="image/jpeg,image/png,image/gif,image/webp,image/tiff,image/heic,image/heif,.cr2,.raw"
+        multiple={uploadMode !== 'single'}
+        accept="image/*"
         onChange={handleFileInputChange}
         disabled={isProcessing}
       />
 
+      {onModeChange && (
+        <div className="upload-mode-container" onClick={(e) => e.stopPropagation()}>
+          <button
+            id="prev-mode-btn"
+            type="button"
+            className="mode-nav-btn"
+            aria-label="Previous Mode"
+            onClick={(e) => handleCycleMode(e, -1)}
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <div className="upload-mode-toggle">
+            <button
+              id="mode-single-btn"
+              className={`mode-btn ${uploadMode === 'single' ? 'active' : ''}`}
+              onClick={(e) => handleSelectMode(e, 'single')}
+              type="button"
+            >
+              <FileImage size={16} />
+              <span>{t('mode_single')}</span>
+            </button>
+            <button
+              id="mode-batch-btn"
+              className={`mode-btn ${uploadMode === 'batch' ? 'active' : ''}`}
+              onClick={(e) => handleSelectMode(e, 'batch')}
+              type="button"
+            >
+              <Layers size={16} />
+              <span>{t('mode_batch')}</span>
+            </button>
+            <button
+              id="mode-remove-btn"
+              className={`mode-btn ${uploadMode === 'remove' ? 'active' : ''}`}
+              onClick={(e) => handleSelectMode(e, 'remove')}
+              type="button"
+            >
+              <ShieldOff size={16} />
+              <span>{t('mode_remove')}</span>
+            </button>
+          </div>
+          <button
+            id="next-mode-btn"
+            type="button"
+            className="mode-nav-btn"
+            aria-label="Next Mode"
+            onClick={(e) => handleCycleMode(e, 1)}
+          >
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
+
       <div className="dropzone-content">
         <div className="dropzone-icon">
-          {isProcessing ? <Loader2 size={48} className="animate-spin" /> : details.icon}
+          {isProcessing ? <Loader2 size={48} className="animate-spin" /> : <ImagePlus size={48} />}
         </div>
-        <h2>{isProcessing ? (t('analyzing_text') || 'Analyzing Evidence...') : details.title}</h2>
-        <p>{details.subtitle}</p>
-        <span className="file-types-hint">JPEG, PNG, WEBP, TIFF, HEIC, CR2, RAW</span>
+        <h2>{isProcessing ? t('analyzing_text') : t('dropzone_prompt')}</h2>
+        <p className="file-types-hint">{t('dropzone_hint')}</p>
+        <p id="mode-description" className="mode-description">
+          {t(modeDescriptionKey)}
+        </p>
       </div>
     </div>
   );

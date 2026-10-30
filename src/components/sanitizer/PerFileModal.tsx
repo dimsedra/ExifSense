@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sliders, X } from 'lucide-react';
+import { Sliders, MapPin, Smartphone, Aperture, Calendar } from 'lucide-react';
 import type { SanitizerOptions, BatchSanitizerEntry } from '../../core/sanitizer/types';
 import { useI18nStore } from '../../store/useI18nStore';
 
@@ -47,80 +47,92 @@ export const PerFileModal: React.FC<PerFileModalProps> = ({
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
+    <div id="perfile-modal" className="modal-overlay" onClick={onClose}>
       <div
-        className="modal-card"
-        style={{ maxWidth: '480px', textAlign: 'left' }}
+        className="modal-card perfile-modal-card"
         onClick={(e) => e.stopPropagation()}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Sliders size={20} color="var(--primary)" />
-            <h3 style={{ margin: 0, fontSize: '1.1rem', color: 'var(--text-main)' }}>
-              {t('per_file_override_title') || 'Customize File Sanitization'}
-            </h3>
+        <div className="modal-header">
+          <div className="modal-icon warning">
+            <Sliders size={24} />
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
-          >
-            <X size={20} />
-          </button>
+          <h3>{t('customize_file_options')}</h3>
+          <p id="perfile-modal-filename" className="text-muted text-sm">
+            {entry.fileName}
+          </p>
         </div>
 
-        <p style={{ fontSize: '0.825rem', color: 'var(--text-muted)', marginBottom: '1.5rem', wordBreak: 'break-all' }}>
-          File: <strong style={{ color: 'var(--text-main)' }}>{entry.fileName}</strong>
-        </p>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.5rem' }}>
-          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--secondary)', borderRadius: '8px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Strip GPS Location</span>
+        <div className="modal-body perfile-modal-body">
+          <label className="perfile-toggle-row">
+            <span>
+              <MapPin size={16} /> <span>{t('cat_gps_removal')}</span>
+            </span>
             <input
               type="checkbox"
+              id="perfile-opt-gps"
               checked={localOptions.gps}
               onChange={() => handleToggle('gps')}
-              style={{ width: '16px', height: '16px' }}
             />
           </label>
-
-          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--secondary)', borderRadius: '8px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Strip Device Information</span>
+          <label className="perfile-toggle-row">
+            <span>
+              <Smartphone size={16} /> <span>{t('cat_device_removal')}</span>
+            </span>
             <input
               type="checkbox"
+              id="perfile-opt-device"
               checked={localOptions.device}
               onChange={() => handleToggle('device')}
-              style={{ width: '16px', height: '16px' }}
             />
           </label>
-
-          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--secondary)', borderRadius: '8px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Strip Camera Settings</span>
+          <label className="perfile-toggle-row">
+            <span>
+              <Aperture size={16} /> <span>{t('cat_camera_removal')}</span>
+            </span>
             <input
               type="checkbox"
+              id="perfile-opt-camera"
               checked={localOptions.camera}
               onChange={() => handleToggle('camera')}
-              style={{ width: '16px', height: '16px' }}
             />
           </label>
-
-          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem', background: 'var(--secondary)', borderRadius: '8px', cursor: 'pointer' }}>
-            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Strip Date & Timestamps</span>
+          <label className="perfile-toggle-row">
+            <span>
+              <Calendar size={16} /> <span>{t('sanitize_toggle_date')}</span>
+            </span>
             <input
               type="checkbox"
+              id="perfile-opt-date"
               checked={localOptions.date}
               onChange={() => handleToggle('date')}
-              style={{ width: '16px', height: '16px' }}
             />
           </label>
         </div>
 
-        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.75rem' }}>
-          <button type="button" className="btn btn-secondary" onClick={handleReset}>
-            {t('reset_to_global') || 'Reset to Global'}
+        <div className="modal-footer">
+          <button
+            id="perfile-cancel-btn"
+            type="button"
+            className="btn btn-secondary"
+            onClick={onClose}
+          >
+            {t('cancel')}
           </button>
-          <button type="button" className="btn btn-primary" onClick={handleApply}>
-            {t('apply') || 'Apply Override'}
+          <button
+            id="perfile-reset-btn"
+            type="button"
+            className="btn btn-secondary"
+            onClick={handleReset}
+          >
+            {t('reset_to_global')}
+          </button>
+          <button
+            id="perfile-save-btn"
+            type="button"
+            className="btn btn-primary"
+            onClick={handleApply}
+          >
+            {t('apply')}
           </button>
         </div>
       </div>

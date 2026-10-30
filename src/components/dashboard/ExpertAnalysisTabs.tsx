@@ -1,12 +1,16 @@
 import React, { useState, useRef, useLayoutEffect } from 'react';
 import {
-  ShieldAlert,
-  Cpu,
-  Sun,
-  Eye,
-  Sparkles,
+  ShieldCheck,
+  Smartphone,
+  Aperture,
+  Focus,
+  Image as ImageIcon,
   Clock,
   MapPin,
+  Cpu,
+  FileCheck,
+  Layers,
+  ListPlus,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -25,76 +29,99 @@ import { useI18nStore } from '../../store/useI18nStore';
 
 export interface ExpertAnalysisTabsProps {
   asset: ForensicAsset;
+  selectorSlot?: React.ReactNode;
 }
 
-interface TabConfig {
+interface NarrativeTabConfig {
   id: ExifCategory;
-  labelKey: string;
-  defaultLabel: string;
+  analysisKey: string;
+  catKey: string;
   icon: React.ReactNode;
 }
 
-const TABS: TabConfig[] = [
+const NARRATIVE_TABS: NarrativeTabConfig[] = [
   {
-    id: 'Device Hardware',
-    labelKey: 'cat_hardware',
-    defaultLabel: 'Hardware',
-    icon: <Cpu size={16} />,
-  },
-  {
-    id: 'Exposure Settings',
-    labelKey: 'cat_exposure',
-    defaultLabel: 'Exposure',
-    icon: <Sun size={16} />,
-  },
-  {
-    id: 'Optics & Lens',
-    labelKey: 'cat_optics',
-    defaultLabel: 'Optics',
-    icon: <Eye size={16} />,
-  },
-  {
-    id: 'Image Quality',
-    labelKey: 'cat_quality',
-    defaultLabel: 'Quality',
-    icon: <Sparkles size={16} />,
-  },
-  {
-    id: 'Timeline & Date',
-    labelKey: 'cat_timeline',
-    defaultLabel: 'Timeline',
-    icon: <Clock size={16} />,
+    id: 'Standards & Info',
+    analysisKey: 'analysis_integrity',
+    catKey: 'cat_standards',
+    icon: <ShieldCheck size={16} />,
   },
   {
     id: 'Geospatial',
-    labelKey: 'cat_geospatial',
-    defaultLabel: 'Geospatial',
+    analysisKey: 'analysis_geospatial',
+    catKey: 'cat_geospatial',
     icon: <MapPin size={16} />,
   },
   {
-    id: 'Standards & Info',
-    labelKey: 'cat_standards',
-    defaultLabel: 'Digital Integrity',
-    icon: <ShieldAlert size={16} />,
+    id: 'Device Hardware',
+    analysisKey: 'analysis_hardware',
+    catKey: 'cat_hardware',
+    icon: <Smartphone size={16} />,
+  },
+  {
+    id: 'Exposure Settings',
+    analysisKey: 'analysis_exposure',
+    catKey: 'cat_exposure',
+    icon: <Aperture size={16} />,
+  },
+  {
+    id: 'Optics & Lens',
+    analysisKey: 'analysis_optics',
+    catKey: 'cat_optics',
+    icon: <Focus size={16} />,
+  },
+  {
+    id: 'Image Quality',
+    analysisKey: 'analysis_quality',
+    catKey: 'cat_quality',
+    icon: <ImageIcon size={16} />,
+  },
+  {
+    id: 'Timeline & Date',
+    analysisKey: 'analysis_timeline',
+    catKey: 'cat_timeline',
+    icon: <Clock size={16} />,
   },
 ];
 
-export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({ asset }) => {
+const RAW_CATEGORIES: Array<{
+  id: ExifCategory;
+  catKey: string;
+  icon: React.ReactNode;
+}> = [
+  { id: 'Device Hardware', catKey: 'cat_hardware', icon: <Smartphone size={16} /> },
+  { id: 'Exposure Settings', catKey: 'cat_exposure', icon: <Aperture size={16} /> },
+  { id: 'Optics & Lens', catKey: 'cat_optics', icon: <Focus size={16} /> },
+  { id: 'Image Quality', catKey: 'cat_quality', icon: <ImageIcon size={16} /> },
+  { id: 'Timeline & Date', catKey: 'cat_timeline', icon: <Clock size={16} /> },
+  { id: 'Geospatial', catKey: 'cat_geospatial', icon: <MapPin size={16} /> },
+  { id: 'Standards & Info', catKey: 'cat_standards', icon: <FileCheck size={16} /> },
+  { id: 'Miscellaneous', catKey: 'cat_misc', icon: <Layers size={16} /> },
+];
+
+export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({
+  asset,
+  selectorSlot,
+}) => {
   const { currentLang, t } = useI18nStore();
-  const [activeCategory, setActiveCategory] = useState<ExifCategory>('Device Hardware');
+  const [activeNarrativeTab, setActiveNarrativeTab] =
+    useState<ExifCategory>('Standards & Info');
+  const [activeRawCategory, setActiveRawCategory] =
+    useState<ExifCategory>('Device Hardware');
 
   const wrapperRef = useRef<HTMLDivElement>(null);
   const activePaneRef = useRef<HTMLDivElement>(null);
+  const rawMetadataRef = useRef<HTMLDivElement>(null);
 
-  // REQ-UI-005: Smooth Expert Tab Height Transitions
   useLayoutEffect(() => {
     if (!wrapperRef.current || !activePaneRef.current) return;
     const currentHeight = activePaneRef.current.offsetHeight;
     if (currentHeight > 0) {
-      wrapperRef.current.style.transition = 'min-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
+      wrapperRef.current.style.transition =
+        'min-height 0.35s cubic-bezier(0.4, 0, 0.2, 1)';
       wrapperRef.current.style.minHeight = `${currentHeight}px`;
     }
-  }, [activeCategory, asset]);
+  }, [activeNarrativeTab, asset]);
 
   const getNarrativeForCategory = (cat: ExifCategory): string => {
     const exif = (asset.exifData || {}) as Record<string, unknown>;
@@ -121,173 +148,183 @@ export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({ asset })
     }
   };
 
-  const narrativeText = getNarrativeForCategory(activeCategory);
-  const categoryData = asset.categorizedExif?.[activeCategory] || {};
-  const entries = Object.entries(categoryData);
+  const narrativeText = getNarrativeForCategory(activeNarrativeTab);
+  const activeTabConfig =
+    NARRATIVE_TABS.find((item) => item.id === activeNarrativeTab) || NARRATIVE_TABS[0]!;
 
-  const activeIndex = TABS.findIndex((t) => t.id === activeCategory);
+  const activeIndex = NARRATIVE_TABS.findIndex((item) => item.id === activeNarrativeTab);
   const handlePrevTab = () => {
-    const prevIdx = (activeIndex - 1 + TABS.length) % TABS.length;
-    setActiveCategory(TABS[prevIdx]!.id);
+    const prevIdx = (activeIndex - 1 + NARRATIVE_TABS.length) % NARRATIVE_TABS.length;
+    setActiveNarrativeTab(NARRATIVE_TABS[prevIdx]!.id);
   };
   const handleNextTab = () => {
-    const nextIdx = (activeIndex + 1) % TABS.length;
-    setActiveCategory(TABS[nextIdx]!.id);
+    const nextIdx = (activeIndex + 1) % NARRATIVE_TABS.length;
+    setActiveNarrativeTab(NARRATIVE_TABS[nextIdx]!.id);
   };
 
+  const rawIndex = RAW_CATEGORIES.findIndex((item) => item.id === activeRawCategory);
+  const handlePrevRaw = () => {
+    const prevIdx = (rawIndex - 1 + RAW_CATEGORIES.length) % RAW_CATEGORIES.length;
+    setActiveRawCategory(RAW_CATEGORIES[prevIdx]!.id);
+  };
+  const handleNextRaw = () => {
+    const nextIdx = (rawIndex + 1) % RAW_CATEGORIES.length;
+    setActiveRawCategory(RAW_CATEGORIES[nextIdx]!.id);
+  };
+
+  const rawData = asset.categorizedExif?.[activeRawCategory] || {};
+  const rawEntries = Object.entries(rawData);
+
   return (
-    <div className="expert-card card">
-      {/* Tab Navigation Header */}
-      <div className="expert-tabs-container">
-        {/* Mobile Arrow Controls */}
-        <button
-          type="button"
-          className="tabs-arrow left"
-          onClick={handlePrevTab}
-          title="Previous Tab"
-          style={{
-            position: 'absolute',
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: '36px',
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ChevronLeft size={18} />
-        </button>
+    <>
+      <div id="expert-analysis-card" className="card expert-card mb-6">
+        {selectorSlot}
 
-        {TABS.map((tab) => {
-          const isActive = tab.id === activeCategory;
-          const hasAlert =
-            tab.id === 'Standards & Info' &&
-            asset.integrityAlerts &&
-            asset.integrityAlerts.length > 0;
+        <div className="card-header">
+          <Cpu size={18} />
+          <h3 id="individual-analysis-title">
+            {t('dynamic_asset_analysis', { name: asset.fileName })}
+          </h3>
+          <span className="badge">{t('forensic_grade')}</span>
+        </div>
 
-          return (
+        <div id="expert-analysis-content" className="card-body expert-body">
+          <div className="expert-tabs-wrapper">
             <button
-              key={tab.id}
               type="button"
-              className={`expert-tab-btn ${isActive ? 'active' : ''}`}
-              onClick={() => setActiveCategory(tab.id)}
+              className="tabs-arrow left"
+              onClick={handlePrevTab}
+              aria-label="Previous Tab"
             >
-              {tab.icon}
-              <span>{t(tab.labelKey) || tab.defaultLabel}</span>
-              {hasAlert && <span className="tab-badge badge-warning" />}
+              <ChevronLeft size={16} />
             </button>
-          );
-        })}
 
-        <button
-          type="button"
-          className="tabs-arrow right"
-          onClick={handleNextTab}
-          title="Next Tab"
-          style={{
-            position: 'absolute',
-            right: 0,
-            top: 0,
-            bottom: 0,
-            width: '36px',
-            background: 'transparent',
-            border: 'none',
-            color: 'var(--text-muted)',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <ChevronRight size={18} />
-        </button>
-      </div>
-
-      {/* Tab Panes Wrapper with Dynamic minHeight Transition */}
-      <div className="expert-panes-wrapper" ref={wrapperRef}>
-        <div className="expert-tab-pane active" ref={activePaneRef} style={{ padding: '1.5rem' }}>
-          {/* Integrity Alerts if on Digital Integrity tab */}
-          {activeCategory === 'Standards & Info' && asset.integrityAlerts && asset.integrityAlerts.length > 0 && (
-            <div style={{ marginBottom: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-              {asset.integrityAlerts.map((alert, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    backgroundColor: alert.severity === 'critical' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                    border: `1px solid ${alert.severity === 'critical' ? '#ef4444' : '#f59e0b'}`,
-                    borderRadius: '8px',
-                    padding: '0.75rem 1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.75rem',
-                  }}
-                >
-                  <ShieldAlert
-                    size={20}
-                    color={alert.severity === 'critical' ? '#ef4444' : '#f59e0b'}
-                  />
-                  <div>
-                    <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)' }}>
-                      {alert.type.toUpperCase().replace(/_/g, ' ')}
-                    </span>
-                    <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      {alert.defaultMessage}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            <div className="expert-tabs-container">
+              {NARRATIVE_TABS.map((tab) => {
+                const isActive = tab.id === activeNarrativeTab;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    className={`expert-tab-btn ${isActive ? 'active' : ''}`}
+                    onClick={() => setActiveNarrativeTab(tab.id)}
+                  >
+                    {tab.icon}
+                    <span>{t(tab.analysisKey)}</span>
+                  </button>
+                );
+              })}
             </div>
-          )}
 
-          {/* Narrative Storytelling Bubble */}
-          <div className="expert-narrative-bubble" style={{ marginBottom: '1.5rem' }}>
-            <p style={{ whiteSpace: 'pre-line', lineHeight: 1.6 }}>
-              {narrativeText || t('no_narrative_available') || 'No metadata narrative available.'}
-            </p>
+            <button
+              type="button"
+              className="tabs-arrow right"
+              onClick={handleNextTab}
+              aria-label="Next Tab"
+            >
+              <ChevronRight size={16} />
+            </button>
           </div>
 
-          {/* Detailed EXIF Key-Value Table */}
-          <div className="forensic-scroll-container">
-            {entries.length === 0 ? (
-              <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
-                {t('no_metadata_found') || 'No metadata properties recorded for this domain.'}
+          <div className="expert-panes-wrapper" ref={wrapperRef}>
+            <div className="expert-tab-pane active" ref={activePaneRef}>
+              <div
+                className="expert-narrative-bubble"
+                dangerouslySetInnerHTML={{
+                  __html: (narrativeText || t('no_data_narrative', {}, 'narratives')).replace(
+                    /\n/g,
+                    '<br/>'
+                  ),
+                }}
+              />
+
+              {activeNarrativeTab !== 'Standards & Info' && (
+                <div className="expert-pane-actions">
+                  <button
+                    type="button"
+                    className="btn-link jump-to-cat-btn"
+                    onClick={() => {
+                      setActiveRawCategory(activeNarrativeTab);
+                      rawMetadataRef.current?.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'nearest',
+                      });
+                    }}
+                  >
+                    <ListPlus size={14} />{' '}
+                    {t('view_details', { cat: t(activeTabConfig.catKey) })}
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Categorized Raw Metadata Tabs */}
+      <div id="metadata-container" ref={rawMetadataRef}>
+        <div className="category-tabs-wrapper">
+          <button
+            type="button"
+            className="tabs-arrow left"
+            onClick={handlePrevRaw}
+            aria-label="Previous Category"
+          >
+            <ChevronLeft size={16} />
+          </button>
+
+          <div className="category-tabs-container">
+            {RAW_CATEGORIES.map((cat) => {
+              const count = Object.keys(asset.categorizedExif?.[cat.id] || {}).length;
+              const isActive = cat.id === activeRawCategory;
+              return (
+                <button
+                  key={cat.id}
+                  type="button"
+                  className={`cat-tab-btn ${isActive ? 'active' : ''}`}
+                  onClick={() => setActiveRawCategory(cat.id)}
+                >
+                  {cat.icon}
+                  <span>{t(cat.catKey)}</span>
+                  <span className="tab-badge">{count}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            type="button"
+            className="tabs-arrow right"
+            onClick={handleNextRaw}
+            aria-label="Next Category"
+          >
+            <ChevronRight size={16} />
+          </button>
+        </div>
+
+        <div className="category-panes-wrapper">
+          <div className="cat-tab-pane active">
+            {rawEntries.length === 0 ? (
+              <div className="empty-category-msg">
+                {t('no_metadata_tags', {}, 'narratives')}
               </div>
             ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                    <th style={{ textAlign: 'left', padding: '6px 10px', width: '40%' }}>{t('property') || 'Property'}</th>
-                    <th style={{ textAlign: 'left', padding: '6px 10px', width: '60%' }}>{t('value') || 'Value'}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {entries.map(([key, val], idx) => (
-                    <tr
-                      key={key}
-                      style={{
-                        borderBottom: '1px solid var(--border-color)',
-                        backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)',
-                      }}
-                    >
-                      <td style={{ padding: '8px 10px', color: 'var(--text-muted)', fontWeight: 500 }}>
-                        {key}
-                      </td>
-                      <td style={{ padding: '8px 10px', color: 'var(--text-main)', fontFamily: 'var(--font-mono)' }}>
-                        {formatExifValue(key, val, currentLang)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+              <div className="data-grid">
+                {rawEntries.map(([key, val]) => (
+                  <div key={key} className="data-item">
+                    <span className="data-label" title={key}>
+                      {key}
+                    </span>
+                    <span className="data-value">
+                      {formatExifValue(key, val, currentLang)}
+                    </span>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };

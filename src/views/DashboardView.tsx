@@ -1,5 +1,6 @@
 import React from 'react';
 import { useAssetStore } from '../store/useAssetStore';
+import { useI18nStore } from '../store/useI18nStore';
 import { AssetSelectorRibbon } from '../components/dashboard/AssetSelectorRibbon';
 import { AssetPreviewCard } from '../components/dashboard/AssetPreviewCard';
 import { CombinedIntelligenceCard } from '../components/dashboard/CombinedIntelligenceCard';
@@ -11,11 +12,12 @@ export interface DashboardViewProps {
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ renderMapSlot }) => {
   const { assets, activeAssetIndex, setActiveAssetIndex } = useAssetStore();
+  const { t } = useI18nStore();
 
   if (!assets || assets.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '4rem 2rem', color: 'var(--text-muted)' }}>
-        <p>No active investigation session. Please upload images from the home workspace.</p>
+        <p>{t('no_sanitizer_target')}</p>
         <button
           className="btn btn-primary"
           style={{ marginTop: '1rem' }}
@@ -23,7 +25,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ renderMapSlot }) =
             window.location.hash = '#/';
           }}
         >
-          Return to Home
+          {t('return_to_home')}
         </button>
       </div>
     );
@@ -32,35 +34,35 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ renderMapSlot }) =
   const activeAsset = assets[activeAssetIndex] || assets[0]!;
 
   return (
-    <div className="dashboard-container" style={{ maxWidth: '1400px', margin: '0 auto', padding: '1rem' }}>
-      {/* Multi-Asset Selector Ribbon (Batch Mode) */}
-      <AssetSelectorRibbon
+    <section id="dashboard-state" className="dashboard">
+      {/* 1. Full-Width Map Section */}
+      {renderMapSlot}
+
+      {/* 2. Combined Analysis Card (Multi-Asset Only) */}
+      <CombinedIntelligenceCard
         assets={assets}
-        activeAssetIndex={activeAssetIndex}
-        onSelectAsset={setActiveAssetIndex}
+        onInspectAsset={setActiveAssetIndex}
       />
 
-      <div className="dashboard-grid" style={{ marginTop: '1.5rem' }}>
-        {/* Left Column: Asset Preview & Cryptographic Hashes */}
+      {/* 3. Main 2-Column Dashboard Grid */}
+      <div className="dashboard-grid">
         <div className="col-left">
           <AssetPreviewCard asset={activeAsset} />
         </div>
 
-        {/* Right Column: Collective Intelligence, Map Slot, and Expert Analysis Panes */}
         <div className="col-right">
-          {/* Collective Multi-Asset Matrix */}
-          <CombinedIntelligenceCard
-            assets={assets}
-            onInspectAsset={setActiveAssetIndex}
+          <ExpertAnalysisTabs
+            asset={activeAsset}
+            selectorSlot={
+              <AssetSelectorRibbon
+                assets={assets}
+                activeAssetIndex={activeAssetIndex}
+                onSelectAsset={setActiveAssetIndex}
+              />
+            }
           />
-
-          {/* Interactive Map Slot */}
-          {renderMapSlot}
-
-          {/* 7-Category Forensic Expert Analysis */}
-          <ExpertAnalysisTabs asset={activeAsset} />
         </div>
       </div>
-    </div>
+    </section>
   );
 };

@@ -57,6 +57,8 @@ export interface ForensicAsset {
   exifData: Record<string, unknown>;
   categorizedExif: CategorizedExif;
   integrityAlerts: IntegrityAlert[];
+  thumbUrl?: string;
+  fileObject?: File;
 }
 
 export interface TimelineJump {
