@@ -281,7 +281,9 @@
         "session_reset_complete": "Sesi investigasi telah direset",
         "analysis_complete": "Analisis forensik selesai",
         "batch_analysis_complete": "Analisis forensik batch selesai",
-        "sanitizer_ready": "Foto siap untuk disanitasi"
+        "sanitizer_ready": "Foto siap untuk disanitasi",
+        "property": "Properti",
+        "value": "Nilai"
     },
     "narratives": {
         "integrity_clean": "Foto ini mempertahankan detail tanggal dan lokasi aslinya. Tidak ditemukan indikator umum penggunaan alat pengeditan eksternal pada metadata dasar.",

@@ -281,7 +281,9 @@
         "session_reset_complete": "Investigation session reset",
         "analysis_complete": "Forensic analysis completed",
         "batch_analysis_complete": "Batch forensic analysis completed",
-        "sanitizer_ready": "Photos ready for sanitization"
+        "sanitizer_ready": "Photos ready for sanitization",
+        "property": "Property",
+        "value": "Value"
     },
     "narratives": {
         "integrity_clean": "This photo retains its original date and location details. No common indicators of external editing tools were found in the basic metadata.",

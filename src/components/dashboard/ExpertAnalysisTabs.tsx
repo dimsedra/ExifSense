@@ -37,43 +37,43 @@ interface TabConfig {
 const TABS: TabConfig[] = [
   {
     id: 'Device Hardware',
-    labelKey: 'tab_hardware',
+    labelKey: 'cat_hardware',
     defaultLabel: 'Hardware',
     icon: <Cpu size={16} />,
   },
   {
     id: 'Exposure Settings',
-    labelKey: 'tab_exposure',
+    labelKey: 'cat_exposure',
     defaultLabel: 'Exposure',
     icon: <Sun size={16} />,
   },
   {
     id: 'Optics & Lens',
-    labelKey: 'tab_optics',
+    labelKey: 'cat_optics',
     defaultLabel: 'Optics',
     icon: <Eye size={16} />,
   },
   {
     id: 'Image Quality',
-    labelKey: 'tab_quality',
+    labelKey: 'cat_quality',
     defaultLabel: 'Quality',
     icon: <Sparkles size={16} />,
   },
   {
     id: 'Timeline & Date',
-    labelKey: 'tab_timeline',
+    labelKey: 'cat_timeline',
     defaultLabel: 'Timeline',
     icon: <Clock size={16} />,
   },
   {
     id: 'Geospatial',
-    labelKey: 'tab_geospatial',
+    labelKey: 'cat_geospatial',
     defaultLabel: 'Geospatial',
     icon: <MapPin size={16} />,
   },
   {
     id: 'Standards & Info',
-    labelKey: 'tab_standards',
+    labelKey: 'cat_standards',
     defaultLabel: 'Digital Integrity',
     icon: <ShieldAlert size={16} />,
   },
@@ -261,8 +261,8 @@ export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({ asset })
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)' }}>
-                    <th style={{ textAlign: 'left', padding: '6px 10px', width: '40%' }}>Property</th>
-                    <th style={{ textAlign: 'left', padding: '6px 10px', width: '60%' }}>Value</th>
+                    <th style={{ textAlign: 'left', padding: '6px 10px', width: '40%' }}>{t('property') || 'Property'}</th>
+                    <th style={{ textAlign: 'left', padding: '6px 10px', width: '60%' }}>{t('value') || 'Value'}</th>
                   </tr>
                 </thead>
                 <tbody>
