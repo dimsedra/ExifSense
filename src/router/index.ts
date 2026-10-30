@@ -1,4 +1,4 @@
-export type AppRoute = '#/' | '#/dashboard' | '#/sanitize' | '#/guide';
+export type AppRoute = '#/' | '#/dashboard' | '#/sanitize' | '#/history' | '#/guide';
 
 export interface RouteDefinition {
   path: AppRoute;
