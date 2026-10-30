@@ -163,16 +163,16 @@ export const Header: React.FC<HeaderProps> = ({
                     <FileText size={16} /> {t('pdf_doc') || 'PDF Document'}
                   </button>
                   <button onClick={() => handleExportClick('json')}>
-                    <FileJson size={16} /> {t('json_metadata') || 'JSON Metadata'}
+                    <FileJson size={16} /> {t('json_file') || 'JSON Metadata'}
                   </button>
                   <button onClick={() => handleExportClick('csv')}>
-                    <Table size={16} /> {t('csv_matrix') || 'CSV Matrix'}
+                    <Table size={16} /> {t('csv_dataset') || 'CSV Dataset'}
                   </button>
                   <button onClick={() => handleExportClick('md')}>
-                    <FileCode size={16} /> {t('md_report') || 'Markdown Report'}
+                    <FileCode size={16} /> {t('md_file') || 'Markdown File'}
                   </button>
                   <button onClick={() => handleExportClick('clipboard')}>
-                    <ClipboardCopy size={16} /> {t('copy_summary') || 'Copy Summary'}
+                    <ClipboardCopy size={16} /> {t('copy_clipboard') || 'Copy to Clipboard'}
                   </button>
                 </div>
               )}
@@ -184,11 +184,11 @@ export const Header: React.FC<HeaderProps> = ({
             <button
               className="btn btn-ghost"
               id="reset-btn"
-              title={t('reset_session') || 'Reset Session'}
+              title={t('go_to_upload') || 'Reset Session'}
               onClick={onReset}
             >
               <RotateCcw size={16} />
-              <span>{t('reset_session') || 'Reset'}</span>
+              <span>{t('go_to_upload') || 'Reset'}</span>
             </button>
           )}
         </div>

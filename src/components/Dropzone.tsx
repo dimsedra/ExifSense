@@ -116,7 +116,7 @@ export const Dropzone: React.FC<DropzoneProps> = ({
         <div className="dropzone-icon">
           {isProcessing ? <Loader2 size={48} className="animate-spin" /> : details.icon}
         </div>
-        <h2>{isProcessing ? (t('processing_assets') || 'Analyzing Evidence...') : details.title}</h2>
+        <h2>{isProcessing ? (t('analyzing_text') || 'Analyzing Evidence...') : details.title}</h2>
         <p>{details.subtitle}</p>
         <span className="file-types-hint">JPEG, PNG, WEBP, TIFF, HEIC, CR2, RAW</span>
       </div>
