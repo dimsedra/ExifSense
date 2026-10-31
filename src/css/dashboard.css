@@ -857,13 +857,13 @@
 
 /* Chronological Batch Story Card (BP-UI-001) */
 .evidence-highlight {
-    background-color: rgba(229, 224, 216, 0.1);
-    color: #e5e0d8;
-    padding: 0.12rem 0.35rem;
+    background-color: rgba(229, 224, 216, 0.08);
+    color: #f1ede8;
+    padding: 0.08rem 0.3rem;
     border-radius: 4px;
     font-weight: 500;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85em;
+    font-family: inherit;
+    font-size: 0.9em;
     display: inline;
     border: 1px solid rgba(229, 224, 216, 0.15);
 }

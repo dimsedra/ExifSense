@@ -47,20 +47,35 @@ export const ChronologicalStoryCard: React.FC<ChronologicalStoryCardProps> = ({
       })
       .sort((a, b) => a.time - b.time);
 
-    if (geoAssets.length > 0) {
-      const initialAsset = geoAssets[0]!.asset;
-      if (initialAsset.locationData === undefined) {
-        const lat = Number(
-          initialAsset.exifData.latitude ?? initialAsset.exifData.GPSLatitude
-        );
-        const lng = Number(
-          initialAsset.exifData.longitude ?? initialAsset.exifData.GPSLongitude
-        );
-        reverseGeocode(lat, lng).then((locData) => {
-          updateAssetLocation(initialAsset.id, locData);
-        });
-      }
+    let isCancelled = false;
+    const pendingAssets = geoAssets.filter(
+      (item) => item.asset.locationData === undefined
+    );
+
+    if (pendingAssets.length > 0) {
+      const resolveLocations = async () => {
+        for (const item of pendingAssets) {
+          if (isCancelled) break;
+          const a = item.asset;
+          const lat = Number(a.exifData.latitude ?? a.exifData.GPSLatitude);
+          const lng = Number(a.exifData.longitude ?? a.exifData.GPSLongitude);
+          try {
+            const locData = await reverseGeocode(lat, lng);
+            if (!isCancelled && locData) {
+              updateAssetLocation(a.id, locData);
+            }
+          } catch {
+            // ignore network errors
+          }
+        }
+      };
+
+      resolveLocations();
     }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [assets, updateAssetLocation]);
 
   if (!assets || assets.length <= 1) {

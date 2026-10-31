@@ -1,5 +1,5 @@
 import { ForensicAsset } from '../forensics/types';
-import { parseExifDate, formatFullDate } from '../forensics/metadata';
+import { parseExifDate, formatNaturalDate } from '../forensics/metadata';
 import { calculateDistance } from '../forensics/collective';
 import type {
   SupportedLocale,
@@ -82,6 +82,13 @@ function formatDistance(distanceMeters: number): string {
     return `${km} km`;
   }
   return `${distanceMeters} m`;
+}
+
+function formatSpeed(speedKmh: number, locale: SupportedLocale): string {
+  if (speedKmh <= 0) return '0 km/h';
+  const unit = locale === 'id' ? 'km/jam' : locale === 'ar' ? 'كم/ساعة' : 'km/h';
+  const rounded = speedKmh >= 10 ? Math.round(speedKmh) : speedKmh.toFixed(1).replace('.0', '');
+  return `~${rounded} ${unit}`;
 }
 
 /**
@@ -257,7 +264,7 @@ function buildInitialStep(
   format: 'html' | 'markdown' | 'plain',
 ): ChronologicalStoryStep {
   const formattedFileName = formatEvidence(node.fileName, format);
-  const formattedDate = formatFullDate(node.timestamp);
+  const formattedDate = formatNaturalDate(node.timestamp, locale);
   const highlightedDate = formatEvidence(formattedDate, format);
 
   let lensPart = '';
@@ -270,8 +277,11 @@ function buildInitialStep(
       lens: highlightedLens,
     });
   } else if (node.focalLength) {
-    lensString = `${node.focalLength}mm`;
-    const highlightedFocal = formatEvidence(node.focalLength, format);
+    const focalWithUnit = node.focalLength.endsWith('mm')
+      ? node.focalLength
+      : `${node.focalLength}mm`;
+    lensString = focalWithUnit;
+    const highlightedFocal = formatEvidence(focalWithUnit, format);
     lensPart = interpolate(getTemplate('chrono_initial_focal', locale), {
       focal: highlightedFocal,
     });
@@ -339,8 +349,13 @@ function buildSubsequentStep(
   const highlightedElapsedTime = formatEvidence(rawElapsedTime, format);
   const formattedFileName = formatEvidence(curr.fileName, format);
 
+  const formattedDate = formatNaturalDate(curr.timestamp, locale);
+  const highlightedDate = formatEvidence(formattedDate, format);
+
   let distanceMeters: number | undefined;
   let distanceString: string | undefined;
+  let speedKmh: number | undefined;
+  let speedString: string | undefined;
   let transitMode: TransitMode | undefined;
   let narrativeText = '';
 
@@ -365,29 +380,75 @@ function buildSubsequentStep(
 
     const pace = evaluateTransitPace(distanceMeters, diffSeconds);
     transitMode = pace.mode;
+    speedKmh = pace.speedKmh;
     const paceDesc = getTemplate(pace.descriptionKey, locale);
 
     if (pace.mode === 'stationary') {
       const template = getTemplate('chrono_step_stationary', locale);
       narrativeText = interpolate(template, {
         fileName: formattedFileName,
+        date: highlightedDate,
+        elapsedTime: highlightedElapsedTime,
+        distance: highlightedDistance,
+        pace: paceDesc,
+      });
+    } else if (pace.mode === 'anomaly') {
+      const template = getTemplate('chrono_step_anomaly', locale);
+      narrativeText = interpolate(template, {
+        fileName: formattedFileName,
+        date: highlightedDate,
         elapsedTime: highlightedElapsedTime,
         distance: highlightedDistance,
         pace: paceDesc,
       });
     } else {
+      speedString = formatSpeed(pace.speedKmh, locale);
+      const highlightedSpeed = formatEvidence(speedString, format);
       const template = getTemplate('chrono_step_movement', locale);
       narrativeText = interpolate(template, {
         fileName: formattedFileName,
+        date: highlightedDate,
         elapsedTime: highlightedElapsedTime,
         distance: highlightedDistance,
+        speed: highlightedSpeed,
         pace: paceDesc,
       });
     }
+
+    // Location check: whether the reverse geocoding address remained the same or changed
+    let locationClause = '';
+    if (curr.locationName && prev.locationName) {
+      const highlightedLocation = formatEvidence(curr.locationName, format);
+      if (curr.locationName === prev.locationName) {
+        locationClause = interpolate(getTemplate('chrono_location_same', locale), {
+          location: highlightedLocation,
+        });
+      } else {
+        locationClause = interpolate(getTemplate('chrono_location_changed', locale), {
+          location: highlightedLocation,
+        });
+      }
+    } else if (curr.locationName && !prev.locationName) {
+      const highlightedLocation = formatEvidence(curr.locationName, format);
+      locationClause = interpolate(getTemplate('chrono_location_new', locale), {
+        location: highlightedLocation,
+      });
+    } else if (!curr.locationName && !prev.locationName) {
+      if (distanceMeters >= 50 && curr.latitude !== null && curr.longitude !== null) {
+        const coordsStr = `${curr.latitude.toFixed(5)}, ${curr.longitude.toFixed(5)}`;
+        const highlightedCoords = formatEvidence(coordsStr, format);
+        locationClause = interpolate(
+          getTemplate('chrono_location_coords_changed', locale),
+          { coordinates: highlightedCoords },
+        );
+      }
+    }
+    narrativeText += locationClause;
   } else {
     const template = getTemplate('chrono_step_no_gps', locale);
     narrativeText = interpolate(template, {
       fileName: formattedFileName,
+      date: highlightedDate,
       elapsedTime: highlightedElapsedTime,
     });
   }
@@ -415,7 +476,9 @@ function buildSubsequentStep(
   if (curr.lensModel) {
     lensString = curr.lensModel;
   } else if (curr.focalLength) {
-    lensString = `${curr.focalLength}mm`;
+    lensString = curr.focalLength.endsWith('mm')
+      ? curr.focalLength
+      : `${curr.focalLength}mm`;
   }
 
   if (curr.lensModel && prev.lensModel && curr.lensModel !== prev.lensModel) {
@@ -433,8 +496,14 @@ function buildSubsequentStep(
     curr.focalLength !== prev.focalLength
   ) {
     lensChanged = true;
-    const prevF = formatEvidence(prev.focalLength, format);
-    const currF = formatEvidence(curr.focalLength, format);
+    const prevFWithUnit = prev.focalLength.endsWith('mm')
+      ? prev.focalLength
+      : `${prev.focalLength}mm`;
+    const currFWithUnit = curr.focalLength.endsWith('mm')
+      ? curr.focalLength
+      : `${curr.focalLength}mm`;
+    const prevF = formatEvidence(prevFWithUnit, format);
+    const currF = formatEvidence(currFWithUnit, format);
     const focalClause = interpolate(getTemplate('chrono_focal_changed', locale), {
       prevFocal: prevF,
       currFocal: currF,
@@ -448,11 +517,14 @@ function buildSubsequentStep(
     fileName: curr.fileName,
     narrativeText,
     evidence: {
-      formattedDate: formatFullDate(curr.timestamp),
+      formattedDate,
       elapsedTimeString: rawElapsedTime,
       distanceMeters,
       distanceString,
+      speedKmh,
+      speedString,
       transitMode,
+      locationName: curr.locationName || undefined,
       deviceString: curr.deviceString,
       deviceChanged,
       lensString,

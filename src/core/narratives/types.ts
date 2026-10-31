@@ -48,6 +48,8 @@ export interface ChronologicalStoryStep {
     elapsedTimeString?: string;
     distanceMeters?: number;
     distanceString?: string;
+    speedKmh?: number;
+    speedString?: string;
     transitMode?: TransitMode;
     locationName?: string;
     deviceString: string;

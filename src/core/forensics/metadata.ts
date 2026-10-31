@@ -170,6 +170,42 @@ export function formatFullDate(dateVal: unknown): string {
 }
 
 /**
+ * Formats a Date or EXIF date value into a natural, localized string.
+ * (e.g. "Selasa, 19 Maret 2019 pukul 16:04:23", "Tuesday, March 19, 2019 at 16:04:23").
+ */
+export function formatNaturalDate(
+  dateVal: unknown,
+  locale: string = 'en',
+): string {
+  const d = dateVal instanceof Date ? dateVal : parseExifDate(dateVal);
+  if (!d || isNaN(d.getTime())) return 'Unknown';
+
+  const localeMap: Record<string, string> = {
+    id: 'id-ID',
+    en: 'en-US',
+    ar: 'ar-SA',
+  };
+  const targetLocale = localeMap[locale] || 'en-US';
+
+  const formatter = new Intl.DateTimeFormat(targetLocale, {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  });
+
+  let str = formatter.format(d);
+  if (locale === 'id') {
+    str = str.replace(/pukul (\d{2})\.(\d{2})\.(\d{2})/, 'pukul $1:$2:$3');
+  }
+  return str;
+}
+
+/**
  * Formats specialized EXIF values for human-readable presentation (REQ-META-001).
  */
 export function formatExifValue(

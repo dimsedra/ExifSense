@@ -238,11 +238,15 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(story.steps[0]!.narrativeText).toContain('FE 24-70mm F2.8 GM II');
       expect(story.steps[0]!.narrativeText).toContain('48.85840, 2.29450');
 
-      // 4. Step 1 (motorized transit inference)
+      // 4. Step 1 (motorized transit inference with transparent speed calculation)
       expect(story.steps[1]!.fileName).toBe('IMG_0002.JPG');
+      expect(story.steps[1]!.narrativeText).toContain('Wednesday, October 28, 2026');
       expect(story.steps[1]!.narrativeText).toContain('30 minutes later');
-      expect(story.steps[1]!.narrativeText).toContain('suggests mobile transportation');
+      expect(story.steps[1]!.narrativeText).toContain('at an estimated speed of ~24 km/h');
+      expect(story.steps[1]!.narrativeText).toContain('typically indicates vehicular transit');
       expect(story.steps[1]!.evidence.transitMode).toBe('motorized');
+      expect(story.steps[1]!.evidence.speedKmh).toBeCloseTo(24);
+      expect(story.steps[1]!.evidence.speedString).toBe('~24 km/h');
       expect(story.steps[1]!.evidence.deviceChanged).toBe(false);
       expect(story.steps[1]!.evidence.lensChanged).toBe(false);
 
@@ -408,7 +412,8 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(idStory.steps[0]!.narrativeText).toContain('Urutan dimulai dengan photo_id_a.jpg');
       expect(idStory.steps[0]!.narrativeText).toContain('menggunakan lensa FE 24-70mm');
       expect(idStory.steps[1]!.narrativeText).toContain('30 menit kemudian');
-      expect(idStory.steps[1]!.narrativeText).toContain('menunjukkan transportasi kendaraan');
+      expect(idStory.steps[1]!.narrativeText).toContain('estimasi kecepatan ~22 km/jam');
+      expect(idStory.steps[1]!.narrativeText).toContain('pada umumnya menunjukkan transportasi kendaraan');
       expect(idStory.steps[1]!.narrativeText).toContain('Lensa kamera berganti dari FE 24-70mm ke FE 70-200mm');
 
       // Arabic
@@ -422,7 +427,8 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(arStory.steps[0]!.narrativeText).toContain('يبدأ التسلسل بـ photo_id_a.jpg');
       expect(arStory.steps[0]!.narrativeText).toContain('باستخدام عدسة FE 24-70mm');
       expect(arStory.steps[1]!.narrativeText).toContain('بعد 30 دقيقة');
-      expect(arStory.steps[1]!.narrativeText).toContain('تشير إلى الانتقال بالمركبة');
+      expect(arStory.steps[1]!.narrativeText).toContain('بسرعة تقديرية ~22 كم/ساعة');
+      expect(arStory.steps[1]!.narrativeText).toContain('تشير عموماً إلى الانتقال بالمركبة');
       expect(arStory.steps[1]!.narrativeText).toContain('تغيرت عدسة الكاميرا من FE 24-70mm إلى FE 70-200mm');
     });
 
@@ -456,6 +462,55 @@ describe('Chronological Batch Narrative Engine', () => {
         format: 'plain',
       });
       expect(idStory.steps[0]!.narrativeText).toContain('di Ballyhennan Crescent, Tarbet, Scotland (koordinat 56.20357, -4.71829)');
+    });
+
+    it('detects and explains whether subsequent images remain at the same reverse geocoded location or moved', () => {
+      const asset1 = createMockAsset({
+        fileName: '200.jpg',
+        locationName: 'A82, Highland, Scotland',
+        exifData: {
+          DateTimeOriginal: '2019:03:19 16:04:23',
+          latitude: 56.63213,
+          longitude: -4.78969,
+        },
+      });
+      const asset2 = createMockAsset({
+        fileName: '201.jpg',
+        locationName: 'A82, Highland, Scotland', // Same reverse geocode location!
+        exifData: {
+          DateTimeOriginal: '2019:03:19 16:05:23',
+          latitude: 56.64500,
+          longitude: -4.79500,
+        },
+      });
+      const asset3 = createMockAsset({
+        fileName: '202.jpg',
+        locationName: 'Glen Coe, Highland, Scotland', // Changed reverse geocode location!
+        exifData: {
+          DateTimeOriginal: '2019:03:19 16:08:23',
+          latitude: 56.68000,
+          longitude: -4.85000,
+        },
+      });
+
+      const idStory = generateChronologicalBatchStory([asset1, asset2, asset3], {
+        locale: 'id',
+        format: 'plain',
+      });
+
+      // Step 2 should detect that reverse geocoded location remains the same
+      expect(idStory.steps[1]!.narrativeText).toContain('Lokasi masih berada di area yang sama: A82, Highland, Scotland');
+
+      // Step 3 should detect that reverse geocoded location moved to a new place
+      expect(idStory.steps[2]!.narrativeText).toContain('Lokasi berpindah ke Glen Coe, Highland, Scotland');
+
+      // Verify English equivalents
+      const enStory = generateChronologicalBatchStory([asset1, asset2, asset3], {
+        locale: 'en',
+        format: 'plain',
+      });
+      expect(enStory.steps[1]!.narrativeText).toContain('Location remains in the same area: A82, Highland, Scotland');
+      expect(enStory.steps[2]!.narrativeText).toContain('Location moved to Glen Coe, Highland, Scotland');
     });
   });
 });

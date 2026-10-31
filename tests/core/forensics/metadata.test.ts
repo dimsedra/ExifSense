@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { categorizeExif, parseExifDate, formatExifValue, formatFullDate, formatLabel } from '../../../src/core/forensics/metadata.ts';
+import { categorizeExif, parseExifDate, formatExifValue, formatFullDate, formatNaturalDate, formatLabel } from '../../../src/core/forensics/metadata.ts';
 
 describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
   it('correctly maps properties across the 8 standardized categories', () => {
@@ -147,6 +147,20 @@ describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
       const d = new Date(2026, 4, 14, 9, 5, 2);
       expect(formatFullDate(d)).toBe('14-05-2026 09:05:02');
       expect(formatFullDate(null)).toBe('Unknown');
+    });
+
+    it('formats natural localized dates for id, en, and ar locales', () => {
+      const d = new Date('2019-03-19T16:04:23');
+      expect(formatNaturalDate(d, 'id')).toContain('Selasa');
+      expect(formatNaturalDate(d, 'id')).toContain('19 Maret 2019');
+      expect(formatNaturalDate(d, 'id')).toContain('pukul 16:04:23');
+
+      expect(formatNaturalDate(d, 'en')).toContain('Tuesday');
+      expect(formatNaturalDate(d, 'en')).toContain('March 19, 2019');
+      expect(formatNaturalDate(d, 'en')).toContain('16:04:23');
+
+      expect(formatNaturalDate(d, 'ar')).toContain('مارس');
+      expect(formatNaturalDate(null, 'en')).toBe('Unknown');
     });
 
     it('formats camelCase and PascalCase EXIF keys into readable space-separated labels', () => {
