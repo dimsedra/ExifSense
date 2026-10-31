@@ -855,3 +855,107 @@
     }
 }
 
+/* Chronological Batch Story Card (BP-UI-001) */
+.evidence-highlight {
+    background-color: rgba(229, 224, 216, 0.08);
+    color: #f1ede8;
+    padding: 0.08rem 0.3rem;
+    border-radius: 4px;
+    font-weight: 500;
+    font-family: inherit;
+    font-size: 0.9em;
+    display: inline;
+    border: 1px solid rgba(229, 224, 216, 0.15);
+}
+
+.chronological-story-card {
+    margin-bottom: 1.5rem;
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    overflow: clip;
+}
+
+.chronological-lead-baseline {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-main);
+    line-height: 1.6;
+    padding: 1rem 1.25rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: baseline;
+    gap: 0.65rem;
+}
+
+.chronological-timeline-steps {
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem;
+    gap: 1.25rem;
+}
+
+.chronological-step-item {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+    position: relative;
+}
+
+.chronological-step-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--secondary);
+    border: 1px solid var(--border-color);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem;
+    font-weight: 600;
+    flex-shrink: 0;
+    margin-top: 0.1rem;
+}
+
+.chronological-step-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.chronological-step-text {
+    font-size: 0.875rem;
+    line-height: 1.6;
+    color: var(--text-main);
+    margin: 0;
+}
+
+.chronological-step-actions {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.chronological-inspect-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.chronological-inspect-btn:hover {
+    color: var(--text-main);
+    border-color: var(--accent);
+    background: rgba(229, 224, 216, 0.05);
+}
+
+
