@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAssetStore } from '../store/useAssetStore';
 import { useI18nStore } from '../store/useI18nStore';
+import { reverseGeocode } from '../services/mapHelpers';
 import { AssetSelectorRibbon } from '../components/dashboard/AssetSelectorRibbon';
 import { AssetPreviewCard } from '../components/dashboard/AssetPreviewCard';
 import { CombinedIntelligenceCard } from '../components/dashboard/CombinedIntelligenceCard';
+import { ChronologicalStoryCard } from '../components/dashboard/ChronologicalStoryCard';
 import { ExpertAnalysisTabs } from '../components/dashboard/ExpertAnalysisTabs';
 
 export interface DashboardViewProps {
@@ -11,10 +13,30 @@ export interface DashboardViewProps {
 }
 
 export const DashboardView: React.FC<DashboardViewProps> = ({ renderMapSlot }) => {
-  const { assets, activeAssetIndex, setActiveAssetIndex } = useAssetStore();
+  const { assets, activeAssetIndex, setActiveAssetIndex, updateAssetLocation } = useAssetStore();
   const { t } = useI18nStore();
 
-  if (!assets || assets.length === 0) {
+  const activeAsset = assets[activeAssetIndex] || assets[0];
+
+  useEffect(() => {
+    if (!activeAsset) return;
+    const lat = activeAsset.exifData?.latitude ?? activeAsset.exifData?.GPSLatitude;
+    const lng = activeAsset.exifData?.longitude ?? activeAsset.exifData?.GPSLongitude;
+
+    if (lat != null && lng != null && activeAsset.locationData === undefined) {
+      let isMounted = true;
+      reverseGeocode(Number(lat), Number(lng)).then((locData) => {
+        if (isMounted) {
+          updateAssetLocation(activeAsset.id, locData);
+        }
+      });
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [activeAsset, updateAssetLocation]);
+
+  if (!assets || assets.length === 0 || !activeAsset) {
     return (
       <div style={{ textAlign: 'center', padding: '4rem 2rem', color: 'var(--text-muted)' }}>
         <p>{t('no_sanitizer_target')}</p>
@@ -31,14 +53,18 @@ export const DashboardView: React.FC<DashboardViewProps> = ({ renderMapSlot }) =
     );
   }
 
-  const activeAsset = assets[activeAssetIndex] || assets[0]!;
-
   return (
-    <section id="dashboard-state" className="dashboard">
+    <section id="dashboard-state" className="dashboard state-container active">
       {/* 1. Full-Width Map Section */}
       {renderMapSlot}
 
-      {/* 2. Combined Analysis Card (Multi-Asset Only) */}
+      {/* 2. Chronological Batch Narrative (Multi-Asset Only) */}
+      <ChronologicalStoryCard
+        assets={assets}
+        onInspectAsset={setActiveAssetIndex}
+      />
+
+      {/* 3. Combined Analysis Card (Multi-Asset Only) */}
       <CombinedIntelligenceCard
         assets={assets}
         onInspectAsset={setActiveAssetIndex}

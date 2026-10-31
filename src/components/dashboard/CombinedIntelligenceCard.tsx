@@ -10,6 +10,7 @@ import {
   Cpu,
   Clock,
   MapPin,
+  Activity,
 } from 'lucide-react';
 import type { ForensicAsset } from '../../core/forensics/types';
 import { evaluateCollectiveIntelligence } from '../../core/forensics/collective';
@@ -96,12 +97,15 @@ export const CombinedIntelligenceCard: React.FC<CombinedIntelligenceCardProps> =
       <div className="card-header">
         <Layers size={18} />
         <h3>{t('combined_intel')}</h3>
-        <span className="badge">{t('cross_asset')}</span>
+        <div className="forensic-badge">
+          <Activity size={14} />
+          <span>{t('cross_asset')}</span>
+        </div>
       </div>
 
       <div id="combined-analysis-content" className="card-body expert-body">
-        <div className="expert-tabs-wrapper">
-          <div className="expert-tabs-container">
+        <div className="tabs-wrapper">
+          <div className="expert-tabs-container combined-tabs">
             {narratives.map((section, idx) => (
               <button
                 key={idx}

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import { MapPin, Navigation, ExternalLink, Map as MapIcon } from 'lucide-react';
 import type { ForensicAsset } from '../core/forensics/types';
-import { extractAssetCoordinates } from '../services/mapHelpers';
+import { extractAssetCoordinates, fetchOsrmRoute, isValidCoordinate } from '../services/mapHelpers';
 import { parseExifDate, formatFullDate } from '../core/forensics/metadata';
 import { useI18nStore } from '../store/useI18nStore';
 
@@ -23,7 +23,7 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.FeatureGroup | null>(null);
-  const polylineLayerRef = useRef<L.Polyline | null>(null);
+  const polylineLayerRef = useRef<L.Layer | null>(null);
   const [routeEnabled, setRouteEnabled] = useState(showPath);
 
   const waypoints = extractAssetCoordinates(assets);
@@ -151,14 +151,64 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
     const featureGroup = L.featureGroup(markers).addTo(map);
     markersLayerRef.current = featureGroup;
 
-    if (routeEnabled && latLngs.length >= 2) {
-      const polyline = L.polyline(latLngs, {
-        color: '#f59e0b',
-        weight: 3,
-        dashArray: '6, 8',
-        opacity: 0.85,
-      }).addTo(map);
-      polylineLayerRef.current = polyline;
+    let isCancelled = false;
+
+    const sortedWaypoints = assets
+      .filter((a) => {
+        const lat = a.exifData?.latitude ?? a.exifData?.GPSLatitude;
+        const lng = a.exifData?.longitude ?? a.exifData?.GPSLongitude;
+        return isValidCoordinate(lat, lng);
+      })
+      .map((a) => {
+        const lat = Number(a.exifData?.latitude ?? a.exifData?.GPSLatitude);
+        const lng = Number(a.exifData?.longitude ?? a.exifData?.GPSLongitude);
+        const rawDate =
+          a.exifData?.DateTimeOriginal ||
+          a.exifData?.CreateDate ||
+          a.exifData?.DateTime;
+        const d = parseExifDate(rawDate);
+        return {
+          assetId: a.id,
+          fileName: a.fileName,
+          lat,
+          lng,
+          time: d ? d.getTime() : a.fileDate || 0,
+        };
+      })
+      .sort((a, b) => a.time - b.time);
+
+    if (routeEnabled && sortedWaypoints.length >= 2) {
+      fetchOsrmRoute(sortedWaypoints).then((geometry) => {
+        if (isCancelled || !mapInstanceRef.current) return;
+
+        if (polylineLayerRef.current) {
+          mapInstanceRef.current.removeLayer(polylineLayerRef.current);
+          polylineLayerRef.current = null;
+        }
+
+        if (geometry) {
+          const routeLayer = L.geoJSON(geometry, {
+            style: {
+              color: '#2563eb',
+              weight: 4,
+              opacity: 0.7,
+              dashArray: '10, 10',
+            },
+          }).addTo(mapInstanceRef.current);
+          polylineLayerRef.current = routeLayer;
+        } else {
+          const straightPath = L.polyline(
+            sortedWaypoints.map((p) => [p.lat, p.lng] as L.LatLngTuple),
+            {
+              color: '#2563eb',
+              weight: 3,
+              opacity: 0.5,
+              dashArray: '6, 8',
+            }
+          ).addTo(mapInstanceRef.current);
+          polylineLayerRef.current = straightPath;
+        }
+      });
     }
 
     try {
@@ -166,6 +216,10 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
     } catch {
       // fitBounds fallback
     }
+
+    return () => {
+      isCancelled = true;
+    };
   }, [waypoints.length, activeAssetId, routeEnabled, assets, onMarkerClick, t]);
 
   if (waypoints.length === 0) {
@@ -181,15 +235,15 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
         </div>
         {waypoints.length > 1 && (
           <div className="map-controls">
-            <label id="route-toggle-container" className="route-toggle">
+            <label id="route-toggle-container" className="switch-control" title={t('show_route')}>
               <input
                 type="checkbox"
-                id="route-toggle-checkbox"
+                id="show-path-toggle"
                 checked={routeEnabled}
                 onChange={(e) => setRouteEnabled(e.target.checked)}
               />
-              <span className="toggle-slider" />
-              <span className="toggle-label">{t('show_route')}</span>
+              <span className="switch-label">{t('show_route')}</span>
+              <span className="switch-slider" />
             </label>
           </div>
         )}
@@ -215,7 +269,7 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
                 href={`https://www.google.com/maps?q=${activeWaypoint.lat},${activeWaypoint.lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-link"
+                className="map-link"
               >
                 <ExternalLink size={14} /> Google Maps
               </a>
@@ -224,7 +278,7 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
                 href={`https://www.openstreetmap.org/?mlat=${activeWaypoint.lat}&mlon=${activeWaypoint.lng}#map=16/${activeWaypoint.lat}/${activeWaypoint.lng}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="btn-link"
+                className="map-link"
               >
                 <MapIcon size={14} /> OpenStreetMap
               </a>

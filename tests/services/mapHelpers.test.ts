@@ -119,4 +119,135 @@ describe('mapHelpers', () => {
       expect(waypoints[0]!.fileName).toBe('crime-scene.jpg');
     });
   });
+
+  describe('Reverse Geocoding', () => {
+    it('returns null when coordinates are invalid', async () => {
+      const { reverseGeocode } = await import('../../src/services/mapHelpers');
+      const res = await reverseGeocode(999, 999);
+      expect(res).toBeNull();
+    });
+
+    it('caches successful reverse geocode results in memory', async () => {
+      const { reverseGeocode, clearGeocodeCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+
+      const mockResponse = {
+        display_name: 'Luss, Argyll and Bute, Scotland',
+        address: { village: 'Luss', country: 'United Kingdom' },
+      };
+
+      const originalFetch = globalThis.fetch;
+      let callCount = 0;
+      globalThis.fetch = (async () => {
+        callCount++;
+        return {
+          ok: true,
+          json: async () => mockResponse,
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const first = await reverseGeocode(56.1023, -4.6404);
+        expect(first?.display_name).toBe('Luss, Argyll and Bute, Scotland');
+        expect(callCount).toBe(1);
+
+        const second = await reverseGeocode(56.1023, -4.6404);
+        expect(second?.display_name).toBe('Luss, Argyll and Bute, Scotland');
+        expect(callCount).toBe(1); // Served from cache
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+      }
+    });
+
+    it('returns null and does not throw when network fetch fails', async () => {
+      const { reverseGeocode, clearGeocodeCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = (async () => {
+        throw new Error('Network error');
+      }) as typeof fetch;
+
+      try {
+        const res = await reverseGeocode(56.1023, -4.6404);
+        expect(res).toBeNull();
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+      }
+    });
+  });
+
+  describe('OSRM Road Routing', () => {
+    it('returns null when waypoints are fewer than 2', async () => {
+      const { fetchOsrmRoute } = await import('../../src/services/mapHelpers');
+      const res = await fetchOsrmRoute([{ lat: 56.1, lng: -4.6 }]);
+      expect(res).toBeNull();
+    });
+
+    it('fetches and caches driving geometry from OSRM', async () => {
+      const { fetchOsrmRoute, clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearOsrmCache();
+
+      const mockRoute = {
+        type: 'LineString',
+        coordinates: [
+          [-4.71829, 56.20357],
+          [-4.71839, 56.20353],
+        ],
+      };
+
+      const originalFetch = globalThis.fetch;
+      let callCount = 0;
+      globalThis.fetch = (async () => {
+        callCount++;
+        return {
+          ok: true,
+          json: async () => ({
+            code: 'Ok',
+            routes: [{ geometry: mockRoute }],
+          }),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const points = [
+          { lat: 56.20357, lng: -4.71829 },
+          { lat: 56.20399, lng: -4.71717 },
+        ];
+        const res1 = await fetchOsrmRoute(points);
+        expect(res1).toEqual(mockRoute);
+        expect(callCount).toBe(1);
+
+        const res2 = await fetchOsrmRoute(points);
+        expect(res2).toEqual(mockRoute);
+        expect(callCount).toBe(1); // Cached
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearOsrmCache();
+      }
+    });
+
+    it('returns null gracefully on OSRM error', async () => {
+      const { fetchOsrmRoute, clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearOsrmCache();
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = (async () => {
+        throw new Error('OSRM network failure');
+      }) as typeof fetch;
+
+      try {
+        const res = await fetchOsrmRoute([
+          { lat: 56.20357, lng: -4.71829 },
+          { lat: 56.20399, lng: -4.71717 },
+        ]);
+        expect(res).toBeNull();
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearOsrmCache();
+      }
+    });
+  });
 });

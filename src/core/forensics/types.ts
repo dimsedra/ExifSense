@@ -59,6 +59,8 @@ export interface ForensicAsset {
   integrityAlerts: IntegrityAlert[];
   thumbUrl?: string;
   fileObject?: File;
+  locationData?: Record<string, unknown> | null;
+  locationName?: string | null;
 }
 
 export interface TimelineJump {

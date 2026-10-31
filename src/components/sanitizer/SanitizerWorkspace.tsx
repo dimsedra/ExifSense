@@ -28,7 +28,7 @@ import type {
   PrivacyScoreResult,
 } from '../../core/sanitizer/types';
 import type { ExifCategory } from '../../core/forensics/types';
-import { categorizeExif, formatExifValue, parseExifDate } from '../../core/forensics/metadata';
+import { categorizeExif, formatExifValue, formatLabel, parseExifDate } from '../../core/forensics/metadata';
 import { useI18nStore } from '../../store/useI18nStore';
 
 export interface SanitizerWorkspaceProps {
@@ -472,7 +472,7 @@ export const SanitizerWorkspace: React.FC<SanitizerWorkspaceProps> = ({
           className="card-body p-0"
           style={{ borderTop: '1px solid var(--border-color)' }}
         >
-          <div className="category-tabs-wrapper">
+          <div className="tabs-wrapper">
             <button
               type="button"
               className="tabs-arrow left"
@@ -482,7 +482,7 @@ export const SanitizerWorkspace: React.FC<SanitizerWorkspaceProps> = ({
               <ChevronLeft size={16} />
             </button>
 
-            <div className="category-tabs-container">
+            <div className="expert-tabs-container metadata-tabs">
               {PREVIEW_CATEGORIES.map((cat) => {
                 const count = Object.keys(categorized[cat.id] || {}).length;
                 const removed = isCategoryRemoved(cat.id);
@@ -491,7 +491,7 @@ export const SanitizerWorkspace: React.FC<SanitizerWorkspaceProps> = ({
                   <button
                     key={cat.id}
                     type="button"
-                    className={`cat-tab-btn ${isActive ? 'active' : ''} ${
+                    className={`expert-tab-btn ${isActive ? 'active' : ''} ${
                       removed && count > 0 ? 'status-removed-tab' : ''
                     }`}
                     onClick={() => setActivePreviewCat(cat.id)}
@@ -523,8 +523,8 @@ export const SanitizerWorkspace: React.FC<SanitizerWorkspaceProps> = ({
             </button>
           </div>
 
-          <div className="category-panes-wrapper">
-            <div className="cat-tab-pane active">
+          <div className="expert-panes-wrapper">
+            <div className="expert-tab-pane active">
               {activeCatEntries.length === 0 ? (
                 <div className="empty-category-msg">
                   {t('no_metadata_tags', {}, 'narratives')}
@@ -550,7 +550,7 @@ export const SanitizerWorkspace: React.FC<SanitizerWorkspaceProps> = ({
                         }}
                       >
                         <span className="data-label" style={{ marginBottom: 0 }}>
-                          {key}
+                          {formatLabel(key)}
                         </span>
                         {activeCatRemoved ? (
                           <span

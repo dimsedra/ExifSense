@@ -207,3 +207,11 @@ export function formatExifValue(
 
   return String(value);
 }
+
+/**
+ * Formats camelCase/PascalCase metadata tag names into human-readable space-separated labels.
+ */
+export function formatLabel(key: string): string {
+  if (!key) return '';
+  return key.replace(/([A-Z])/g, ' $1').trim();
+}

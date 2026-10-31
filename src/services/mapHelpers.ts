@@ -83,3 +83,101 @@ export function calculateMapBounds(
     center: [centerLat, centerLng],
   };
 }
+
+export interface ReverseGeocodeResult {
+  place_id?: number;
+  display_name: string;
+  address?: Record<string, string>;
+  [key: string]: unknown;
+}
+
+const geocodeCache = new Map<string, ReverseGeocodeResult | null>();
+
+/**
+ * Performs reverse geocoding via OpenStreetMap Nominatim with memory caching.
+ */
+export async function reverseGeocode(
+  lat: number,
+  lng: number
+): Promise<ReverseGeocodeResult | null> {
+  if (!isValidCoordinate(lat, lng)) {
+    return null;
+  }
+
+  const cacheKey = `${Number(lat).toFixed(5)},${Number(lng).toFixed(5)}`;
+  if (geocodeCache.has(cacheKey)) {
+    return geocodeCache.get(cacheKey) ?? null;
+  }
+
+  try {
+    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(
+      lat
+    )}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      return null;
+    }
+    const data = (await response.json()) as ReverseGeocodeResult;
+    geocodeCache.set(cacheKey, data);
+    return data;
+  } catch (error) {
+    console.error('Reverse geocoding failed:', error);
+    return null;
+  }
+}
+
+/**
+ * Resets the in-memory geocoding cache (useful for testing).
+ */
+export function clearGeocodeCache(): void {
+  geocodeCache.clear();
+}
+
+const osrmCache = new Map<string, GeoJSON.GeoJsonObject | null>();
+
+/**
+ * Fetches real-world road-following driving route geometry between waypoints via OSRM.
+ */
+export async function fetchOsrmRoute(
+  waypoints: Array<{ lat: number; lng: number }>
+): Promise<GeoJSON.GeoJsonObject | null> {
+  if (!waypoints || waypoints.length < 2) return null;
+
+  // OSRM public demo server limits waypoints (~100 max)
+  const capped = waypoints.slice(0, 100);
+  const coordsStr = capped.map((p) => `${p.lng},${p.lat}`).join(';');
+
+  if (osrmCache.has(coordsStr)) {
+    return osrmCache.get(coordsStr) ?? null;
+  }
+
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      return null;
+    }
+    const data = (await response.json()) as {
+      code: string;
+      routes?: Array<{ geometry: GeoJSON.GeoJsonObject }>;
+    };
+    if (data.code === 'Ok' && data.routes?.[0]?.geometry) {
+      const geometry = data.routes[0].geometry;
+      osrmCache.set(coordsStr, geometry);
+      return geometry;
+    }
+  } catch (error) {
+    console.error('OSRM route fetch failed:', error);
+  }
+
+  return null;
+}
+
+/**
+ * Resets the in-memory OSRM route cache (useful for testing).
+ */
+export function clearOsrmCache(): void {
+  osrmCache.clear();
+}
+
+

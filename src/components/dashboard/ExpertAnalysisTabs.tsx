@@ -24,7 +24,7 @@ import {
   generateGeospatialNarrative,
   generateIntegrityNarrative,
 } from '../../core/narratives/narratives';
-import { formatExifValue } from '../../core/forensics/metadata';
+import { formatExifValue, formatLabel } from '../../core/forensics/metadata';
 import { useI18nStore } from '../../store/useI18nStore';
 
 export interface ExpertAnalysisTabsProps {
@@ -139,7 +139,11 @@ export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({
       case 'Geospatial': {
         const lat = Number(exif.latitude ?? exif.GPSLatitude);
         const lng = Number(exif.longitude ?? exif.GPSLongitude);
-        return generateGeospatialNarrative(lat, lng, null, currentLang);
+        const locName =
+          (asset.locationData?.display_name as string) ||
+          asset.locationName ||
+          null;
+        return generateGeospatialNarrative(lat, lng, locName, currentLang);
       }
       case 'Standards & Info':
         return generateIntegrityNarrative(asset, currentLang);
@@ -174,6 +178,8 @@ export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({
 
   const rawData = asset.categorizedExif?.[activeRawCategory] || {};
   const rawEntries = Object.entries(rawData);
+  const activeRawCatConfig =
+    RAW_CATEGORIES.find((item) => item.id === activeRawCategory) || RAW_CATEGORIES[0]!;
 
   return (
     <>
@@ -189,7 +195,7 @@ export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({
         </div>
 
         <div id="expert-analysis-content" className="card-body expert-body">
-          <div className="expert-tabs-wrapper">
+          <div className="tabs-wrapper">
             <button
               type="button"
               className="tabs-arrow left"
@@ -262,8 +268,8 @@ export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({
       </div>
 
       {/* Categorized Raw Metadata Tabs */}
-      <div id="metadata-container" ref={rawMetadataRef}>
-        <div className="category-tabs-wrapper">
+      <div id="metadata-container" className="metadata-container" ref={rawMetadataRef}>
+        <div className="tabs-wrapper">
           <button
             type="button"
             className="tabs-arrow left"
@@ -273,20 +279,18 @@ export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({
             <ChevronLeft size={16} />
           </button>
 
-          <div className="category-tabs-container">
+          <div className="expert-tabs-container metadata-tabs">
             {RAW_CATEGORIES.map((cat) => {
-              const count = Object.keys(asset.categorizedExif?.[cat.id] || {}).length;
               const isActive = cat.id === activeRawCategory;
               return (
                 <button
                   key={cat.id}
                   type="button"
-                  className={`cat-tab-btn ${isActive ? 'active' : ''}`}
+                  className={`expert-tab-btn ${isActive ? 'active' : ''}`}
                   onClick={() => setActiveRawCategory(cat.id)}
                 >
                   {cat.icon}
                   <span>{t(cat.catKey)}</span>
-                  <span className="tab-badge">{count}</span>
                 </button>
               );
             })}
@@ -302,26 +306,34 @@ export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({
           </button>
         </div>
 
-        <div className="category-panes-wrapper">
-          <div className="cat-tab-pane active">
-            {rawEntries.length === 0 ? (
-              <div className="empty-category-msg">
-                {t('no_metadata_tags', {}, 'narratives')}
+        <div className="expert-panes-wrapper">
+          <div className="expert-tab-pane active">
+            <div className="card">
+              <div className="card-header">
+                {activeRawCatConfig.icon}
+                <h3>{t(activeRawCatConfig.catKey)}</h3>
               </div>
-            ) : (
-              <div className="data-grid">
-                {rawEntries.map(([key, val]) => (
-                  <div key={key} className="data-item">
-                    <span className="data-label" title={key}>
-                      {key}
-                    </span>
-                    <span className="data-value">
-                      {formatExifValue(key, val, currentLang)}
-                    </span>
+              <div className="card-body">
+                {rawEntries.length === 0 ? (
+                  <div className="text-muted" style={{ padding: '24px', textAlign: 'center', opacity: 0.7 }}>
+                    {t('no_metadata_tags', {}, 'narratives')}
                   </div>
-                ))}
+                ) : (
+                  <div className="data-grid">
+                    {rawEntries.map(([key, val]) => (
+                      <div key={key} className="data-item">
+                        <div className="data-label" title={key}>
+                          {formatLabel(key)}
+                        </div>
+                        <div className="data-value">
+                          {formatExifValue(key, val, currentLang)}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
-            )}
+            </div>
           </div>
         </div>
       </div>

@@ -173,8 +173,9 @@ export function generateMarkdownReport(
 
     const lat = asset.exifData.latitude as number | undefined;
     const lng = asset.exifData.longitude as number | undefined;
+    const locName = (asset.locationData?.display_name as string) || asset.locationName || null;
     if (lat !== undefined && lng !== undefined) {
-      md += `**${translate('analysis_geospatial', {}, locale, 'ui')}:**  \n${generateGeospatialNarrative(lat, lng, null, locale)}  \n\n`;
+      md += `**${translate('analysis_geospatial', {}, locale, 'ui')}:**  \n${generateGeospatialNarrative(lat, lng, locName, locale)}  \n\n`;
     }
 
     const hw = asset.categorizedExif['Device Hardware'];
@@ -269,8 +270,9 @@ export function generateClipboardReport(
 
     const lat = asset.exifData.latitude as number | undefined;
     const lng = asset.exifData.longitude as number | undefined;
+    const locName = (asset.locationData?.display_name as string) || asset.locationName || null;
     if (lat !== undefined && lng !== undefined) {
-      content += `${translate('analysis_geospatial', {}, locale, 'ui')}: ${generateGeospatialNarrative(lat, lng, null, locale)}\n`;
+      content += `${translate('analysis_geospatial', {}, locale, 'ui')}: ${generateGeospatialNarrative(lat, lng, locName, locale)}\n`;
     }
 
     const hw = asset.categorizedExif['Device Hardware'];
@@ -517,10 +519,11 @@ export async function generatePdfReport(
 
     const lat = asset.exifData.latitude as number | undefined;
     const lng = asset.exifData.longitude as number | undefined;
+    const locName = (asset.locationData?.display_name as string) || asset.locationName || null;
     if (lat !== undefined && lng !== undefined) {
       narrativeList.push({
         title: translate('analysis_geospatial', {}, locale, 'ui'),
-        story: generateGeospatialNarrative(lat, lng, null, locale)
+        story: generateGeospatialNarrative(lat, lng, locName, locale)
       });
     }
 

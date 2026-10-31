@@ -10,6 +10,7 @@ import type {
 import type { BatchSanitizerEntry } from '../core/sanitizer/types';
 import { useAssetStore, MAX_STAGED_FILES } from '../store/useAssetStore';
 import { useSanitizerStore } from '../store/useSanitizerStore';
+import { reverseGeocode } from './mapHelpers';
 
 export interface ExtendedForensicAsset extends ForensicAsset {
   hashes: {
@@ -83,6 +84,20 @@ export async function processSingleAsset(file: File): Promise<ExtendedForensicAs
   const forensicSessionId = generateForensicId();
   const id = `asset-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+  let locationData = undefined;
+  const lat = Number(rawExif.latitude ?? rawExif.GPSLatitude);
+  const lng = Number(rawExif.longitude ?? rawExif.GPSLongitude);
+  if (!isNaN(lat) && !isNaN(lng)) {
+    try {
+      const loc = await reverseGeocode(lat, lng);
+      if (loc) {
+        locationData = loc;
+      }
+    } catch {
+      // Ignore network errors
+    }
+  }
+
   const asset: ExtendedForensicAsset = {
     id,
     fileName: file.name,
@@ -98,6 +113,8 @@ export async function processSingleAsset(file: File): Promise<ExtendedForensicAs
     integrityAlerts,
     thumbUrl: createSafePreviewUrl(file),
     fileObject: file,
+    locationData: locationData ?? null,
+    locationName: locationData?.display_name as string | undefined,
     hashes: {
       sha256,
       sha1,

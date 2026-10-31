@@ -21,6 +21,7 @@ export interface AssetStoreState {
   clearStagedFiles: () => void;
   setAssets: (assets: ForensicAsset[], forensicId?: string) => void;
   setActiveAssetIndex: (index: number) => void;
+  updateAssetLocation: (assetId: string, locationData: Record<string, unknown> | null) => void;
   setInvestigatorIdentity: (identity: string | null) => void;
   setIsAnalyzing: (isAnalyzing: boolean) => void;
   resetSession: () => void;
@@ -73,6 +74,19 @@ export const useAssetStore = create<AssetStoreState>((set) => ({
       }
       return { activeAssetIndex: index };
     }),
+
+  updateAssetLocation: (assetId, locationData) =>
+    set((state) => ({
+      assets: state.assets.map((asset) =>
+        asset.id === assetId
+          ? {
+              ...asset,
+              locationData,
+              locationName: (locationData?.display_name as string) || null,
+            }
+          : asset
+      ),
+    })),
 
   setInvestigatorIdentity: (identity) => set({ investigatorIdentity: identity }),
 

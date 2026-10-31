@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { categorizeExif, parseExifDate, formatExifValue, formatFullDate } from '../../../src/core/forensics/metadata.ts';
+import { categorizeExif, parseExifDate, formatExifValue, formatFullDate, formatLabel } from '../../../src/core/forensics/metadata.ts';
 
 describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
   it('correctly maps properties across the 8 standardized categories', () => {
@@ -147,6 +147,14 @@ describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
       const d = new Date(2026, 4, 14, 9, 5, 2);
       expect(formatFullDate(d)).toBe('14-05-2026 09:05:02');
       expect(formatFullDate(null)).toBe('Unknown');
+    });
+
+    it('formats camelCase and PascalCase EXIF keys into readable space-separated labels', () => {
+      expect(formatLabel('Make')).toBe('Make');
+      expect(formatLabel('Model')).toBe('Model');
+      expect(formatLabel('DateTimeOriginal')).toBe('Date Time Original');
+      expect(formatLabel('FocalLengthIn35mmFormat')).toBe('Focal Length In35mm Format');
+      expect(formatLabel('')).toBe('');
     });
   });
 });

@@ -213,4 +213,17 @@ describe('useAssetStore - Forensic Chain of Custody (Blocker 3 Fix Verification)
     expect(id2).not.toBeNull();
     expect(id2).not.toBe(id1);
   });
+
+  it('updates asset location data and locationName correctly', () => {
+    useAssetStore.getState().setAssets([dummyAsset]);
+    expect(useAssetStore.getState().assets[0]!.locationData).toBeUndefined();
+
+    useAssetStore.getState().updateAssetLocation('asset-x', {
+      display_name: 'Pier Road, Luss, Scotland',
+    });
+
+    const updated = useAssetStore.getState().assets[0]!;
+    expect(updated.locationData).toEqual({ display_name: 'Pier Road, Luss, Scotland' });
+    expect(updated.locationName).toBe('Pier Road, Luss, Scotland');
+  });
 });
