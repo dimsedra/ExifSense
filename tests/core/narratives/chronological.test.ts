@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import {
   parseChronologicalEvents,
-  evaluateTransitPace,
   generateChronologicalBatchStory,
 } from '../../../src/core/narratives/chronological';
 import type { ForensicAsset } from '../../../src/core/forensics/types';
@@ -126,59 +125,43 @@ describe('Chronological Batch Narrative Engine', () => {
     });
   });
 
-  describe('BP-NARRATIVE-002: Transit Pace Heuristics', () => {
-    it('classifies movement under 50m as stationary (Normal Path)', () => {
-      const pace = evaluateTransitPace(30, 120);
+  describe('BP-NARRATIVE-002: Spatial-Temporal Distance Evaluation', () => {
+    it('calculates physical distance and elapsed time without speculative velocity heuristics (Normal Path)', () => {
+      const assetA = createMockAsset({
+        fileName: 'loc_a.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:00:00',
+          latitude: 48.8584,
+          longitude: 2.2945,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: 'loc_b.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:30:00',
+          latitude: 48.9663,
+          longitude: 2.2945,
+        },
+      });
 
-      expect(pace.mode).toBe('stationary');
-      expect(pace.descriptionKey).toBe('transit_stationary');
-    });
+      const story = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'en',
+        format: 'plain',
+      });
 
-    it('classifies movement at walking speed up to 6 km/h (Normal Path)', () => {
-      // 200m in 240 seconds = 3 km/h
-      const pace = evaluateTransitPace(200, 240);
-
-      expect(pace.mode).toBe('walking');
-      expect(pace.speedKmh).toBeCloseTo(3);
-      expect(pace.descriptionKey).toBe('transit_walking');
-    });
-
-    it('classifies movement between 15 km/h and 150 km/h as motorized transit (Normal Path)', () => {
-      // 12 km in 1800 seconds (30 mins) = 24 km/h
-      const pace = evaluateTransitPace(12000, 1800);
-
-      expect(pace.mode).toBe('motorized');
-      expect(pace.speedKmh).toBeCloseTo(24);
-      expect(pace.descriptionKey).toBe('transit_motorized');
-    });
-
-    it('flags instant jump anomaly when elapsed time is zero and distance exceeds 50m (Error & Boundary Path)', () => {
-      const pace = evaluateTransitPace(800, 0);
-
-      expect(pace.mode).toBe('anomaly');
-      expect(pace.speedKmh).toBe(999999);
-      expect(pace.descriptionKey).toBe('transit_anomaly');
-    });
-
-    it('flags high-speed air or clock discrepancy when velocity exceeds 800 km/h (Boundary Path)', () => {
-      // 900 km in 3600 seconds = 900 km/h
-      const pace = evaluateTransitPace(900000, 3600);
-
-      expect(pace.mode).toBe('air_or_anomaly');
-      expect(pace.descriptionKey).toBe('transit_air_or_anomaly');
-    });
-
-    it('classifies in-between speeds as transition (Normal Path)', () => {
-      // 500m in 200 seconds = 9 km/h
-      const pace = evaluateTransitPace(500, 200);
-
-      expect(pace.mode).toBe('transition');
-      expect(pace.descriptionKey).toBe('transit_transition');
+      expect(story.steps[1]!.evidence.distanceMeters).toBe(11998);
+      expect(story.steps[1]!.evidence.distanceString).toBe('12 km');
+      expect(story.steps[1]!.evidence.elapsedTimeString).toBe('30 minutes later');
+      expect(story.steps[1]!.narrativeText).toContain(
+        '12 km away from loc_a.jpg at coordinates 48.96630, 2.29450.',
+      );
+      expect(story.steps[1]!.narrativeText).not.toMatch(/speed/i);
+      expect(story.steps[1]!.narrativeText).not.toMatch(/indicates/i);
     });
   });
 
   describe('BP-NARRATIVE-003: Sequential Narrative Synthesis Engine', () => {
-    it('synthesizes full 3-step story with same-device baseline, motorized transit, and lens change', () => {
+    it('synthesizes full 3-step story with same-device baseline, spatial progression, and lens change', () => {
       // Image 1: Location A in Paris (Eiffel Tower area)
       const img1 = createMockAsset({
         fileName: 'IMG_0001.JPG',
@@ -192,8 +175,7 @@ describe('Chronological Batch Narrative Engine', () => {
         },
       });
 
-      // Image 2: 30 minutes later, 12 km away (24 km/h motorized pace)
-      // Lat 48.9663, Lon 2.2945 is ~12 km north
+      // Image 2: 30 minutes later, 12 km away
       const img2 = createMockAsset({
         fileName: 'IMG_0002.JPG',
         exifData: {
@@ -206,7 +188,7 @@ describe('Chronological Batch Narrative Engine', () => {
         },
       });
 
-      // Image 3: 5 minutes later, 30m away (<50m stationary), lens swapped
+      // Image 3: 5 minutes later, 22m away, lens swapped
       const img3 = createMockAsset({
         fileName: 'IMG_0003.JPG',
         exifData: {
@@ -238,26 +220,28 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(story.steps[0]!.narrativeText).toContain('FE 24-70mm F2.8 GM II');
       expect(story.steps[0]!.narrativeText).toContain('48.85840, 2.29450');
 
-      // 4. Step 1 (motorized transit inference with transparent speed calculation)
+      // 4. Step 1 (factual spatial-temporal progression without speculative speed)
       expect(story.steps[1]!.fileName).toBe('IMG_0002.JPG');
       expect(story.steps[1]!.narrativeText).toContain('Wednesday, October 28, 2026');
       expect(story.steps[1]!.narrativeText).toContain('30 minutes later');
-      expect(story.steps[1]!.narrativeText).toContain('at an estimated speed of ~24 km/h');
-      expect(story.steps[1]!.narrativeText).toContain('typically indicates vehicular transit');
-      expect(story.steps[1]!.evidence.transitMode).toBe('motorized');
-      expect(story.steps[1]!.evidence.speedKmh).toBeCloseTo(24);
-      expect(story.steps[1]!.evidence.speedString).toBe('~24 km/h');
+      expect(story.steps[1]!.narrativeText).toContain(
+        '12 km away from IMG_0001.JPG at coordinates 48.96630, 2.29450.',
+      );
+      expect(story.steps[1]!.evidence.prevFileName).toBe('IMG_0001.JPG');
+      expect(story.steps[1]!.evidence.distanceMeters).toBe(11998);
       expect(story.steps[1]!.evidence.deviceChanged).toBe(false);
       expect(story.steps[1]!.evidence.lensChanged).toBe(false);
 
-      // 5. Step 2 (optical change detection + stationary vicinity)
+      // 5. Step 2 (optical change detection + vicinity progression)
       expect(story.steps[2]!.fileName).toBe('IMG_0003.JPG');
       expect(story.steps[2]!.narrativeText).toContain('5 minutes later');
-      expect(story.steps[2]!.narrativeText).toContain('remained in the immediate vicinity');
+      expect(story.steps[2]!.narrativeText).toContain(
+        '22 m away from IMG_0002.JPG at coordinates 48.96650, 2.29450.',
+      );
+      expect(story.steps[2]!.evidence.prevFileName).toBe('IMG_0002.JPG');
       expect(story.steps[2]!.narrativeText).toContain(
         'Camera lens changed from FE 24-70mm F2.8 GM II to FE 70-200mm F2.8 GM OSS II',
       );
-      expect(story.steps[2]!.evidence.transitMode).toBe('stationary');
       expect(story.steps[2]!.evidence.lensChanged).toBe(true);
 
       // 6. Verify combined full narrative includes baseline and all steps
@@ -412,8 +396,9 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(idStory.steps[0]!.narrativeText).toContain('Urutan dimulai dengan photo_id_a.jpg');
       expect(idStory.steps[0]!.narrativeText).toContain('menggunakan lensa FE 24-70mm');
       expect(idStory.steps[1]!.narrativeText).toContain('30 menit kemudian');
-      expect(idStory.steps[1]!.narrativeText).toContain('estimasi kecepatan ~22 km/jam');
-      expect(idStory.steps[1]!.narrativeText).toContain('pada umumnya menunjukkan transportasi kendaraan');
+      expect(idStory.steps[1]!.narrativeText).toContain(
+        'sejauh 11.1 km dari photo_id_a.jpg di koordinat -6.30880, 106.84560.',
+      );
       expect(idStory.steps[1]!.narrativeText).toContain('Lensa kamera berganti dari FE 24-70mm ke FE 70-200mm');
 
       // Arabic
@@ -427,8 +412,9 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(arStory.steps[0]!.narrativeText).toContain('يبدأ التسلسل بـ photo_id_a.jpg');
       expect(arStory.steps[0]!.narrativeText).toContain('باستخدام عدسة FE 24-70mm');
       expect(arStory.steps[1]!.narrativeText).toContain('بعد 30 دقيقة');
-      expect(arStory.steps[1]!.narrativeText).toContain('بسرعة تقديرية ~22 كم/ساعة');
-      expect(arStory.steps[1]!.narrativeText).toContain('تشير عموماً إلى الانتقال بالمركبة');
+      expect(arStory.steps[1]!.narrativeText).toContain(
+        'على بعد 11.1 km من photo_id_a.jpg عند الإحداثيات -6.30880, 106.84560.',
+      );
       expect(arStory.steps[1]!.narrativeText).toContain('تغيرت عدسة الكاميرا من FE 24-70mm إلى FE 70-200mm');
     });
 
@@ -464,7 +450,7 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(idStory.steps[0]!.narrativeText).toContain('di Ballyhennan Crescent, Tarbet, Scotland (koordinat 56.20357, -4.71829)');
     });
 
-    it('detects and explains whether subsequent images remain at the same reverse geocoded location or moved', () => {
+    it('interpolates reverse-geocoded location name into subsequent step narratives', () => {
       const asset1 = createMockAsset({
         fileName: '200.jpg',
         locationName: 'A82, Highland, Scotland',
@@ -476,7 +462,7 @@ describe('Chronological Batch Narrative Engine', () => {
       });
       const asset2 = createMockAsset({
         fileName: '201.jpg',
-        locationName: 'A82, Highland, Scotland', // Same reverse geocode location!
+        locationName: 'A82, Highland, Scotland',
         exifData: {
           DateTimeOriginal: '2019:03:19 16:05:23',
           latitude: 56.64500,
@@ -485,7 +471,7 @@ describe('Chronological Batch Narrative Engine', () => {
       });
       const asset3 = createMockAsset({
         fileName: '202.jpg',
-        locationName: 'Glen Coe, Highland, Scotland', // Changed reverse geocode location!
+        locationName: 'Glen Coe, Highland, Scotland',
         exifData: {
           DateTimeOriginal: '2019:03:19 16:08:23',
           latitude: 56.68000,
@@ -498,19 +484,16 @@ describe('Chronological Batch Narrative Engine', () => {
         format: 'plain',
       });
 
-      // Step 2 should detect that reverse geocoded location remains the same
-      expect(idStory.steps[1]!.narrativeText).toContain('Lokasi masih berada di area yang sama: A82, Highland, Scotland');
-
-      // Step 3 should detect that reverse geocoded location moved to a new place
-      expect(idStory.steps[2]!.narrativeText).toContain('Lokasi berpindah ke Glen Coe, Highland, Scotland');
+      expect(idStory.steps[1]!.narrativeText).toContain('di A82, Highland, Scotland.');
+      expect(idStory.steps[2]!.narrativeText).toContain('di Glen Coe, Highland, Scotland.');
 
       // Verify English equivalents
       const enStory = generateChronologicalBatchStory([asset1, asset2, asset3], {
         locale: 'en',
         format: 'plain',
       });
-      expect(enStory.steps[1]!.narrativeText).toContain('Location remains in the same area: A82, Highland, Scotland');
-      expect(enStory.steps[2]!.narrativeText).toContain('Location moved to Glen Coe, Highland, Scotland');
+      expect(enStory.steps[1]!.narrativeText).toContain('at A82, Highland, Scotland.');
+      expect(enStory.steps[2]!.narrativeText).toContain('at Glen Coe, Highland, Scotland.');
     });
   });
 });
