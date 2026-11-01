@@ -2,9 +2,13 @@
   "name": "exifsense",
   "version": "1.0.0",
   "type": "module",
+  "bin": {
+    "exifsense": "./bin/exifsense.js"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && npm run build:cli",
+    "build:cli": "rolldown src/cli/entry.ts --file bin/exifsense.js --platform node --banner \"#!/usr/bin/env node\"",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
