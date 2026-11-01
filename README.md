@@ -45,10 +45,62 @@ Identify post-processing signatures from common image editing software, timestam
 | :--- | :--- |
 | **Single Image Analysis** | Detailed breakdown of camera hardware, optical settings, date history, and exact location. |
 | **Batch Comparison** | Inspect multiple files simultaneously with side-by-side technical correlation and combined map views. |
+| **CLI Analysis & Simulation** | Terminal-native execution harness for headless analysis, automated testing, and simulated edge-case presets. |
 | **Metadata Sanitization** | Selective or full removal of EXIF metadata categories with instant cleaned file downloads. |
 | **Interactive Mapping** | High-fidelity map rendering with reverse geocoding to display physical addresses. |
 | **Export Capability** | Export comprehensive reports as PDF, Markdown, CSV, or structured JSON data manifests. |
 | **Multi-Language Support** | Full localization in English, Bahasa Indonesia, and Arabic (RTL layout supported). |
+
+---
+
+## Command-Line Interface (CLI)
+
+ExifSense includes a standalone, terminal-native CLI executable (`exifsense`) that runs single-asset and batch forensic analyses directly from your shell, completely bypassing the browser interface. It allows developers and investigators to analyze real images, extract raw EXIF metadata, and run version-controlled simulation scenarios.
+
+### Setup
+
+To build and register the command globally:
+
+```bash
+npm install
+npm run build:cli
+npm link
+```
+
+### Usage
+
+```bash
+# Analyze a single photo or JSON metadata file
+exifsense single photo.jpg
+
+# Analyze multiple photos and generate collective intelligence and chronological story
+exifsense batch photo1.jpg photo2.jpg photo3.jpg
+
+# Run a pre-configured simulation scenario from disk
+exifsense scenario travel-sequence
+
+# Extract raw EXIF metadata into a clean JSON file
+exifsense extract photo.jpg metadata.json
+
+# Format output as Markdown or write directly to a file
+exifsense scenario time-jump-anomaly --format markdown --out report.md
+
+# Switch narrative language (en, id, ar)
+exifsense single photo.jpg --locale id
+```
+
+### Simulation Scenarios
+
+Curated test scenarios are stored as version-controlled JSON files in `tests/fixtures/scenarios/`. These allow reproducible testing of edge cases without checking bulky image binaries into Git:
+
+* `baseline`: Clean metadata extracted from real-world geotagged photos.
+* `missing-gps`: Evaluates integrity alerts when GPS coordinates are omitted.
+* `missing-datetime`: Evaluates timeline fallbacks when capture dates are missing.
+* `missing-device`: Evaluates hardware fallbacks when camera make and model are stripped.
+* `tampered-software`: Simulates third-party editing tags (such as Photoshop or GIMP).
+* `travel-sequence`: Multi-asset movement sequence generating a step-by-step travel story.
+* `time-jump-anomaly`: Multi-asset sequence simulating an artificial multi-day break between photos.
+* `hardware-discrepancy`: Multi-asset sequence simulating a camera model switch midway through a trip.
 
 ---
 
