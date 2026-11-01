@@ -3,8 +3,6 @@ import { parseExifDate, formatNaturalDate } from '../forensics/metadata';
 import { calculateDistance } from '../forensics/collective';
 import type {
   SupportedLocale,
-  TransitMode,
-  TransitInference,
   ChronologicalEventNode,
   ChronologicalStoryStep,
   ChronologicalBatchStory,
@@ -84,12 +82,6 @@ function formatDistance(distanceMeters: number): string {
   return `${distanceMeters} m`;
 }
 
-function formatSpeed(speedKmh: number, locale: SupportedLocale): string {
-  if (speedKmh <= 0) return '0 km/h';
-  const unit = locale === 'id' ? 'km/jam' : locale === 'ar' ? 'كم/ساعة' : 'km/h';
-  const rounded = speedKmh >= 10 ? Math.round(speedKmh) : speedKmh.toFixed(1).replace('.0', '');
-  return `~${rounded} ${unit}`;
-}
 
 /**
  * Parses and sorts an array of forensic assets into chronological event nodes (BP-NARRATIVE-001).
@@ -167,70 +159,6 @@ export function parseChronologicalEvents(
   return nodes.slice().sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 }
 
-/**
- * Evaluates transit pace and physics heuristics between two sequential captures (BP-NARRATIVE-002).
- */
-export function evaluateTransitPace(
-  distanceMeters: number,
-  elapsedSeconds: number,
-): TransitInference {
-  if (elapsedSeconds <= 0 && distanceMeters > 50) {
-    return {
-      speedKmh: 999999,
-      mode: 'anomaly',
-      descriptionKey: 'transit_anomaly',
-    };
-  }
-
-  if (elapsedSeconds <= 0) {
-    return {
-      speedKmh: 0,
-      mode: 'stationary',
-      descriptionKey: 'transit_stationary',
-    };
-  }
-
-  const hours = elapsedSeconds / 3600;
-  const speedKmh = (distanceMeters / 1000) / hours;
-
-  if (distanceMeters < 50) {
-    return {
-      speedKmh,
-      mode: 'stationary',
-      descriptionKey: 'transit_stationary',
-    };
-  }
-
-  if (speedKmh > 800) {
-    return {
-      speedKmh,
-      mode: 'air_or_anomaly',
-      descriptionKey: 'transit_air_or_anomaly',
-    };
-  }
-
-  if (distanceMeters >= 50 && speedKmh <= 6) {
-    return {
-      speedKmh,
-      mode: 'walking',
-      descriptionKey: 'transit_walking',
-    };
-  }
-
-  if (distanceMeters >= 200 && speedKmh > 15 && speedKmh <= 150) {
-    return {
-      speedKmh,
-      mode: 'motorized',
-      descriptionKey: 'transit_motorized',
-    };
-  }
-
-  return {
-    speedKmh,
-    mode: 'transition',
-    descriptionKey: 'transit_transition',
-  };
-}
 
 function buildBaseline(
   nodes: ChronologicalEventNode[],
@@ -348,15 +276,13 @@ function buildSubsequentStep(
   const rawElapsedTime = formatElapsedTime(diffSeconds, locale);
   const highlightedElapsedTime = formatEvidence(rawElapsedTime, format);
   const formattedFileName = formatEvidence(curr.fileName, format);
+  const formattedPrevFileName = formatEvidence(prev.fileName, format);
 
   const formattedDate = formatNaturalDate(curr.timestamp, locale);
   const highlightedDate = formatEvidence(formattedDate, format);
 
   let distanceMeters: number | undefined;
   let distanceString: string | undefined;
-  let speedKmh: number | undefined;
-  let speedString: string | undefined;
-  let transitMode: TransitMode | undefined;
   let narrativeText = '';
 
   const hasBothGps =
@@ -378,72 +304,51 @@ function buildSubsequentStep(
     distanceString = formatDistance(distanceMeters);
     const highlightedDistance = formatEvidence(distanceString, format);
 
-    const pace = evaluateTransitPace(distanceMeters, diffSeconds);
-    transitMode = pace.mode;
-    speedKmh = pace.speedKmh;
-    const paceDesc = getTemplate(pace.descriptionKey, locale);
-
-    if (pace.mode === 'stationary') {
-      const template = getTemplate('chrono_step_stationary', locale);
-      narrativeText = interpolate(template, {
-        fileName: formattedFileName,
-        date: highlightedDate,
-        elapsedTime: highlightedElapsedTime,
-        distance: highlightedDistance,
-        pace: paceDesc,
-      });
-    } else if (pace.mode === 'anomaly') {
-      const template = getTemplate('chrono_step_anomaly', locale);
-      narrativeText = interpolate(template, {
-        fileName: formattedFileName,
-        date: highlightedDate,
-        elapsedTime: highlightedElapsedTime,
-        distance: highlightedDistance,
-        pace: paceDesc,
-      });
-    } else {
-      speedString = formatSpeed(pace.speedKmh, locale);
-      const highlightedSpeed = formatEvidence(speedString, format);
-      const template = getTemplate('chrono_step_movement', locale);
-      narrativeText = interpolate(template, {
-        fileName: formattedFileName,
-        date: highlightedDate,
-        elapsedTime: highlightedElapsedTime,
-        distance: highlightedDistance,
-        speed: highlightedSpeed,
-        pace: paceDesc,
-      });
-    }
-
-    // Location check: whether the reverse geocoding address remained the same or changed
-    let locationClause = '';
-    if (curr.locationName && prev.locationName) {
+    if (curr.locationName) {
       const highlightedLocation = formatEvidence(curr.locationName, format);
-      if (curr.locationName === prev.locationName) {
-        locationClause = interpolate(getTemplate('chrono_location_same', locale), {
-          location: highlightedLocation,
-        });
-      } else {
-        locationClause = interpolate(getTemplate('chrono_location_changed', locale), {
-          location: highlightedLocation,
-        });
-      }
-    } else if (curr.locationName && !prev.locationName) {
-      const highlightedLocation = formatEvidence(curr.locationName, format);
-      locationClause = interpolate(getTemplate('chrono_location_new', locale), {
+      const template = getTemplate('chrono_step_location', locale);
+      narrativeText = interpolate(template, {
+        fileName: formattedFileName,
+        date: highlightedDate,
+        elapsedTime: highlightedElapsedTime,
+        distance: highlightedDistance,
+        prevFileName: formattedPrevFileName,
         location: highlightedLocation,
       });
-    } else if (!curr.locationName && !prev.locationName) {
-      if (distanceMeters >= 50 && curr.latitude !== null && curr.longitude !== null) {
-        const coordsStr = `${curr.latitude.toFixed(5)}, ${curr.longitude.toFixed(5)}`;
-        const highlightedCoords = formatEvidence(coordsStr, format);
-        locationClause = interpolate(
-          getTemplate('chrono_location_coords_changed', locale),
-          { coordinates: highlightedCoords },
-        );
-      }
+    } else {
+      const coordsStr = `${curr.latitude!.toFixed(5)}, ${curr.longitude!.toFixed(5)}`;
+      const highlightedCoords = formatEvidence(coordsStr, format);
+      const template = getTemplate('chrono_step_gps', locale);
+      narrativeText = interpolate(template, {
+        fileName: formattedFileName,
+        date: highlightedDate,
+        elapsedTime: highlightedElapsedTime,
+        distance: highlightedDistance,
+        prevFileName: formattedPrevFileName,
+        coordinates: highlightedCoords,
+      });
     }
-    narrativeText += locationClause;
+  } else if (curr.hasGps && curr.latitude !== null && curr.longitude !== null) {
+    if (curr.locationName) {
+      const highlightedLocation = formatEvidence(curr.locationName, format);
+      const template = getTemplate('chrono_step_location_no_prev_gps', locale);
+      narrativeText = interpolate(template, {
+        fileName: formattedFileName,
+        date: highlightedDate,
+        elapsedTime: highlightedElapsedTime,
+        location: highlightedLocation,
+      });
+    } else {
+      const coordsStr = `${curr.latitude.toFixed(5)}, ${curr.longitude.toFixed(5)}`;
+      const highlightedCoords = formatEvidence(coordsStr, format);
+      const template = getTemplate('chrono_step_gps_no_prev_gps', locale);
+      narrativeText = interpolate(template, {
+        fileName: formattedFileName,
+        date: highlightedDate,
+        elapsedTime: highlightedElapsedTime,
+        coordinates: highlightedCoords,
+      });
+    }
   } else {
     const template = getTemplate('chrono_step_no_gps', locale);
     narrativeText = interpolate(template, {
@@ -519,11 +424,9 @@ function buildSubsequentStep(
     evidence: {
       formattedDate,
       elapsedTimeString: rawElapsedTime,
+      prevFileName: prev.fileName,
       distanceMeters,
       distanceString,
-      speedKmh,
-      speedString,
-      transitMode,
       locationName: curr.locationName || undefined,
       deviceString: curr.deviceString,
       deviceChanged,

@@ -5,21 +5,6 @@ export interface NarrativeSection {
   narrative: string;
 }
 
-export type TransitMode =
-  | 'stationary'
-  | 'walking'
-  | 'motorized'
-  | 'air_or_anomaly'
-  | 'anomaly'
-  | 'transition'
-  | 'unknown';
-
-export interface TransitInference {
-  speedKmh: number;
-  mode: TransitMode;
-  descriptionKey: string;
-}
-
 export interface ChronologicalEventNode {
   assetIndex: number;
   fileName: string;
@@ -46,11 +31,9 @@ export interface ChronologicalStoryStep {
   evidence: {
     formattedDate?: string;
     elapsedTimeString?: string;
+    prevFileName?: string;
     distanceMeters?: number;
     distanceString?: string;
-    speedKmh?: number;
-    speedString?: string;
-    transitMode?: TransitMode;
     locationName?: string;
     deviceString: string;
     deviceChanged: boolean;
