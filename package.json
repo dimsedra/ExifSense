@@ -2,9 +2,13 @@
   "name": "exifsense",
   "version": "1.0.0",
   "type": "module",
+  "bin": {
+    "exifsense": "./bin/exifsense.js"
+  },
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build && npm run build:cli",
+    "build:cli": "rolldown src/cli/entry.ts --file bin/exifsense.js --platform node --banner \"#!/usr/bin/env node\"",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },
@@ -27,6 +31,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "happy-dom": "^21.0.4",
+    "rolldown": "^1.2.16",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
