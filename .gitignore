@@ -51,3 +51,6 @@ temp/
 output/
 .agents/
 
+# Nested repos
+thesis/
+
