@@ -115,8 +115,47 @@
     border-bottom: 1px solid var(--border-color);
 }
 
+.map-card .card-header {
+    justify-content: space-between;
+}
+
+.map-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.route-type-badge {
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    letter-spacing: 0.02em;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.route-type-badge.badge-osrm {
+    background: rgba(37, 99, 235, 0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+.route-type-badge.badge-direct {
+    background: rgba(234, 179, 8, 0.12);
+    color: #facc15;
+    border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
 @media (max-width: 768px) {
     #map { height: 350px; }
+    .map-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .route-disclaimer {
+        text-align: left;
+    }
 }
 
 .map-footer {
@@ -125,6 +164,7 @@
     justify-content: space-between;
     align-items: center;
     gap: 1rem;
+    flex-wrap: wrap;
 }
 
 .gps-coords {
@@ -134,7 +174,18 @@
     background-color: var(--secondary);
     padding: 0.5rem 0.75rem;
     border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.route-disclaimer {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    font-style: italic;
+    text-align: center;
     flex: 1;
+    min-width: 200px;
 }
 
 .map-actions {

@@ -25,6 +25,7 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
   const markersLayerRef = useRef<L.FeatureGroup | null>(null);
   const polylineLayerRef = useRef<L.Layer | null>(null);
   const [routeEnabled, setRouteEnabled] = useState(showPath);
+  const [routeType, setRouteType] = useState<'osrm' | 'direct' | null>(null);
 
   const waypoints = extractAssetCoordinates(assets);
   const activeWaypoint =
@@ -196,6 +197,7 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
             },
           }).addTo(mapInstanceRef.current);
           polylineLayerRef.current = routeLayer;
+          setRouteType('osrm');
         } else {
           const straightPath = L.polyline(
             sortedWaypoints.map((p) => [p.lat, p.lng] as L.LatLngTuple),
@@ -207,8 +209,11 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
             }
           ).addTo(mapInstanceRef.current);
           polylineLayerRef.current = straightPath;
+          setRouteType('direct');
         }
       });
+    } else {
+      setRouteType(null);
     }
 
     try {
@@ -235,14 +240,27 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
         </div>
         {waypoints.length > 1 && (
           <div className="map-controls">
-            <label id="route-toggle-container" className="switch-control" title={t('show_route')}>
+            {routeEnabled && routeType && (
+              <span
+                id="route-type-badge"
+                className={`route-type-badge ${routeType === 'osrm' ? 'badge-osrm' : 'badge-direct'}`}
+                title={
+                  routeType === 'osrm'
+                    ? t('route_osrm_disclaimer')
+                    : t('route_direct_disclaimer')
+                }
+              >
+                {routeType === 'osrm' ? t('route_type_osrm') : t('route_type_direct')}
+              </span>
+            )}
+            <label id="route-toggle-container" className="switch-control" title={t('show_probable_route')}>
               <input
                 type="checkbox"
                 id="show-path-toggle"
                 checked={routeEnabled}
                 onChange={(e) => setRouteEnabled(e.target.checked)}
               />
-              <span className="switch-label">{t('show_route')}</span>
+              <span className="switch-label">{t('show_probable_route')}</span>
               <span className="switch-slider" />
             </label>
           </div>
@@ -262,6 +280,21 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
                 : t('no_gps')}
             </span>
           </div>
+          {routeEnabled && routeType && (
+            <div
+              id="route-disclaimer"
+              className="route-disclaimer"
+              title={
+                routeType === 'osrm'
+                  ? t('route_osrm_disclaimer')
+                  : t('route_direct_disclaimer')
+              }
+            >
+              <span>
+                * {routeType === 'osrm' ? t('route_osrm_disclaimer') : t('route_direct_disclaimer')}
+              </span>
+            </div>
+          )}
           {activeWaypoint && (
             <div className="map-actions">
               <a
