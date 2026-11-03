@@ -5,7 +5,8 @@ import { generateChronologicalBatchStory } from '../../core/narratives/chronolog
 import { useI18nStore } from '../../store/useI18nStore';
 import { useAssetStore } from '../../store/useAssetStore';
 import { parseExifDate } from '../../core/forensics/metadata';
-import { reverseGeocode } from '../../services/mapHelpers';
+import { reverseGeocode, fetchOsrmRouteDetails } from '../../services/mapHelpers';
+import type { OsrmRouteDetails } from '../../services/mapHelpers';
 
 export interface ChronologicalStoryCardProps {
   assets: ForensicAsset[];
@@ -19,6 +20,7 @@ export const ChronologicalStoryCard: React.FC<ChronologicalStoryCardProps> = ({
   const { currentLang, t } = useI18nStore();
   const { updateAssetLocation } = useAssetStore();
   const [copied, setCopied] = useState(false);
+  const [roadRouteDetails, setRoadRouteDetails] = useState<OsrmRouteDetails | null>(null);
 
   useEffect(() => {
     if (!assets || assets.length < 2) return;
@@ -48,6 +50,24 @@ export const ChronologicalStoryCard: React.FC<ChronologicalStoryCardProps> = ({
       .sort((a, b) => a.time - b.time);
 
     let isCancelled = false;
+
+    if (geoAssets.length >= 2) {
+      const waypoints = geoAssets.map((item) => ({
+        lat: Number(item.asset.exifData.latitude ?? item.asset.exifData.GPSLatitude),
+        lng: Number(item.asset.exifData.longitude ?? item.asset.exifData.GPSLongitude),
+      }));
+
+      fetchOsrmRouteDetails(waypoints)
+        .then((details) => {
+          if (!isCancelled && details) {
+            setRoadRouteDetails(details);
+          }
+        })
+        .catch(() => {
+          // graceful offline fallback
+        });
+    }
+
     const pendingAssets = geoAssets.filter(
       (item) => item.asset.locationData === undefined
     );
@@ -85,12 +105,16 @@ export const ChronologicalStoryCard: React.FC<ChronologicalStoryCardProps> = ({
   const htmlStory = generateChronologicalBatchStory(assets, {
     locale: currentLang,
     format: 'html',
+    totalRoadDistance: roadRouteDetails?.totalDistanceMeters,
+    roadDistances: roadRouteDetails?.legDistancesMeters,
   });
 
   const handleCopyStory = async () => {
     const markdownStory = generateChronologicalBatchStory(assets, {
       locale: currentLang,
       format: 'markdown',
+      totalRoadDistance: roadRouteDetails?.totalDistanceMeters,
+      roadDistances: roadRouteDetails?.legDistancesMeters,
     });
 
     try {

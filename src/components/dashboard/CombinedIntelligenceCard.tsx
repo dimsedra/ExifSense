@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Layers,
   ChevronDown,
@@ -17,7 +17,9 @@ import { evaluateCollectiveIntelligence } from '../../core/forensics/collective'
 import { generateCollectiveNarratives } from '../../core/narratives/narratives';
 import type { NarrativeSection } from '../../core/narratives/types';
 import { useI18nStore } from '../../store/useI18nStore';
-import { formatNaturalDate } from '../../core/forensics/metadata';
+import { formatNaturalDate, parseExifDate } from '../../core/forensics/metadata';
+import { fetchOsrmRouteDetails } from '../../services/mapHelpers';
+import type { OsrmRouteDetails } from '../../services/mapHelpers';
 
 function formatTotalDuration(
   totalMs: number,
@@ -94,7 +96,61 @@ export const CombinedIntelligenceCard: React.FC<CombinedIntelligenceCardProps> =
   const { currentLang, t } = useI18nStore();
   const [activeTabIdx, setActiveTabIdx] = useState(0);
   const [expandedTabs, setExpandedTabs] = useState<Record<number, boolean>>({});
+  const [roadRouteDetails, setRoadRouteDetails] = useState<OsrmRouteDetails | null>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!assets || assets.length < 2) return;
+
+    const geoAssets = assets
+      .filter((a) => {
+        const lat = a.exifData?.latitude ?? a.exifData?.GPSLatitude;
+        const lng = a.exifData?.longitude ?? a.exifData?.GPSLongitude;
+        return (
+          lat != null &&
+          lng != null &&
+          !Number.isNaN(Number(lat)) &&
+          !Number.isNaN(Number(lng))
+        );
+      })
+      .map((a) => {
+        const rawDate =
+          a.exifData?.DateTimeOriginal ||
+          a.exifData?.CreateDate ||
+          a.exifData?.DateTime;
+        const d = parseExifDate(rawDate);
+        return {
+          asset: a,
+          time: d ? d.getTime() : a.fileDate || 0,
+          lat: Number(a.exifData?.latitude ?? a.exifData?.GPSLatitude),
+          lng: Number(a.exifData?.longitude ?? a.exifData?.GPSLongitude),
+        };
+      })
+      .sort((a, b) => a.time - b.time);
+
+    let isCancelled = false;
+
+    if (geoAssets.length >= 2) {
+      const waypoints = geoAssets.map((item) => ({
+        lat: item.lat,
+        lng: item.lng,
+      }));
+
+      fetchOsrmRouteDetails(waypoints)
+        .then((details) => {
+          if (!isCancelled && details) {
+            setRoadRouteDetails(details);
+          }
+        })
+        .catch(() => {
+          // graceful offline fallback
+        });
+    }
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [assets]);
 
   if (!assets || assets.length <= 1) {
     return null;
@@ -583,11 +639,27 @@ export const CombinedIntelligenceCard: React.FC<CombinedIntelligenceCardProps> =
                                 )}
                               </span>
                             </div>
+                            {roadRouteDetails && roadRouteDetails.totalDistanceMeters > 0 && (
+                              <div>
+                                <strong style={{ color: 'var(--text-main)' }}>
+                                  {t('geo_estimated_road_route', {}, 'narratives')}
+                                </strong>
+                                <br />
+                                <span style={{ color: '#38bdf8', fontWeight: 600 }}>
+                                  {formatGeoDistance(
+                                    roadRouteDetails.totalDistanceMeters / 1000,
+                                    roadRouteDetails.totalDistanceMeters
+                                  )}
+                                </span>
+                              </div>
+                            )}
                             <div
                               className="forensic-stats-full-row"
                               style={{ color: 'var(--text-muted)', fontSize: '11px' }}
                             >
-                              {t('geo_reconstruct_note', {}, 'narratives')}
+                              {roadRouteDetails && roadRouteDetails.totalDistanceMeters > 0
+                                ? t('geo_reconstruct_note_road', {}, 'narratives')
+                                : t('geo_reconstruct_note_displacement', {}, 'narratives')}
                             </div>
                           </div>
 
@@ -597,23 +669,32 @@ export const CombinedIntelligenceCard: React.FC<CombinedIntelligenceCardProps> =
                                 {t('geo_reconstruct_jumps', {}, 'narratives')}
                               </div>
                               <div className="timeline-jumps-list">
-                                {collective.geospatial.jumps.map((jump, idx) => (
-                                  <div key={idx} className="forensic-jump-row">
-                                    <span className="jump-filename" title={jump.fromFileName}>
-                                      {jump.fromFileName}
-                                    </span>
-                                    <span className="jump-delta">
-                                      ➡ (+{formatGeoDistance(jump.distanceKm, jump.distanceMeters)})
-                                    </span>
-                                    <span
-                                      className="jump-filename"
-                                      style={{ textAlign: 'right' }}
-                                      title={jump.toFileName}
-                                    >
-                                      {jump.toFileName}
-                                    </span>
-                                  </div>
-                                ))}
+                                {collective.geospatial.jumps.map((jump, idx) => {
+                                  const roadMeters = roadRouteDetails?.legDistancesMeters?.[idx];
+                                  const hasRoadLeg = roadMeters != null && roadMeters > 0;
+                                  return (
+                                    <div key={idx} className="forensic-jump-row">
+                                      <span className="jump-filename" title={jump.fromFileName}>
+                                        {jump.fromFileName}
+                                      </span>
+                                      <span className="jump-delta">
+                                        ➡ (+{formatGeoDistance(jump.distanceKm, jump.distanceMeters)}
+                                        {hasRoadLeg && (
+                                          <span style={{ color: 'var(--text-muted)', fontSize: '0.85em', marginLeft: '4px' }}>
+                                            (~{formatGeoDistance(roadMeters / 1000, roadMeters)} {t('geo_via_road', {}, 'narratives')})
+                                          </span>
+                                        )})
+                                      </span>
+                                      <span
+                                        className="jump-filename"
+                                        style={{ textAlign: 'right' }}
+                                        title={jump.toFileName}
+                                      >
+                                        {jump.toFileName}
+                                      </span>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             </>
                           )}
