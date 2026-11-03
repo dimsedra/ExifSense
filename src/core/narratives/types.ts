@@ -53,5 +53,6 @@ export interface ChronologicalBatchStory {
 export interface ChronologicalStoryOptions {
   locale?: SupportedLocale;
   format?: 'html' | 'markdown' | 'plain';
+  totalRoadDistance?: number;
   roadDistances?: number[];
 }

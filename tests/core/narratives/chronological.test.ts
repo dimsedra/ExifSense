@@ -629,6 +629,136 @@ describe('Chronological Batch Narrative Engine', () => {
         'حوالي 17.7 km إزاحة خط مستقيم من 731.jpg',
       );
     });
+
+    it('formats macro baseline dual distance with displacement and road route when totalRoadDistance is provided (en)', () => {
+      const assetA = createMockAsset({
+        fileName: '731.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:00:00',
+          latitude: 56.64500,
+          longitude: -4.79500,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: '732.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:35:00',
+          latitude: 56.78000,
+          longitude: -4.95000,
+        },
+      });
+
+      const story = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'en',
+        format: 'plain',
+        totalRoadDistance: 21500,
+      });
+
+      expect(story.baseline).toContain(
+        'covering approximately 17.7 km in cumulative straight-line displacement (or ~21.5 km via road route).',
+      );
+    });
+
+    it('falls back to displacement only in macro baseline when totalRoadDistance is absent (en)', () => {
+      const assetA = createMockAsset({
+        fileName: '731.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:00:00',
+          latitude: 56.64500,
+          longitude: -4.79500,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: '732.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:35:00',
+          latitude: 56.78000,
+          longitude: -4.95000,
+        },
+      });
+
+      const story = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'en',
+        format: 'plain',
+      });
+
+      expect(story.baseline).toContain(
+        'covering approximately 17.7 km in cumulative straight-line displacement.',
+      );
+      expect(story.baseline).not.toContain('via road route');
+    });
+
+    it('formats macro baseline dual distance and fallback in Indonesian (id)', () => {
+      const assetA = createMockAsset({
+        fileName: '731.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:00:00',
+          latitude: 56.64500,
+          longitude: -4.79500,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: '732.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:35:00',
+          latitude: 56.78000,
+          longitude: -4.95000,
+        },
+      });
+
+      const storyWithRoad = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'id',
+        format: 'plain',
+        totalRoadDistance: 21500,
+      });
+      expect(storyWithRoad.baseline).toContain(
+        'mencakup perpindahan garis lurus kumulatif sekitar 17.7 km (atau ~21.5 km melalui rute jalan).',
+      );
+
+      const storyWithoutRoad = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'id',
+        format: 'plain',
+      });
+      expect(storyWithoutRoad.baseline).toContain(
+        'mencakup perpindahan garis lurus kumulatif sekitar 17.7 km.',
+      );
+    });
+
+    it('formats macro baseline dual distance and fallback in Arabic (ar)', () => {
+      const assetA = createMockAsset({
+        fileName: '731.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:00:00',
+          latitude: 56.64500,
+          longitude: -4.79500,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: '732.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:35:00',
+          latitude: 56.78000,
+          longitude: -4.95000,
+        },
+      });
+
+      const storyWithRoad = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'ar',
+        format: 'plain',
+        totalRoadDistance: 21500,
+      });
+      expect(storyWithRoad.baseline).toContain(
+        'مغطية إزاحة خط مستقيم تراكمية بحوالي 17.7 km (أو ~21.5 km عبر مسار الطريق).',
+      );
+
+      const storyWithoutRoad = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'ar',
+        format: 'plain',
+      });
+      expect(storyWithoutRoad.baseline).toContain(
+        'مغطية إزاحة خط مستقيم تراكمية بحوالي 17.7 km.',
+      );
+    });
   });
 
   describe('BP-SYNTHESIS-001: Unified Macro Baseline Synthesis', () => {
@@ -665,7 +795,7 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(story.baseline).toContain('across a span of 17.6 hours');
       expect(story.baseline).toContain('Tuesday, March 19, 2019 at 18:01:04');
       expect(story.baseline).toContain('Wednesday, March 20, 2019 at 11:38:31');
-      expect(story.baseline).toContain('covering an estimated total travel distance of approximately 149.3 km');
+      expect(story.baseline).toContain('covering approximately 149.3 km in cumulative straight-line displacement.');
     });
 
     it('synthesizes multiple devices with time span and distance in one sentence', () => {
@@ -701,7 +831,7 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(story.baseline).toContain('across a span of 17.6 hours');
       expect(story.baseline).toContain('Tuesday, March 19, 2019 at 18:01:04');
       expect(story.baseline).toContain('Wednesday, March 20, 2019 at 11:38:31');
-      expect(story.baseline).toContain('covering an estimated total travel distance of approximately 149.3 km');
+      expect(story.baseline).toContain('covering approximately 149.3 km in cumulative straight-line displacement.');
     });
 
     it('omits distance gracefully when assets lack GPS coordinates', () => {
@@ -731,7 +861,7 @@ describe('Chronological Batch Narrative Engine', () => {
         'All photos in this batch were captured using the same camera device: Sony A7IV',
       );
       expect(story.baseline).toContain('across a span of 2 hours');
-      expect(story.baseline).not.toContain('travel distance');
+      expect(story.baseline).not.toContain('straight-line displacement');
     });
 
     it('omits time span gracefully when assets lack capture timestamps', () => {
@@ -762,7 +892,7 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(story.baseline).toContain(
         'All photos in this batch were captured using the same camera device: Sony A7IV',
       );
-      expect(story.baseline).toContain('covering an estimated total travel distance of approximately 12 km');
+      expect(story.baseline).toContain('covering approximately 12 km in cumulative straight-line displacement.');
       expect(story.baseline).not.toContain('across a span');
     });
 
@@ -798,7 +928,7 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(storyId.baseline).toContain('dalam rentang waktu 17,6 jam');
       expect(storyId.baseline).toContain('Selasa, 19 Maret 2019');
       expect(storyId.baseline).toContain('Rabu, 20 Maret 2019');
-      expect(storyId.baseline).toContain('dengan estimasi total jarak perjalanan sekitar 149.3 km');
+      expect(storyId.baseline).toContain('mencakup perpindahan garis lurus kumulatif sekitar 149.3 km.');
 
       const storyAr = generateChronologicalBatchStory([assetA, assetB], {
         locale: 'ar',
@@ -808,7 +938,7 @@ describe('Chronological Batch Narrative Engine', () => {
         'تم التقاط جميع الصور في هذه المجموعة باستخدام نفس جهاز الكاميرا: LGE Nexus 5X',
       );
       expect(storyAr.baseline).toContain('خلال فترة زمنية مدتها 17.6 ساعة');
-      expect(storyAr.baseline).toContain('مع تقدير إجمالي مسافة الرحلة بحوالي 149.3 km');
+      expect(storyAr.baseline).toContain('مغطية إزاحة خط مستقيم تراكمية بحوالي 149.3 km.');
     });
   });
 });
