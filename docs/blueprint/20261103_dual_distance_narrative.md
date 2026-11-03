@@ -133,8 +133,8 @@ This specification translates [Intent: Dual-Distance Narrative (Displacement vs 
 - **Commit**:
   - `feat: integrate osrm route details into story card and realign geospatial inspector`
 
-### BP-DUALDIST-004: CLI Runner and Formatter Realignment
-- **Serves**: Parity between CLI and Web across both narrative stories and tabular collective intelligence.
+### BP-DUALDIST-004: CLI Runner, Formatter, and Executable Binary Realignment
+- **Serves**: Parity between CLI executable binary (`bin/exifsense.js`) and Web across both narrative stories and tabular collective intelligence.
 - **Input**: `assets: ForensicAsset[]`, CLI options
 - **Behavior**:
   - In `src/cli/runner.ts`:
@@ -144,13 +144,15 @@ This specification translates [Intent: Dual-Distance Narrative (Displacement vs 
   - In `src/cli/formatter.ts`:
     - Displays both "Cumulative Displacement" and "Estimated Road Route" (if resolved).
     - Aligns label naming with the web inspector.
-- **Output**: Terminal/markdown batch report reflecting dual-distance metrics.
+  - In `bin/exifsense.js`:
+    - Recompiled via `npm run build:cli` (rolldown bundle) so the direct CLI executable binary in `bin/` reflects all dual-distance changes.
+- **Output**: Terminal/markdown batch report reflecting dual-distance metrics, with updated standalone binary at `bin/exifsense.js`.
 - **Failure**: Network failure falls back to displacement-only without nonzero exit code.
-- **Method**: TDD
-- **Verification**: `tests/cli/cli.test.ts` testing batch CLI execution online and offline.
+- **Method**: TDD & Binary Verification
+- **Verification**: `tests/cli/cli.test.ts` testing batch CLI execution online and offline, plus running `./bin/exifsense.js batch` verifying binary parity.
 - **Commit**:
   - `test: test cli batch runner and formatter with dual distance and offline fallback`
-  - `feat: enable dual-distance road route resolution in cli runner and formatter`
+  - `feat: enable dual-distance road route resolution in cli runner, formatter, and bin bundle`
 
 ## Non-Goals
 - **No network calls in core domain**: `src/core/` remains 100% pure, synchronous, and offline.
