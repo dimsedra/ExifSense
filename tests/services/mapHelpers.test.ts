@@ -229,6 +229,65 @@ describe('mapHelpers', () => {
       }
     });
 
+    it('fetches route details with total distance and individual leg distances', async () => {
+      const { fetchOsrmRouteDetails, clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearOsrmCache();
+
+      const mockRoute = {
+        type: 'LineString',
+        coordinates: [
+          [-4.71, 56.20],
+          [-4.72, 56.21],
+          [-4.73, 56.22],
+        ],
+      };
+
+      const originalFetch = globalThis.fetch;
+      let callCount = 0;
+      globalThis.fetch = (async () => {
+        callCount++;
+        return {
+          ok: true,
+          json: async () => ({
+            code: 'Ok',
+            routes: [
+              {
+                geometry: mockRoute,
+                distance: 21500,
+                legs: [
+                  { distance: 9500 },
+                  { distance: 12000 },
+                ],
+              },
+            ],
+          }),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const points = [
+          { lat: 56.20, lng: -4.71 },
+          { lat: 56.21, lng: -4.72 },
+          { lat: 56.22, lng: -4.73 },
+        ];
+
+        const details = await fetchOsrmRouteDetails(points);
+        expect(details).not.toBeNull();
+        expect(details?.totalDistanceMeters).toBe(21500);
+        expect(details?.legDistancesMeters).toEqual([9500, 12000]);
+        expect(details?.geometry).toEqual(mockRoute);
+        expect(callCount).toBe(1);
+
+        // Verify cache hit
+        const detailsCached = await fetchOsrmRouteDetails(points);
+        expect(detailsCached).toEqual(details);
+        expect(callCount).toBe(1);
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearOsrmCache();
+      }
+    });
+
     it('returns null gracefully on OSRM error', async () => {
       const { fetchOsrmRoute, clearOsrmCache } = await import('../../src/services/mapHelpers');
       clearOsrmCache();
