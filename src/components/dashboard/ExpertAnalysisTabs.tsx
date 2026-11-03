@@ -11,6 +11,7 @@ import {
   FileCheck,
   Layers,
   ListPlus,
+  ArrowDown,
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
@@ -248,7 +249,7 @@ export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({
                 <div className="expert-pane-actions">
                   <button
                     type="button"
-                    className="btn-link jump-to-cat-btn"
+                    className="jump-to-cat-btn"
                     onClick={() => {
                       setActiveRawCategory(activeNarrativeTab);
                       rawMetadataRef.current?.scrollIntoView({
@@ -257,8 +258,9 @@ export const ExpertAnalysisTabs: React.FC<ExpertAnalysisTabsProps> = ({
                       });
                     }}
                   >
-                    <ListPlus size={14} />{' '}
-                    {t('view_details', { cat: t(activeTabConfig.catKey) })}
+                    <ListPlus size={14} className="jump-icon" />
+                    <span>{t('view_details', { cat: t(activeTabConfig.catKey) })}</span>
+                    <ArrowDown size={12} className="jump-arrow" />
                   </button>
                 </div>
               )}
