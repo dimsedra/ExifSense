@@ -302,6 +302,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
     margin-bottom: 1rem;
     font-size: 0.85rem;
     font-weight: 600;
@@ -310,12 +312,47 @@
     letter-spacing: 0.05em;
 }
 
-.count-badge {
-    background-color: var(--secondary);
+.selector-title-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-main);
+}
+
+.selector-title-group h3 {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-main);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.selector-controls-group {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.asset-filters,
+.asset-selector-filters {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+}
+
+.count-badge,
+.selector-controls-group .badge {
+    background-color: rgba(229, 224, 216, 0.08);
+    border: 1px solid rgba(229, 224, 216, 0.15);
     color: var(--accent);
-    padding: 0.25rem 0.75rem;
+    padding: 0.25rem 0.65rem;
     border-radius: 99px;
     font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 .asset-selector-list {
@@ -436,14 +473,16 @@
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     color: var(--text-muted);
-    padding: 0.35rem 0.75rem;
+    padding: 0.3rem 0.65rem;
     border-radius: 6px;
     font-size: 0.75rem;
-    display: flex;
+    font-weight: 500;
+    display: inline-flex;
     align-items: center;
     gap: 0.25rem;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
 }
 
 .asset-filter-btn i {
@@ -451,10 +490,16 @@
     height: 14px;
 }
 
-.asset-filter-btn:hover, .asset-filter-btn.active {
+.asset-filter-btn:hover {
+    border-color: var(--text-muted);
+    color: var(--text-main);
+}
+
+.asset-filter-btn.active {
     background: var(--primary);
     color: var(--bg-main);
     border-color: var(--primary);
+    font-weight: 600;
 }
 
 .asset-thumb-btn.active::after {

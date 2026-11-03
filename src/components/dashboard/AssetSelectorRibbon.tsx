@@ -87,7 +87,7 @@ export const AssetSelectorRibbon: React.FC<AssetSelectorRibbonProps> = ({
               {t('filter_stripped', {}, 'narratives')}
             </button>
           </div>
-          <span id="batch-count" className="badge">
+          <span id="batch-count" className="badge count-badge">
             {t('asset_count', { n: assets.length })}
           </span>
         </div>
