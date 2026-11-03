@@ -105,13 +105,24 @@ export const AssetSelectorRibbon: React.FC<AssetSelectorRibbonProps> = ({
   }, [assets.length, activeAssetIndex, onSelectAsset]);
 
   useEffect(() => {
-    if (listRef.current) {
-      const activeEl = listRef.current.querySelector('.asset-thumb-btn.active') as
-        | HTMLElement
-        | undefined;
-      if (activeEl) {
-        activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-      }
+    const container = listRef.current;
+    if (!container) return;
+
+    const activeEl = container.querySelector('.asset-thumb-btn.active') as HTMLElement | null;
+    if (!activeEl) return;
+
+    const containerWidth = container.clientWidth;
+    const elementLeft = activeEl.offsetLeft;
+    const elementWidth = activeEl.offsetWidth;
+
+    const targetScrollLeft = elementLeft - containerWidth / 2 + elementWidth / 2;
+    if (typeof container.scrollTo === 'function') {
+      container.scrollTo({
+        left: Math.max(0, targetScrollLeft),
+        behavior: 'smooth',
+      });
+    } else {
+      container.scrollLeft = Math.max(0, targetScrollLeft);
     }
   }, [activeAssetIndex]);
 

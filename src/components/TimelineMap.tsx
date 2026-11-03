@@ -13,6 +13,42 @@ export interface TimelineMapProps {
   onMarkerClick?: (assetIndex: number) => void;
 }
 
+function createHighlightedIcon(): L.DivIcon {
+  return L.divIcon({
+    className: 'highlighted-forensic-marker',
+    html: `
+      <div style="
+        background: #ef4444; 
+        width: 22px; 
+        height: 22px; 
+        border-radius: 50%; 
+        border: 3px solid #ffffff; 
+        box-shadow: 0 0 10px rgba(239,68,68,0.8);
+      "></div>
+    `,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+}
+
+function createStandardIcon(): L.DivIcon {
+  return L.divIcon({
+    className: 'standard-forensic-marker',
+    html: `
+      <div style="
+        background: #0ea5e9; 
+        width: 14px; 
+        height: 14px; 
+        border-radius: 50%; 
+        border: 2px solid #ffffff; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+      "></div>
+    `,
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
+  });
+}
+
 export const TimelineMap: React.FC<TimelineMapProps> = ({
   assets,
   activeAssetId,
@@ -24,12 +60,18 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersLayerRef = useRef<L.FeatureGroup | null>(null);
   const polylineLayerRef = useRef<L.Layer | null>(null);
+  const markersMapRef = useRef<Map<string, L.Marker>>(new Map());
+  const hasInitiallyFittedRef = useRef(false);
+  const prevFingerprintRef = useRef('');
   const [routeEnabled, setRouteEnabled] = useState(showPath);
   const [routeType, setRouteType] = useState<'osrm' | 'direct' | null>(null);
 
   const waypoints = extractAssetCoordinates(assets);
   const activeWaypoint =
     waypoints.find((wp) => wp.assetId === activeAssetId) || waypoints[0] || null;
+  const waypointsFingerprint = waypoints
+    .map((wp) => `${wp.assetId}:${wp.lat.toFixed(5)},${wp.lng.toFixed(5)}`)
+    .join('|');
 
   useEffect(() => {
     setRouteEnabled(showPath);
@@ -79,12 +121,9 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
     if (waypoints.length === 0) return;
 
     const markers: L.Marker[] = [];
-    const latLngs: L.LatLngExpression[] = [];
-
     waypoints.forEach((wp) => {
       const asset = assets.find((a) => a.id === wp.assetId);
       const isHighlighted = wp.assetId === activeAssetId;
-      latLngs.push([wp.lat, wp.lng]);
 
       const captureDate =
         asset?.exifData?.DateTimeOriginal ||
@@ -101,41 +140,7 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
         </div>
       `;
 
-      let icon: L.DivIcon;
-      if (isHighlighted) {
-        icon = L.divIcon({
-          className: 'highlighted-forensic-marker',
-          html: `
-            <div style="
-              background: #ef4444; 
-              width: 22px; 
-              height: 22px; 
-              border-radius: 50%; 
-              border: 3px solid #ffffff; 
-              box-shadow: 0 0 10px rgba(239,68,68,0.8);
-            "></div>
-          `,
-          iconSize: [22, 22],
-          iconAnchor: [11, 11],
-        });
-      } else {
-        icon = L.divIcon({
-          className: 'standard-forensic-marker',
-          html: `
-            <div style="
-              background: #0ea5e9; 
-              width: 14px; 
-              height: 14px; 
-              border-radius: 50%; 
-              border: 2px solid #ffffff; 
-              box-shadow: 0 2px 4px rgba(0,0,0,0.4);
-            "></div>
-          `,
-          iconSize: [14, 14],
-          iconAnchor: [7, 7],
-        });
-      }
-
+      const icon = isHighlighted ? createHighlightedIcon() : createStandardIcon();
       const marker = L.marker([wp.lat, wp.lng], { icon }).bindPopup(popupHtml);
       marker.on('click', () => {
         if (onMarkerClick) {
@@ -147,10 +152,25 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
       });
 
       markers.push(marker);
+      markersMapRef.current.set(wp.assetId, marker);
     });
 
     const featureGroup = L.featureGroup(markers).addTo(map);
     markersLayerRef.current = featureGroup;
+
+    if (prevFingerprintRef.current !== waypointsFingerprint) {
+      prevFingerprintRef.current = waypointsFingerprint;
+      hasInitiallyFittedRef.current = false;
+    }
+
+    if (!hasInitiallyFittedRef.current) {
+      try {
+        map.fitBounds(featureGroup.getBounds(), { padding: [50, 50], maxZoom: 15 });
+        hasInitiallyFittedRef.current = true;
+      } catch {
+        // fitBounds fallback
+      }
+    }
 
     let isCancelled = false;
 
@@ -216,16 +236,17 @@ export const TimelineMap: React.FC<TimelineMapProps> = ({
       setRouteType(null);
     }
 
-    try {
-      map.fitBounds(featureGroup.getBounds(), { padding: [50, 50], maxZoom: 15 });
-    } catch {
-      // fitBounds fallback
-    }
-
     return () => {
       isCancelled = true;
     };
-  }, [waypoints.length, activeAssetId, routeEnabled, assets, onMarkerClick, t]);
+  }, [waypointsFingerprint, routeEnabled, assets, onMarkerClick, t]);
+
+  useEffect(() => {
+    markersMapRef.current.forEach((marker, assetId) => {
+      const isHighlighted = assetId === activeAssetId;
+      marker.setIcon(isHighlighted ? createHighlightedIcon() : createStandardIcon());
+    });
+  }, [activeAssetId]);
 
   if (waypoints.length === 0) {
     return null;
