@@ -8,130 +8,151 @@ last_updated: 2026-11-03
 
 # Blueprint: Dual-Distance Narrative (Displacement and Road Route)
 
-This specification translates [Intent: Dual-Distance Narrative (Displacement vs Road Route)](../intent/20261103_dual_distance_displacement_and_road_route.md) into concrete technical contracts, preserving architectural boundaries so that `src/core/narratives/chronological.ts` remains a pure, synchronous domain module while both Web and CLI consumers leverage OSRM network routing with graceful offline fallbacks.
+This specification translates [Intent: Dual-Distance Narrative (Displacement vs Road Route)](../intent/20261103_dual_distance_displacement_and_road_route.md) into concrete technical contracts, covering holistic alignment across the Chronological Story lead, event step transitions, the Combined Analysis Geospatial inspector, and the CLI runner.
 
-## Current Code
-- In `src/services/mapHelpers.ts`, `fetchOsrmRoute` queries `https://router.project-osrm.org/route/v1/driving/...` but only extracts `geometry: GeoJSON.GeoJsonObject`. It discards `routes[0].legs` and route distance metrics.
-- In `src/core/narratives/chronological.ts`, `buildSubsequentStep` calculates distance strictly via `calculateDistance` (Haversine formula), interpolating `{distance}` as a single value into `chrono_step_location` or `chrono_step_gps`.
-- In `src/components/dashboard/ChronologicalStoryCard.tsx`, story generation is executed synchronously during render without road route metrics.
-- In `src/cli/runner.ts`, `processBatchAssets` generates the story synchronously and currently performs no network I/O.
+## Current Code & Identified Gaps
+- In `src/services/mapHelpers.ts`, `fetchOsrmRoute` queries `https://router.project-osrm.org/route/v1/driving/...` but only extracts `geometry: GeoJSON.GeoJsonObject`. It discards `routes[0].legs` and overall route distance.
+- In `src/core/narratives/chronological.ts`:
+  - `buildBaseline`: Calculates total session distance via Haversine and inserts it into `chrono_macro_*` templates as "covering an estimated total travel distance of approximately {distance}", confusing coordinate displacement with travel effort.
+  - `buildSubsequentStep`: Calculates pairwise distance via Haversine and inserts it into step templates as a single ambiguous `{distance}`.
+- In `src/components/dashboard/CombinedIntelligenceCard.tsx` (Geospatial Analysis tab):
+  - Displays `collective.geospatial.totalPathDistanceKm` (Haversine summation) under the title "Total Travel Distance" with a misleading footnote: `*Estimated distance based on the most probable road routes between the photos' locations.`, even though no road routing was performed.
+  - Displays individual coordinate jumps with pure Haversine values without distinguishing straight-line displacement from road route.
+- In `src/cli/runner.ts` and `src/cli/formatter.ts`, batch output only reflects pure Haversine distance without road route context.
 
 ## Design
 ```
                        [ Input: Assets with GPS ]
                                    │
-              ┌────────────────────┴────────────────────┐
-              ▼                                         ▼
-   [ Web: ChronologicalStoryCard ]             [ CLI: runner.ts ]
-              │                                         │
-              └───────────────┬─────────────────────────┘
-                              │
-                              ▼
-            fetchOsrmRouteDetails(waypoints)
-             (Boundary: I/O + In-Memory Cache)
-                              │
-             ┌────────────────┴────────────────┐
-             ▼ (Success)                       ▼ (Offline/Error)
-   [ legDistancesMeters[] ]                    [ null / [] ]
-             │                                       │
-             └────────────────┬──────────────────────┘
-                              │
-                              ▼
-            generateChronologicalBatchStory(assets, {
-              roadDistances: legDistancesMeters
-            })
-            (Core Domain: Pure, Synchronous)
-                              │
-                              ▼
-         "approximately 16.3 km in straight-line displacement
-              (or ~21.5 km via road route) from 731.jpg"
+              ┌────────────────────┴────────────────────────┐
+              ▼                                             ▼
+   [ Web: StoryCard & CombinedCard ]               [ CLI: runner.ts ]
+              │                                             │
+              └────────────────────┬────────────────────────┘
+                                   │
+                                   ▼
+                 fetchOsrmRouteDetails(waypoints)
+                  (Boundary: I/O + In-Memory Cache)
+                                   │
+                  ┌────────────────┴────────────────┐
+                  ▼ (Success)                       ▼ (Offline/Error)
+        [ totalDistanceMeters,            [ total: null,
+          legDistancesMeters[] ]            legs: [] ]
+                  │                                 │
+                  └────────────────┬────────────────┘
+                                   │
+          ┌────────────────────────┴────────────────────────┐
+          ▼                                                 ▼
+[ Core Narratives & Locales ]                     [ Geospatial Inspector ]
+- Lead: "cumulative displacement                  - Total Displacement: X km
+  (or ~Y km via road route)"                      - Estimated Road Route: Y km (if resolved)
+- Steps: "X km displacement                       - Corrected, transparent footnotes
+  (or ~Y km via road route)"                      - Jumps: displacement + road route
 ```
 
 1. **Boundary I/O Layer (`src/services/mapHelpers.ts`)**:
-   Provides `fetchOsrmRouteDetails(waypoints)` returning both overall route info and individual `legDistancesMeters: number[]`. Works universally across Web (browser `fetch`) and Node CLI (Node 18+ global `fetch`).
-2. **Core Domain Layer (`src/core/narratives/chronological.ts`)**:
-   Remains strictly pure and synchronous. Accepts optional `roadDistances?: number[]` mapping to transitions between GPS-enabled waypoints. Formats the displacement and road distance according to active locale templates.
-3. **Consumers (`ChronologicalStoryCard.tsx` and `cli/runner.ts`)**:
-   Resolve road route asynchronously at the boundary before passing resolved distances into the narrative generator. If offline, timed out, or unroutable, they supply no road distances and the narrative cleanly renders straight-line displacement only.
+   Provides `fetchOsrmRouteDetails(waypoints)` returning `{ totalDistanceMeters: number; legDistancesMeters: number[]; geometry?: GeoJSON.GeoJsonObject }`. Works universally in browser and Node 18+ CLI.
+2. **Core Domain Layer (`src/core/narratives/chronological.ts` & `src/locales/`)**:
+   Pure and synchronous. Accepts optional `{ totalRoadDistance?: number; roadDistances?: number[] }`. Formats both the macro lead paragraph and step transitions with dual-distance text.
+3. **Geospatial Technical Inspector (`CombinedIntelligenceCard.tsx` & `cli/formatter.ts`)**:
+   Rigorously labels metrics: "Cumulative Displacement" (Haversine) and "Estimated Road Route" (OSRM). Adjusts footnotes honestly based on whether OSRM routing was evaluated.
 
 ## Contracts
 
-### BP-DUALDIST-001: OSRM Route Leg Distance Extraction
-- **Serves**: Resolving individual segment transit distances along the road network without redundant API calls.
+### BP-DUALDIST-001: OSRM Route Details and Leg Distance Extraction
+- **Serves**: Resolving both total road distance and individual segment transit distances without redundant API calls.
 - **Input**: `waypoints: Array<{ lat: number; lng: number }>`
 - **Behavior**:
-  - Builds coordinates string `lng,lat;lng,lat...` (capped at 100 points).
+  - Validates waypoint list (minimum 2 points, capped at 100).
   - Checks in-memory cache `osrmDetailsCache`.
-  - Sends HTTP GET to OSRM driving route API.
-  - Parses `routes[0].legs`, extracting `leg.distance` (in meters) for each consecutive pair `[i, i+1]`.
-  - Returns structured result: `{ totalDistanceMeters: number; legDistancesMeters: number[]; geometry?: GeoJSON.GeoJsonObject }`.
-  - On network failure, non-200 response, or missing routes, returns `null` gracefully.
+  - Queries OSRM `/route/v1/driving/...` endpoint.
+  - Extracts `routes[0].distance` (total meters) and `routes[0].legs` (`leg.distance` in meters per consecutive waypoint pair).
+  - Caches and returns `{ totalDistanceMeters, legDistancesMeters, geometry }`.
+  - On network error, non-200 HTTP, or empty routes, catches error and returns `null`.
 - **Output**: `Promise<OsrmRouteDetails | null>`
-- **Failure**: Caught internally, logs error, returns `null`. Never throws.
+- **Failure**: Handled gracefully, logs error without throwing.
 - **Method**: TDD
-- **Verification**: `tests/services/mapHelpers.test.ts` testing successful parsing of legs, in-memory caching, empty waypoints, and HTTP error fallback.
+- **Verification**: `tests/services/mapHelpers.test.ts` testing total distance, leg distances, caching, and network failure fallback.
 - **Commit**:
   - `test: add unit tests for osrm route details and leg distance extraction`
   - `feat: implement fetchOsrmRouteDetails with leg distance mapping and caching`
 
-### BP-DUALDIST-002: Dual-Distance Narrative Formatting and Localization
-- **Serves**: Clear distinction between straight-line displacement and estimated road route in narrative text.
+### BP-DUALDIST-002: Dual-Distance Narrative Formatting (Lead Baseline & Step Transitions)
+- **Serves**: Eliminating misleading single-metric distance claims in both the opening macro summary and pairwise step transitions.
 - **Input**:
   - `assets: ForensicAsset[]`
-  - `options: ChronologicalStoryOptions & { roadDistances?: number[] }`
-  - Locale templates in `src/locales/{en,id,ar}.json`
+  - `options: ChronologicalStoryOptions & { totalRoadDistance?: number; roadDistances?: number[] }`
+  - Locale files (`en.json`, `id.json`, `ar.json`)
 - **Behavior**:
-  - For each chronological transition between consecutive assets with valid GPS:
-    - Calculates straight-line distance via `calculateDistance` (Haversine).
-    - If a matching `roadDistance` is provided: formats compound evidence string, e.g.:
+  - **Macro Baseline**:
+    - Calculates cumulative Haversine displacement.
+    - If `totalRoadDistance` is provided: formats compound baseline string, e.g.:
+      - `en`: `...covering approximately 11.8 km in cumulative straight-line displacement (or ~14.2 km via road route).`
+      - `id`: `...mencakup perpindahan garis lurus kumulatif sekitar 11.8 km (atau ~14.2 km melalui rute jalan).`
+      - `ar`: `...مغطية إزاحة خط مستقيم تراكمية بحوالي 11.8 كم (أو ~14.2 كم عبر مسار الطريق).`
+    - If `totalRoadDistance` is absent: formats displacement only:
+      - `en`: `...covering approximately 11.8 km in cumulative straight-line displacement.`
+      - `id`: `...mencakup perpindahan garis lurus kumulatif sekitar 11.8 km.`
+      - `ar`: `...مغطية إزاحة خط مستقيم تراكمية بحوالي 11.8 كم.`
+  - **Step Transitions**:
+    - If `roadDistances[i]` is provided: formats compound step string, e.g.:
       - `en`: `approximately 16.3 km in straight-line displacement (or ~21.5 km via road route)`
       - `id`: `sekitar 16.3 km perpindahan garis lurus (atau ~21.5 km melalui rute jalan)`
       - `ar`: `حوالي 16.3 كم إزاحة خط مستقيم (أو ~21.5 كم عبر مسار الطريق)`
-    - If `roadDistance` is not provided (or 0 / undefined): formats displacement only:
+    - If `roadDistances[i]` is absent: formats displacement only:
       - `en`: `approximately 16.3 km in straight-line displacement`
       - `id`: `sekitar 16.3 km perpindahan garis lurus`
       - `ar`: `حوالي 16.3 كم إزاحة خط مستقيم`
-- **Output**: `ChronologicalBatchStory` with dual-distance text.
-- **Failure**: Missing road distance falls back to pure displacement without throwing.
+- **Output**: `ChronologicalBatchStory` with dual-distance narrative text.
+- **Failure**: Missing road metrics fall back cleanly to displacement-only output.
 - **Method**: TDD
-- **Verification**: `tests/core/narratives/chronological.test.ts` testing output across `en`, `id`, and `ar` with and without road distances.
+- **Verification**: `tests/core/narratives/chronological.test.ts` testing baseline and steps with and without road metrics across `en`, `id`, and `ar`.
 - **Commit**:
-  - `test: add unit tests for dual-distance narrative step interpolation`
+  - `test: add unit tests for dual-distance narrative step and baseline interpolation`
   - `feat: update chronological narrative templates and step builder for dual distance`
 
-### BP-DUALDIST-003: Web UI Boundary Integration
-- **Serves**: Providing road route data to the web narrative without blocking initial render.
-- **Input**: `assets: ForensicAsset[]` in `ChronologicalStoryCard.tsx`
+### BP-DUALDIST-003: UI Boundary Realignment (StoryCard and Geospatial Inspector)
+- **Serves**: Pre-fetching OSRM metrics in web boundary, feeding the story card, and clarifying metrics and footnotes in the Geospatial Analysis inspector.
+- **Input**: `assets: ForensicAsset[]`, `collective: CollectiveIntelligenceResult`
 - **Behavior**:
-  - `useEffect` extracts chronological GPS waypoints.
-  - Invokes `fetchOsrmRouteDetails(waypoints)`.
-  - On resolution, stores `legDistancesMeters` in component state.
-  - Rerenders `generateChronologicalBatchStory(assets, { roadDistances })`.
-- **Output**: Updated DOM showing dual distance in the story steps.
-- **Failure**: If offline or OSRM fails, state remains empty, rendering baseline displacement cleanly.
-- **Method**: Integration/e2e
-- **Verification**: Unit/integration tests in `tests/components/` or manual web verification proving async resolution and fallback.
+  - In `ChronologicalStoryCard.tsx`:
+    - `useEffect` fetches `fetchOsrmRouteDetails(waypoints)`.
+    - Updates local state with `{ totalRoadDistance, legDistances }`.
+    - Passes metrics into `generateChronologicalBatchStory`.
+  - In `CombinedIntelligenceCard.tsx` (Geospatial Analysis tab):
+    - Relabels "Total Travel Distance" to "Cumulative Displacement" (*Perpindahan Garis Lurus Kumulatif*).
+    - When OSRM route is resolved, adds adjacent metric: "Estimated Road Route" (*Estimasi Rute Jalan*).
+    - Fixes the footnote:
+      - If road route resolved: displays attribution to OSRM road network estimation.
+      - If only displacement available: displays clear attribution to direct coordinate displacement.
+    - In pairwise jumps list: shows displacement distance and, if available, road route distance.
+- **Output**: Cohesive, unambiguous web UI with zero contradictory statements.
+- **Failure**: If OSRM fails or user is offline, inspector cleanly displays displacement metrics only with accurate displacement footnote.
+- **Method**: Integration / Component testing
+- **Verification**: Component/integration tests and browser verification verifying dual-metric display, accurate footnotes, and offline fallback.
 - **Commit**:
-  - `feat: integrate osrm leg distances into ChronologicalStoryCard`
+  - `feat: integrate osrm route details into story card and realign geospatial inspector`
 
-### BP-DUALDIST-004: CLI Runner Parity and Offline Fallback
-- **Serves**: Ensuring CLI batch analysis outputs the same dual-distance narrative as the web while maintaining zero-crash offline execution.
-- **Input**: `assets: ForensicAsset[]` in `src/cli/runner.ts`
+### BP-DUALDIST-004: CLI Runner and Formatter Realignment
+- **Serves**: Parity between CLI and Web across both narrative stories and tabular collective intelligence.
+- **Input**: `assets: ForensicAsset[]`, CLI options
 - **Behavior**:
-  - `processBatchAssets` becomes async.
-  - Extracts chronological GPS waypoints from assets.
-  - Awaits `fetchOsrmRouteDetails(waypoints)` wrapped in try/catch with timeout.
-  - Passes extracted `legDistancesMeters` into `generateChronologicalBatchStory`.
-  - If network is unreachable or offline, proceeds with displacement-only narrative without throwing or aborting CLI run.
-- **Output**: Formatted batch report string containing dual-distance narrative.
-- **Failure**: Network failure is caught; output continues with displacement-only story. Exit code remains 0.
+  - In `src/cli/runner.ts`:
+    - `processBatchAssets` asynchronously fetches `fetchOsrmRouteDetails(waypoints)` with short timeout.
+    - Passes resolved road metrics into `generateChronologicalBatchStory` and formatters.
+    - Catches network/offline errors without failing the CLI command.
+  - In `src/cli/formatter.ts`:
+    - Displays both "Cumulative Displacement" and "Estimated Road Route" (if resolved).
+    - Aligns label naming with the web inspector.
+- **Output**: Terminal/markdown batch report reflecting dual-distance metrics.
+- **Failure**: Network failure falls back to displacement-only without nonzero exit code.
 - **Method**: TDD
-- **Verification**: `tests/cli/cli.test.ts` testing batch execution with mocked successful OSRM response and mocked network failure.
+- **Verification**: `tests/cli/cli.test.ts` testing batch CLI execution online and offline.
 - **Commit**:
-  - `test: test cli batch analysis with dual distance and offline fallback`
-  - `feat: enable dual-distance road route resolution in cli runner`
+  - `test: test cli batch runner and formatter with dual distance and offline fallback`
+  - `feat: enable dual-distance road route resolution in cli runner and formatter`
 
 ## Non-Goals
-- **No internal fetch in core domain**: `src/core/narratives/chronological.ts` must never import `fetch` or call external HTTP endpoints directly.
-- **No multi-mode routing**: Do not add walking, cycling, or transit mode toggles; driving mode (`/driving/`) remains the single standard road route profile.
-- **No blocking spinners in CLI**: CLI must not freeze indefinitely if OSRM is slow; network fetch must have a short reasonable timeout (e.g. 3000ms).
+- **No network calls in core domain**: `src/core/` remains 100% pure, synchronous, and offline.
+- **No speculative route claims**: Never claim a distance is road-based unless OSRM was evaluated and succeeded.
+- **No blocking execution**: Network timeouts or failures must never crash or stall the application.
