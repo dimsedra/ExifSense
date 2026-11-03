@@ -8,6 +8,7 @@ Catalog of technical documentation and design references for ExifSense.
 - [Intent: CLI Analysis and Simulation Harness](./intent/20261102_cli_analysis_simulation.md) — Direct command-line interaction and persistent JSON simulation harness for rapid stress testing, edge-case simulation, and narrative quality evaluation outside the browser UI.
 - [Intent: Dual-Distance Narrative (Displacement vs Road Route)](./intent/20261103_dual_distance_displacement_and_road_route.md) — Distinguishing straight-line coordinate displacement from estimated road travel distance in batch chronological narratives.
 - [Intent: Batch Macro Narrative Synthesis and Evidence Inspector](./intent/20261103_batch_narrative_synthesis.md) — Unifying batch macro narrative insights into Chronological Story lead with natural date formatting while repositioning Combined Analysis as a focused technical evidence inspector.
+- [Intent: CLI Local OSRM Provisioning for Fully Air-Gapped Environments](./intent/20261103_cli_local_osrm_provisioning.md) — Automated CLI helper commands to download and run regional OSRM containers locally for offline, privacy-first forensic operations.
 
 ## Blueprint
 
