@@ -910,13 +910,15 @@
 .evidence-highlight {
     background-color: rgba(229, 224, 216, 0.08);
     color: #f1ede8;
-    padding: 0.08rem 0.3rem;
+    padding: 0.08rem 0.35rem;
     border-radius: 4px;
     font-weight: 500;
     font-family: inherit;
     font-size: 0.9em;
     display: inline;
     border: 1px solid rgba(229, 224, 216, 0.15);
+    box-decoration-break: clone;
+    -webkit-box-decoration-break: clone;
 }
 
 .chronological-story-card {
@@ -929,15 +931,12 @@
 
 .chronological-lead-baseline {
     font-size: 0.95rem;
-    font-weight: 500;
+    font-weight: 400;
     color: var(--text-main);
-    line-height: 1.6;
+    line-height: 1.7;
     padding: 1rem 1.25rem;
     background: rgba(255, 255, 255, 0.02);
     border-bottom: 1px solid var(--border-color);
-    display: flex;
-    align-items: baseline;
-    gap: 0.65rem;
 }
 
 .chronological-timeline-steps {
