@@ -280,7 +280,7 @@ describe('CLI Analysis and Simulation Harness', () => {
       expect(result.exitCode).toBe(0);
       expect(result.outputText).toContain('Total Assets: 5');
       expect(result.outputText).toContain('--- Combined Analysis ---');
-      expect(result.outputText).toContain('Total Path Distance');
+      expect(result.outputText).toContain('Cumulative Displacement');
       expect(result.outputText).toContain('[Step 1]');
       expect(result.outputText).toContain('[Step 5]');
     });
@@ -342,6 +342,69 @@ describe('CLI Analysis and Simulation Harness', () => {
       await expect(extractBaseline('/non/existent/source.jpg')).rejects.toThrow(
         FileNotFoundError
       );
+    });
+  });
+
+  // ==========================================
+  // BP-DUALDIST-004: Dual-Distance CLI Realignment
+  // ==========================================
+  describe('BP-DUALDIST-004: CLI Batch Dual-Distance and Offline Fallback', () => {
+    it('resolves road route when online and outputs both Cumulative Displacement and Estimated Road Route', async () => {
+      const originalFetch = globalThis.fetch;
+      const { clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearOsrmCache();
+
+      globalThis.fetch = (async () => {
+        return {
+          ok: true,
+          json: async () => ({
+            code: 'Ok',
+            routes: [
+              {
+                geometry: { type: 'LineString', coordinates: [] },
+                distance: 21500,
+                legs: [{ distance: 9500 }, { distance: 12000 }],
+              },
+            ],
+          }),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const result = await runCli(['scenario', 'travel-sequence']);
+        expect(result.success).toBe(true);
+        expect(result.exitCode).toBe(0);
+        expect(result.outputText).toContain('Cumulative Displacement');
+        expect(result.outputText).toContain('Estimated Road Route');
+        expect(result.outputText).toContain('21.50 km');
+        expect(result.outputText).toContain('via road route');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearOsrmCache();
+      }
+    });
+
+    it('falls back cleanly to displacement only when offline or network fails', async () => {
+      const originalFetch = globalThis.fetch;
+      const { clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearOsrmCache();
+
+      globalThis.fetch = (async () => {
+        throw new Error('Network connection offline');
+      }) as typeof fetch;
+
+      try {
+        const result = await runCli(['scenario', 'travel-sequence']);
+        expect(result.success).toBe(true);
+        expect(result.exitCode).toBe(0);
+        expect(result.outputText).toContain('Cumulative Displacement');
+        expect(result.outputText).not.toContain('Estimated Road Route');
+        expect(result.outputText).toContain('cumulative straight-line displacement');
+        expect(result.outputText).not.toContain('via road route');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearOsrmCache();
+      }
     });
   });
 });
