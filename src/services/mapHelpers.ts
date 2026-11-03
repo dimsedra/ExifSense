@@ -133,22 +133,30 @@ export function clearGeocodeCache(): void {
   geocodeCache.clear();
 }
 
+export interface OsrmRouteDetails {
+  totalDistanceMeters: number;
+  legDistancesMeters: number[];
+  geometry?: GeoJSON.GeoJsonObject;
+}
+
 const osrmCache = new Map<string, GeoJSON.GeoJsonObject | null>();
+const osrmDetailsCache = new Map<string, OsrmRouteDetails | null>();
 
 /**
- * Fetches real-world road-following driving route geometry between waypoints via OSRM.
+ * Fetches real-world road-following driving route details between waypoints via OSRM,
+ * including total road distance, individual waypoint-to-waypoint leg distances, and geometry.
  */
-export async function fetchOsrmRoute(
+export async function fetchOsrmRouteDetails(
   waypoints: Array<{ lat: number; lng: number }>
-): Promise<GeoJSON.GeoJsonObject | null> {
+): Promise<OsrmRouteDetails | null> {
   if (!waypoints || waypoints.length < 2) return null;
 
   // OSRM public demo server limits waypoints (~100 max)
   const capped = waypoints.slice(0, 100);
   const coordsStr = capped.map((p) => `${p.lng},${p.lat}`).join(';');
 
-  if (osrmCache.has(coordsStr)) {
-    return osrmCache.get(coordsStr) ?? null;
+  if (osrmDetailsCache.has(coordsStr)) {
+    return osrmDetailsCache.get(coordsStr) ?? null;
   }
 
   try {
@@ -159,12 +167,28 @@ export async function fetchOsrmRoute(
     }
     const data = (await response.json()) as {
       code: string;
-      routes?: Array<{ geometry: GeoJSON.GeoJsonObject }>;
+      routes?: Array<{
+        geometry?: GeoJSON.GeoJsonObject;
+        distance?: number;
+        legs?: Array<{ distance?: number }>;
+      }>;
     };
-    if (data.code === 'Ok' && data.routes?.[0]?.geometry) {
-      const geometry = data.routes[0].geometry;
-      osrmCache.set(coordsStr, geometry);
-      return geometry;
+
+    if (data.code === 'Ok' && data.routes?.[0]) {
+      const primaryRoute = data.routes[0];
+      const totalDistanceMeters = Number(primaryRoute.distance || 0);
+      const legDistancesMeters = (primaryRoute.legs || []).map((leg) => Number(leg.distance || 0));
+      const result: OsrmRouteDetails = {
+        totalDistanceMeters,
+        legDistancesMeters,
+        geometry: primaryRoute.geometry,
+      };
+
+      osrmDetailsCache.set(coordsStr, result);
+      if (primaryRoute.geometry) {
+        osrmCache.set(coordsStr, primaryRoute.geometry);
+      }
+      return result;
     }
   } catch (error) {
     console.error('OSRM route fetch failed:', error);
@@ -174,10 +198,21 @@ export async function fetchOsrmRoute(
 }
 
 /**
+ * Fetches real-world road-following driving route geometry between waypoints via OSRM.
+ */
+export async function fetchOsrmRoute(
+  waypoints: Array<{ lat: number; lng: number }>
+): Promise<GeoJSON.GeoJsonObject | null> {
+  const details = await fetchOsrmRouteDetails(waypoints);
+  return details?.geometry ?? null;
+}
+
+/**
  * Resets the in-memory OSRM route cache (useful for testing).
  */
 export function clearOsrmCache(): void {
   osrmCache.clear();
+  osrmDetailsCache.clear();
 }
 
 
