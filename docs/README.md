@@ -19,3 +19,7 @@ Catalog of technical documentation and design references for ExifSense.
 ## Design
 
 - [Brand Design SOT: ExifSense](./design/brand.md) — Brand positioning, target user context, visual system, and layout hierarchy across all views.
+
+## Lesson
+
+- [Lesson: Haversine Algorithm and OSRM Road Routing](./lesson/haversine_and_osrm/haversine_and_osrm.md) — Intuitive mental models and mathematical mechanics of great-circle displacement versus road network routing in batch analysis.
