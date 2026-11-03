@@ -11,6 +11,7 @@ import type { BatchSanitizerEntry } from '../core/sanitizer/types';
 import { useAssetStore, MAX_STAGED_FILES } from '../store/useAssetStore';
 import { useSanitizerStore } from '../store/useSanitizerStore';
 import { reverseGeocode } from './mapHelpers';
+import { generateThumbnailDataUrl, saveImagePreview } from './imagePreviewCache';
 
 export interface ExtendedForensicAsset extends ForensicAsset {
   hashes: {
@@ -98,6 +99,10 @@ export async function processSingleAsset(file: File): Promise<ExtendedForensicAs
     }
   }
 
+  const thumbDataUrl = await generateThumbnailDataUrl(file);
+  const thumbUrl = thumbDataUrl || createSafePreviewUrl(file);
+  void saveImagePreview(sha256, file);
+
   const asset: ExtendedForensicAsset = {
     id,
     fileName: file.name,
@@ -111,7 +116,7 @@ export async function processSingleAsset(file: File): Promise<ExtendedForensicAs
     exifData: rawExif,
     categorizedExif,
     integrityAlerts,
-    thumbUrl: createSafePreviewUrl(file),
+    thumbUrl,
     fileObject: file,
     locationData: locationData ?? null,
     locationName: locationData?.display_name as string | undefined,
@@ -176,6 +181,10 @@ export async function processBatchAssets(
       actualHeight: null,
     });
 
+    const thumbDataUrl = await generateThumbnailDataUrl(file);
+    const thumbUrl = thumbDataUrl || createSafePreviewUrl(file);
+    void saveImagePreview(sha256, file);
+
     const asset: ExtendedForensicAsset = {
       id: `asset-${Date.now()}-${i}`,
       fileName: file.name,
@@ -189,7 +198,7 @@ export async function processBatchAssets(
       exifData: rawExif,
       categorizedExif,
       integrityAlerts,
-      thumbUrl: createSafePreviewUrl(file),
+      thumbUrl,
       fileObject: file,
       hashes: {
         sha256,
@@ -226,13 +235,16 @@ export async function processSanitizerIntake(
       rawExif = {};
     }
 
+    const thumbDataUrl = await generateThumbnailDataUrl(file);
+    const thumbUrl = thumbDataUrl || createSafePreviewUrl(file);
+
     const entry: ExtendedBatchSanitizerEntry = {
       id: `sanitizer-entry-${Date.now()}-${i}`,
       file,
       fileName: file.name,
       name: file.name,
       exifData: rawExif,
-      thumbUrl: createSafePreviewUrl(file),
+      thumbUrl,
     };
     entries.push(entry);
   }

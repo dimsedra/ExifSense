@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Image as ImageIcon, Copy, Check } from 'lucide-react';
 import type { ForensicAsset } from '../../core/forensics/types';
 import { formatFileSize } from '../StagedQueue';
 import { showToast } from '../ToastContainer';
 import { useI18nStore } from '../../store/useI18nStore';
+import { getImagePreview } from '../../services/imagePreviewCache';
 
 export interface AssetPreviewCardProps {
   asset: ForensicAsset;
@@ -11,7 +12,52 @@ export interface AssetPreviewCardProps {
 
 export const AssetPreviewCard: React.FC<AssetPreviewCardProps> = ({ asset }) => {
   const { currentLang, t } = useI18nStore();
-  const [copiedKey, setCopiedKey] = React.useState<string | null>(null);
+  const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [cachedUrl, setCachedUrl] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  useEffect(() => {
+    setLoadFailed(false);
+    let active = true;
+    let localUrl: string | null = null;
+
+    if (asset.fileObject) {
+      try {
+        localUrl = URL.createObjectURL(asset.fileObject);
+        setCachedUrl(localUrl);
+      } catch {
+        setCachedUrl(null);
+      }
+    } else if (asset.sha256) {
+      getImagePreview(asset.sha256)
+        .then((blob) => {
+          if (active && blob) {
+            try {
+              localUrl = URL.createObjectURL(blob);
+              setCachedUrl(localUrl);
+            } catch {
+              setCachedUrl(null);
+            }
+          }
+        })
+        .catch(() => {});
+    } else {
+      setCachedUrl(null);
+    }
+
+    return () => {
+      active = false;
+      if (localUrl) {
+        try {
+          URL.revokeObjectURL(localUrl);
+        } catch {
+          // Ignore revoke error
+        }
+      }
+    };
+  }, [asset.id, asset.sha256, asset.fileObject]);
+
+  const previewSource = (!loadFailed && (cachedUrl || asset.thumbUrl)) || '';
 
   const handleCopyHash = async (hash: string, label: string) => {
     try {
@@ -39,8 +85,13 @@ export const AssetPreviewCard: React.FC<AssetPreviewCardProps> = ({ asset }) => 
 
       <div className="card-body">
         <div className="image-preview-wrapper">
-          {asset.thumbUrl ? (
-            <img id="preview-image" src={asset.thumbUrl} alt={asset.fileName} />
+          {previewSource ? (
+            <img
+              id="preview-image"
+              src={previewSource}
+              alt={asset.fileName}
+              onError={() => setLoadFailed(true)}
+            />
           ) : (
             <div
               id="preview-image"

@@ -11,10 +11,70 @@ import { useHistoryStore } from '../store/useHistoryStore';
 import type { HistoryFilter, HistorySession } from '../store/useHistoryStore';
 import { ConfirmModal } from '../components/ConfirmModal';
 import { useI18nStore } from '../store/useI18nStore';
+import { getImagePreview } from '../services/imagePreviewCache';
 
 export interface HistoryViewProps {
   embedded?: boolean;
 }
+
+const HistoryThumbnail: React.FC<{
+  mainThumb?: string;
+  sha256?: string;
+  alt: string;
+}> = ({ mainThumb, sha256, alt }) => {
+  const [src, setSrc] = useState(mainThumb || '');
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    setSrc(mainThumb || '');
+    setLoadError(false);
+    let active = true;
+
+    if ((!mainThumb || mainThumb.startsWith('blob:')) && sha256) {
+      getImagePreview(sha256)
+        .then((blob) => {
+          if (active && blob) {
+            try {
+              const url = URL.createObjectURL(blob);
+              setSrc(url);
+            } catch {
+              // Ignore createObjectURL error
+            }
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [mainThumb, sha256]);
+
+  if (loadError || !src) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--text-muted)',
+        }}
+      >
+        <FileImage size={24} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      onError={() => setLoadError(true)}
+    />
+  );
+};
 
 export const HistoryView: React.FC<HistoryViewProps> = ({ embedded = false }) => {
   const { currentLang, t } = useI18nStore();
@@ -189,22 +249,11 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ embedded = false }) =>
                 onClick={() => handleRestore(session.id)}
               >
                 <div className="history-thumb">
-                  {session.mainThumb ? (
-                    <img src={session.mainThumb} alt={displayName} />
-                  ) : (
-                    <div
-                      style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: 'var(--text-muted)',
-                      }}
-                    >
-                      <FileImage size={24} />
-                    </div>
-                  )}
+                  <HistoryThumbnail
+                    mainThumb={session.mainThumb}
+                    sha256={session.assets[0]?.sha256}
+                    alt={displayName}
+                  />
                   {session.isBatch && (
                     <div className="batch-badge">
                       <Layers size={10} /> {session.assetCount}

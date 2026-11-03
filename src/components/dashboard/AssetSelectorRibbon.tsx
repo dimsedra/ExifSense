@@ -3,6 +3,7 @@ import { Image as ImageIcon, Images, MapPin, AlertCircle } from 'lucide-react';
 import type { ForensicAsset } from '../../core/forensics/types';
 import { formatFileSize } from '../StagedQueue';
 import { useI18nStore } from '../../store/useI18nStore';
+import { getImagePreview } from '../../services/imagePreviewCache';
 
 export interface AssetSelectorRibbonProps {
   assets: ForensicAsset[];
@@ -11,6 +12,66 @@ export interface AssetSelectorRibbonProps {
 }
 
 type AssetFilterType = 'all' | 'complete' | 'stripped';
+
+const RibbonThumbnail: React.FC<{
+  thumbUrl?: string;
+  sha256?: string;
+  fileName: string;
+}> = ({ thumbUrl, sha256, fileName }) => {
+  const [src, setSrc] = useState(thumbUrl || '');
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    setSrc(thumbUrl || '');
+    setLoadError(false);
+    let active = true;
+
+    if ((!thumbUrl || thumbUrl.startsWith('blob:')) && sha256) {
+      getImagePreview(sha256)
+        .then((blob) => {
+          if (active && blob) {
+            try {
+              const url = URL.createObjectURL(blob);
+              setSrc(url);
+            } catch {
+              // Ignore createObjectURL error
+            }
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      active = false;
+    };
+  }, [thumbUrl, sha256]);
+
+  if (loadError || !src) {
+    return (
+      <div
+        style={{
+          width: '100%',
+          height: '100%',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: '#18181b',
+          color: '#71717a',
+        }}
+      >
+        <ImageIcon size={24} />
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={fileName}
+      onError={() => setLoadError(true)}
+    />
+  );
+};
 
 export const AssetSelectorRibbon: React.FC<AssetSelectorRibbonProps> = ({
   assets,
@@ -119,23 +180,11 @@ export const AssetSelectorRibbon: React.FC<AssetSelectorRibbonProps> = ({
               title={asset.fileName}
             >
               <div className="asset-card-thumb">
-                {asset.thumbUrl ? (
-                  <img src={asset.thumbUrl} alt={asset.fileName} />
-                ) : (
-                  <div
-                    style={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: '#18181b',
-                      color: '#71717a',
-                    }}
-                  >
-                    <ImageIcon size={24} />
-                  </div>
-                )}
+                <RibbonThumbnail
+                  thumbUrl={asset.thumbUrl}
+                  sha256={asset.sha256}
+                  fileName={asset.fileName}
+                />
                 <div className="asset-card-badges">
                   {hasGps && (
                     <div className="badge-geo" title={t('cat_geospatial')}>

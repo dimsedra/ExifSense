@@ -4,6 +4,7 @@ import type { SanitizerOptions } from '../core/sanitizer/types';
 import { generateForensicId } from '../core/forensics/hashing';
 import { categorizeExif } from '../core/forensics/metadata';
 import { useAssetStore } from './useAssetStore';
+import { deleteImagePreview, clearImagePreviewCache } from '../services/imagePreviewCache';
 
 export const HISTORY_KEY = 'exif_forensic_history';
 export const MAX_HISTORY = 20;
@@ -223,6 +224,12 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
 
   deleteSession: (id) =>
     set((state) => {
+      const target = state.sessions.find((s) => s.id === id);
+      if (target) {
+        target.assets.forEach((a) => {
+          if (a.sha256) void deleteImagePreview(a.sha256);
+        });
+      }
       const updated = state.sessions.filter((s) => s.id !== id);
       try {
         localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
@@ -239,6 +246,7 @@ export const useHistoryStore = create<HistoryStoreState>((set, get) => ({
       } catch (err) {
         console.warn('Failed to clear history sessions from localStorage:', err);
       }
+      void clearImagePreviewCache();
       return { sessions: [] };
     }),
   setSearchQuery: (query) => set({ searchQuery: query }),
