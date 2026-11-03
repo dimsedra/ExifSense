@@ -62,8 +62,12 @@ function formatGeoDistance(km: number, meters: number): string {
 
 function getToggleLabel(
   tabIdx: number,
+  isOpen: boolean,
   t: (key: string, params?: Record<string, unknown>, section?: string) => string
 ): string {
+  if (isOpen) {
+    return t('hide_details');
+  }
   switch (tabIdx) {
     case 0:
       return t('integrity_reconstruct_btn', {}, 'narratives');
@@ -74,7 +78,7 @@ function getToggleLabel(
     case 3:
       return t('geo_reconstruct_btn', {}, 'narratives');
     default:
-      return t('integrity_reconstruct_btn', {}, 'narratives');
+      return t('show_details');
   }
 }
 
@@ -103,7 +107,10 @@ export const CombinedIntelligenceCard: React.FC<CombinedIntelligenceCardProps> =
     currentLang
   );
 
-  const isCurrentOpen = Boolean(expandedTabs[activeTabIdx]);
+  const isCurrentOpen =
+    expandedTabs[activeTabIdx] !== undefined
+      ? Boolean(expandedTabs[activeTabIdx])
+      : true;
 
   const handleToggleDetails = () => {
     const nextState = !isCurrentOpen;
@@ -199,30 +206,25 @@ export const CombinedIntelligenceCard: React.FC<CombinedIntelligenceCardProps> =
         <div className="expert-panes-wrapper">
           {activeSection && (
             <div className="expert-tab-pane active">
-              <div
-                className="expert-narrative-bubble"
-                dangerouslySetInnerHTML={{
-                  __html: activeSection.narrative.replace(/\n/g, '<br/>'),
-                }}
-              />
-
               {showToggleButton && (
-                <div style={{ marginTop: '1rem' }}>
-                  <button
-                    type="button"
-                    className="btn btn-secondary btn-sm"
-                    onClick={handleToggleDetails}
-                    style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
-                  >
-                    <span>{getToggleLabel(activeTabIdx, t)}</span>
-                    <ChevronDown
-                      size={16}
-                      style={{
-                        transform: isCurrentOpen ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.2s',
-                      }}
-                    />
-                  </button>
+                <div>
+                  <div style={{ marginBottom: isCurrentOpen ? '1rem' : '0' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary btn-sm"
+                      onClick={handleToggleDetails}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <span>{getToggleLabel(activeTabIdx, isCurrentOpen, t)}</span>
+                      <ChevronDown
+                        size={16}
+                        style={{
+                          transform: isCurrentOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+                          transition: 'transform 0.2s',
+                        }}
+                      />
+                    </button>
+                  </div>
 
                   {isCurrentOpen && (
                     <>

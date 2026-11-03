@@ -3826,6 +3826,8 @@ var en_default = {
 		"route_direct_disclaimer": "Direct straight-line path between coordinates, road route unavailable",
 		"combined_intel": "Combined Analysis",
 		"cross_asset": "Cross-Asset Analysis",
+		"hide_details": "Hide Detailed View",
+		"show_details": "Show Detailed View",
 		"select_asset": "Select Asset to Inspect",
 		"asset_count": "{n} Assets",
 		"individual_analysis": "Individual Asset Analysis",
@@ -4136,13 +4138,22 @@ var en_default = {
 		"chrono_baseline_single": "All photos in this batch were captured using the same camera device: {device}.",
 		"chrono_baseline_multiple": "Photos in this batch were captured across multiple devices: {devices}.",
 		"chrono_baseline_unknown": "Camera device information was not recorded for the photos in this batch.",
+		"chrono_macro_single_full": "All photos in this batch were captured using the same camera device: {device}, across a span of {span} (from {startDate} to {endDate}), covering an estimated total travel distance of approximately {distance}.",
+		"chrono_macro_single_no_geo": "All photos in this batch were captured using the same camera device: {device}, across a span of {span} (from {startDate} to {endDate}).",
+		"chrono_macro_single_no_time": "All photos in this batch were captured using the same camera device: {device}, covering an estimated total travel distance of approximately {distance}.",
+		"chrono_macro_multiple_full": "Photos in this batch were captured across multiple devices: {devices}, across a span of {span} (from {startDate} to {endDate}), covering an estimated total travel distance of approximately {distance}.",
+		"chrono_macro_multiple_no_geo": "Photos in this batch were captured across multiple devices: {devices}, across a span of {span} (from {startDate} to {endDate}).",
+		"chrono_macro_multiple_no_time": "Photos in this batch were captured across multiple devices: {devices}, covering an estimated total travel distance of approximately {distance}.",
+		"chrono_macro_unknown_full": "The photos in this batch were taken across a span of {span} (from {startDate} to {endDate}), covering an estimated total travel distance of approximately {distance}.",
+		"chrono_macro_unknown_no_geo": "The photos in this batch were taken across a span of {span} (from {startDate} to {endDate}).",
+		"chrono_macro_unknown_no_time": "The photos in this batch were taken covering an estimated total travel distance of approximately {distance}.",
 		"chrono_initial_location": "The sequence begins with {fileName}, captured on {date} at {location} (coordinates {coordinates}){lens}.",
 		"chrono_initial_gps": "The sequence begins with {fileName}, captured on {date} at coordinates {coordinates}{lens}.",
 		"chrono_initial_no_gps": "The sequence begins with {fileName}, captured on {date} with no location data recorded{lens}.",
 		"chrono_initial_lens": " using lens {lens}",
 		"chrono_initial_focal": " at focal length {focal}",
-		"chrono_step_location": "{fileName} was captured on {date} ({elapsedTime}), {distance} away from {prevFileName} at {location}.",
-		"chrono_step_gps": "{fileName} was captured on {date} ({elapsedTime}), {distance} away from {prevFileName} at coordinates {coordinates}.",
+		"chrono_step_location": "{fileName} was captured on {date} ({elapsedTime}), {distance} from {prevFileName} at {location}.",
+		"chrono_step_gps": "{fileName} was captured on {date} ({elapsedTime}), {distance} from {prevFileName} at coordinates {coordinates}.",
 		"chrono_step_location_no_prev_gps": "{fileName} was captured on {date} ({elapsedTime}) at {location}.",
 		"chrono_step_gps_no_prev_gps": "{fileName} was captured on {date} ({elapsedTime}) at coordinates {coordinates}.",
 		"chrono_step_no_gps": "{fileName} was captured on {date} ({elapsedTime}). Location data was not recorded for this capture.",
@@ -4258,6 +4269,8 @@ var id_default = {
 		"route_direct_disclaimer": "Garis lurus langsung antar-koordinat, rute jalan tidak tersedia",
 		"combined_intel": "Analisis Gabungan",
 		"cross_asset": "Analisis Lintas-Aset",
+		"hide_details": "Sembunyikan Tampilan Rinci",
+		"show_details": "Tampilkan Tampilan Rinci",
 		"select_asset": "Pilih Aset untuk Diperiksa",
 		"asset_count": "{n} Aset",
 		"individual_analysis": "Analisis Aset Individu",
@@ -4568,13 +4581,22 @@ var id_default = {
 		"chrono_baseline_single": "Semua foto dalam rangkaian ini diambil menggunakan perangkat kamera yang sama: {device}.",
 		"chrono_baseline_multiple": "Foto-foto dalam rangkaian ini diambil menggunakan beberapa perangkat berbeda: {devices}.",
 		"chrono_baseline_unknown": "Informasi perangkat kamera tidak tercatat untuk foto-foto dalam rangkaian ini.",
+		"chrono_macro_single_full": "Semua foto dalam rangkaian ini diambil menggunakan perangkat kamera yang sama: {device}, dalam rentang waktu {span} (dari {startDate} hingga {endDate}), dengan estimasi total jarak perjalanan sekitar {distance}.",
+		"chrono_macro_single_no_geo": "Semua foto dalam rangkaian ini diambil menggunakan perangkat kamera yang sama: {device}, dalam rentang waktu {span} (dari {startDate} hingga {endDate}).",
+		"chrono_macro_single_no_time": "Semua foto dalam rangkaian ini diambil menggunakan perangkat kamera yang sama: {device}, dengan estimasi total jarak perjalanan sekitar {distance}.",
+		"chrono_macro_multiple_full": "Foto-foto dalam rangkaian ini diambil menggunakan beberapa perangkat berbeda: {devices}, dalam rentang waktu {span} (dari {startDate} hingga {endDate}), dengan estimasi total jarak perjalanan sekitar {distance}.",
+		"chrono_macro_multiple_no_geo": "Foto-foto dalam rangkaian ini diambil menggunakan beberapa perangkat berbeda: {devices}, dalam rentang waktu {span} (dari {startDate} hingga {endDate}).",
+		"chrono_macro_multiple_no_time": "Foto-foto dalam rangkaian ini diambil menggunakan beberapa perangkat berbeda: {devices}, dengan estimasi total jarak perjalanan sekitar {distance}.",
+		"chrono_macro_unknown_full": "Foto-foto dalam rangkaian ini diambil dalam rentang waktu {span} (dari {startDate} hingga {endDate}), dengan estimasi total jarak perjalanan sekitar {distance}.",
+		"chrono_macro_unknown_no_geo": "Foto-foto dalam rangkaian ini diambil dalam rentang waktu {span} (dari {startDate} hingga {endDate}).",
+		"chrono_macro_unknown_no_time": "Foto-foto dalam rangkaian ini diambil dengan estimasi total jarak perjalanan sekitar {distance}.",
 		"chrono_initial_location": "Urutan dimulai dengan {fileName}, diambil pada {date} di {location} (koordinat {coordinates}){lens}.",
 		"chrono_initial_gps": "Urutan dimulai dengan {fileName}, diambil pada {date} di koordinat {coordinates}{lens}.",
 		"chrono_initial_no_gps": "Urutan dimulai dengan {fileName}, diambil pada {date} tanpa data lokasi yang tercatat{lens}.",
 		"chrono_initial_lens": " menggunakan lensa {lens}",
 		"chrono_initial_focal": " pada panjang fokus {focal}",
-		"chrono_step_location": "{fileName} diambil pada {date} ({elapsedTime}), sejauh {distance} dari {prevFileName} di {location}.",
-		"chrono_step_gps": "{fileName} diambil pada {date} ({elapsedTime}), sejauh {distance} dari {prevFileName} di koordinat {coordinates}.",
+		"chrono_step_location": "{fileName} diambil pada {date} ({elapsedTime}), {distance} dari {prevFileName} di {location}.",
+		"chrono_step_gps": "{fileName} diambil pada {date} ({elapsedTime}), {distance} dari {prevFileName} di koordinat {coordinates}.",
 		"chrono_step_location_no_prev_gps": "{fileName} diambil pada {date} ({elapsedTime}) di {location}.",
 		"chrono_step_gps_no_prev_gps": "{fileName} diambil pada {date} ({elapsedTime}) di koordinat {coordinates}.",
 		"chrono_step_no_gps": "{fileName} diambil pada {date} ({elapsedTime}). Data lokasi tidak tercatat untuk pengambilan foto ini.",
@@ -4690,6 +4712,8 @@ var ar_default = {
 		"route_direct_disclaimer": "مسار مستقيم مباشر بين الإحداثيات، المسار البري غير متوفر",
 		"combined_intel": "التحليل المشترك",
 		"cross_asset": "تحليل متعدد الأصول",
+		"hide_details": "إخفاء العرض المفصل",
+		"show_details": "إظهار العرض المفصل",
 		"select_asset": "اختر ملفاً لفحصه",
 		"asset_count": "{n} ملفات",
 		"individual_analysis": "تحليل الملف الفردي",
@@ -4964,13 +4988,22 @@ var ar_default = {
 		"chrono_baseline_single": "تم التقاط جميع الصور في هذه المجموعة باستخدام نفس جهاز الكاميرا: {device}.",
 		"chrono_baseline_multiple": "تم التقاط الصور في هذه المجموعة عبر أجهزة متعددة: {devices}.",
 		"chrono_baseline_unknown": "لم يتم تسجيل معلومات جهاز الكاميرا للصور في هذه المجموعة.",
+		"chrono_macro_single_full": "تم التقاط جميع الصور في هذه المجموعة باستخدام نفس جهاز الكاميرا: {device}، خلال فترة زمنية مدتها {span} (من {startDate} إلى {endDate})، مع تقدير إجمالي مسافة الرحلة بحوالي {distance}.",
+		"chrono_macro_single_no_geo": "تم التقاط جميع الصور في هذه المجموعة باستخدام نفس جهاز الكاميرا: {device}، خلال فترة زمنية مدتها {span} (من {startDate} إلى {endDate}).",
+		"chrono_macro_single_no_time": "تم التقاط جميع الصور في هذه المجموعة باستخدام نفس جهاز الكاميرا: {device}، مع تقدير إجمالي مسافة الرحلة بحوالي {distance}.",
+		"chrono_macro_multiple_full": "تم التقاط الصور في هذه المجموعة عبر أجهزة متعددة: {devices}، خلال فترة زمنية مدتها {span} (من {startDate} إلى {endDate})، مع تقدير إجمالي مسافة الرحلة بحوالي {distance}.",
+		"chrono_macro_multiple_no_geo": "تم التقاط الصور في هذه المجموعة عبر أجهزة متعددة: {devices}، خلال فترة زمنية مدتها {span} (من {startDate} إلى {endDate}).",
+		"chrono_macro_multiple_no_time": "تم التقاط الصور في هذه المجموعة عبر أجهزة متعددة: {devices}، مع تقدير إجمالي مسافة الرحلة بحوالي {distance}.",
+		"chrono_macro_unknown_full": "تم التقاط الصور في هذه المجموعة خلال فترة زمنية مدتها {span} (من {startDate} إلى {endDate})، مع تقدير إجمالي مسافة الرحلة بحوالي {distance}.",
+		"chrono_macro_unknown_no_geo": "تم التقاط الصور في هذه المجموعة خلال فترة زمنية مدتها {span} (من {startDate} إلى {endDate}).",
+		"chrono_macro_unknown_no_time": "تم التقاط الصور في هذه المجموعة مع تقدير إجمالي مسافة الرحلة بحوالي {distance}.",
 		"chrono_initial_location": "يبدأ التسلسل بـ {fileName}، التي تم التقاطها في {date} في {location} (الإحداثيات {coordinates}){lens}.",
 		"chrono_initial_gps": "يبدأ التسلسل بـ {fileName}، التي تم التقاطها في {date} عند الإحداثيات {coordinates}{lens}.",
 		"chrono_initial_no_gps": "يبدأ التسلسل بـ {fileName}، التي تم التقاطها في {date} دون تسجيل بيانات الموقع{lens}.",
 		"chrono_initial_lens": " باستخدام عدسة {lens}",
 		"chrono_initial_focal": " عند البعد البؤري {focal}",
-		"chrono_step_location": "تم التقاط {fileName} في {date} ({elapsedTime})، على بعد {distance} من {prevFileName} في {location}.",
-		"chrono_step_gps": "تم التقاط {fileName} في {date} ({elapsedTime})، على بعد {distance} من {prevFileName} عند الإحداثيات {coordinates}.",
+		"chrono_step_location": "تم التقاط {fileName} في {date} ({elapsedTime})، {distance} من {prevFileName} في {location}.",
+		"chrono_step_gps": "تم التقاط {fileName} في {date} ({elapsedTime})، {distance} من {prevFileName} عند الإحداثيات {coordinates}.",
 		"chrono_step_location_no_prev_gps": "تم التقاط {fileName} في {date} ({elapsedTime}) في {location}.",
 		"chrono_step_gps_no_prev_gps": "تم التقاط {fileName} في {date} ({elapsedTime}) عند الإحداثيات {coordinates}.",
 		"chrono_step_no_gps": "تم التقاط {fileName} في {date} ({elapsedTime}). لم يتم تسجيل بيانات الموقع لهذا الالتقاط.",
@@ -5693,6 +5726,37 @@ function formatDistance(distanceMeters) {
 	if (distanceMeters >= 1e3) return `${(distanceMeters / 1e3).toFixed(1).replace(".0", "")} km`;
 	return `${distanceMeters} m`;
 }
+function formatSpanDuration(diffSeconds, locale) {
+	const hours = diffSeconds / 3600;
+	if (hours >= 1) {
+		const formattedHours = (Math.round(hours * 10) / 10).toFixed(1).replace(".0", "");
+		if (locale === "id") return `${formattedHours.replace(".", ",")} jam`;
+		if (locale === "ar") return `${formattedHours} ساعة`;
+		return `${formattedHours} hours`;
+	}
+	const minutes = Math.max(1, Math.round(diffSeconds / 60));
+	if (locale === "id") return `${minutes} menit`;
+	if (locale === "ar") return `${minutes} دقيقة`;
+	return `${minutes} minutes`;
+}
+function calculateTotalPathDistance(nodes) {
+	let totalKm = 0;
+	const geoNodes = nodes.filter((n) => n.hasGps && n.latitude !== null && n.longitude !== null);
+	if (geoNodes.length >= 2) for (let i = 0; i < geoNodes.length - 1; i++) totalKm += calculateDistance(geoNodes[i].latitude, geoNodes[i].longitude, geoNodes[i + 1].latitude, geoNodes[i + 1].longitude);
+	return totalKm;
+}
+function formatDualDistance(distStr, roadDistStr, locale) {
+	if (locale === "id") {
+		if (roadDistStr) return `sekitar ${distStr} perpindahan garis lurus (atau ~${roadDistStr} melalui rute jalan)`;
+		return `sekitar ${distStr} perpindahan garis lurus`;
+	}
+	if (locale === "ar") {
+		if (roadDistStr) return `حوالي ${distStr} إزاحة خط مستقيم (أو ~${roadDistStr} عبر مسار الطريق)`;
+		return `حوالي ${distStr} إزاحة خط مستقيم`;
+	}
+	if (roadDistStr) return `approximately ${distStr} in straight-line displacement (or ~${roadDistStr} via road route)`;
+	return `approximately ${distStr} in straight-line displacement`;
+}
 /**
 * Parses and sorts an array of forensic assets into chronological event nodes (BP-NARRATIVE-001).
 * Fails fast if fewer than 2 assets are provided.
@@ -5736,15 +5800,49 @@ function parseChronologicalEvents(assets) {
 }
 function buildBaseline(nodes, locale, format) {
 	const devices = Array.from(new Set(nodes.map((n) => n.deviceString).filter(Boolean)));
-	if (devices.length === 1) {
-		const formattedDevice = formatEvidence(devices[0], format);
-		return interpolate(getTemplate("chrono_baseline_single", locale), { device: formattedDevice });
+	const timedNodes = nodes.filter((n) => n.hasCaptureTime);
+	let timeSpanInfo = null;
+	if (timedNodes.length >= 2) {
+		const firstTime = timedNodes[0].timestamp;
+		const lastTime = timedNodes[timedNodes.length - 1].timestamp;
+		const diffMs = lastTime.getTime() - firstTime.getTime();
+		if (diffMs > 0) timeSpanInfo = {
+			spanString: formatSpanDuration(Math.round(diffMs / 1e3), locale),
+			startDateString: formatNaturalDate(firstTime, locale),
+			endDateString: formatNaturalDate(lastTime, locale)
+		};
 	}
-	if (devices.length > 1) {
-		const formattedList = devices.map((d) => formatEvidence(d, format)).join(", ");
-		return interpolate(getTemplate("chrono_baseline_multiple", locale), { devices: formattedList });
+	const totalDistanceKm = calculateTotalPathDistance(nodes);
+	const hasDistance = totalDistanceKm > 0;
+	const distanceString = hasDistance ? formatDistance(Math.round(totalDistanceKm * 1e3)) : "";
+	const deviceType = devices.length === 1 ? "single" : devices.length > 1 ? "multiple" : "unknown";
+	const hasTime = timeSpanInfo !== null;
+	if (!hasTime && !hasDistance) {
+		if (deviceType === "single") {
+			const formattedDevice = formatEvidence(devices[0], format);
+			return interpolate(getTemplate("chrono_baseline_single", locale), { device: formattedDevice });
+		}
+		if (deviceType === "multiple") {
+			const formattedList = devices.map((d) => formatEvidence(d, format)).join(", ");
+			return interpolate(getTemplate("chrono_baseline_multiple", locale), { devices: formattedList });
+		}
+		return getTemplate("chrono_baseline_unknown", locale);
 	}
-	return getTemplate("chrono_baseline_unknown", locale);
+	let templateKey = "";
+	if (hasTime && hasDistance) templateKey = `chrono_macro_${deviceType}_full`;
+	else if (hasTime && !hasDistance) templateKey = `chrono_macro_${deviceType}_no_geo`;
+	else templateKey = `chrono_macro_${deviceType}_no_time`;
+	const template = getTemplate(templateKey, locale);
+	const params = {};
+	if (deviceType === "single") params.device = formatEvidence(devices[0], format);
+	else if (deviceType === "multiple") params.devices = devices.map((d) => formatEvidence(d, format)).join(", ");
+	if (timeSpanInfo) {
+		params.span = formatEvidence(timeSpanInfo.spanString, format);
+		params.startDate = formatEvidence(timeSpanInfo.startDateString, format);
+		params.endDate = formatEvidence(timeSpanInfo.endDateString, format);
+	}
+	if (hasDistance) params.distance = formatEvidence(distanceString, format);
+	return interpolate(template, params);
 }
 function buildInitialStep(node, locale, format) {
 	const formattedFileName = formatEvidence(node.fileName, format);
@@ -5799,7 +5897,7 @@ function buildInitialStep(node, locale, format) {
 		}
 	};
 }
-function buildSubsequentStep(curr, prev, stepIndex, locale, format) {
+function buildSubsequentStep(curr, prev, stepIndex, locale, format, roadDistMeters) {
 	const diffMs = curr.timestamp.getTime() - prev.timestamp.getTime();
 	const rawElapsedTime = formatElapsedTime(Math.max(0, Math.round(diffMs / 1e3)), locale);
 	const highlightedElapsedTime = formatEvidence(rawElapsedTime, format);
@@ -5809,12 +5907,18 @@ function buildSubsequentStep(curr, prev, stepIndex, locale, format) {
 	const highlightedDate = formatEvidence(formattedDate, format);
 	let distanceMeters;
 	let distanceString;
+	let roadDistanceMeters;
+	let roadDistanceString;
 	let narrativeText = "";
 	if (curr.hasGps && prev.hasGps && curr.latitude !== null && curr.longitude !== null && prev.latitude !== null && prev.longitude !== null) {
 		const distKm = calculateDistance(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
 		distanceMeters = Math.round(distKm * 1e3);
 		distanceString = formatDistance(distanceMeters);
-		const highlightedDistance = formatEvidence(distanceString, format);
+		if (roadDistMeters != null && roadDistMeters > 0) {
+			roadDistanceMeters = roadDistMeters;
+			roadDistanceString = formatDistance(roadDistMeters);
+		}
+		const highlightedDistance = formatEvidence(formatDualDistance(distanceString, roadDistanceString, locale), format);
 		if (curr.locationName) {
 			const highlightedLocation = formatEvidence(curr.locationName, format);
 			narrativeText = interpolate(getTemplate("chrono_step_location", locale), {
@@ -5905,6 +6009,8 @@ function buildSubsequentStep(curr, prev, stepIndex, locale, format) {
 			prevFileName: prev.fileName,
 			distanceMeters,
 			distanceString,
+			roadDistanceMeters,
+			roadDistanceString,
 			locationName: curr.locationName || void 0,
 			deviceString: curr.deviceString,
 			deviceChanged,
@@ -5923,7 +6029,15 @@ function generateChronologicalBatchStory(assets, options) {
 	const baseline = buildBaseline(nodes, locale, format);
 	const steps = [];
 	steps.push(buildInitialStep(nodes[0], locale, format));
-	for (let i = 1; i < nodes.length; i++) steps.push(buildSubsequentStep(nodes[i], nodes[i - 1], i, locale, format));
+	let gpsTransitionIdx = 0;
+	for (let i = 1; i < nodes.length; i++) {
+		let roadDistMeters;
+		if (nodes[i].hasGps && nodes[i - 1].hasGps && nodes[i].latitude !== null && nodes[i].longitude !== null && nodes[i - 1].latitude !== null && nodes[i - 1].longitude !== null && options?.roadDistances && options.roadDistances.length > gpsTransitionIdx) {
+			roadDistMeters = options.roadDistances[gpsTransitionIdx];
+			gpsTransitionIdx++;
+		}
+		steps.push(buildSubsequentStep(nodes[i], nodes[i - 1], i, locale, format, roadDistMeters));
+	}
 	return {
 		baseline,
 		steps,
