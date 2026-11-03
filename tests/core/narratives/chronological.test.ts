@@ -153,7 +153,7 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(story.steps[1]!.evidence.distanceString).toBe('12 km');
       expect(story.steps[1]!.evidence.elapsedTimeString).toBe('30 minutes later');
       expect(story.steps[1]!.narrativeText).toContain(
-        '12 km away from loc_a.jpg at coordinates 48.96630, 2.29450.',
+        'approximately 12 km in straight-line displacement from loc_a.jpg at coordinates 48.96630, 2.29450.',
       );
       expect(story.steps[1]!.narrativeText).not.toMatch(/speed/i);
       expect(story.steps[1]!.narrativeText).not.toMatch(/indicates/i);
@@ -225,7 +225,7 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(story.steps[1]!.narrativeText).toContain('Wednesday, October 28, 2026');
       expect(story.steps[1]!.narrativeText).toContain('30 minutes later');
       expect(story.steps[1]!.narrativeText).toContain(
-        '12 km away from IMG_0001.JPG at coordinates 48.96630, 2.29450.',
+        'approximately 12 km in straight-line displacement from IMG_0001.JPG at coordinates 48.96630, 2.29450.',
       );
       expect(story.steps[1]!.evidence.prevFileName).toBe('IMG_0001.JPG');
       expect(story.steps[1]!.evidence.distanceMeters).toBe(11998);
@@ -236,7 +236,7 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(story.steps[2]!.fileName).toBe('IMG_0003.JPG');
       expect(story.steps[2]!.narrativeText).toContain('5 minutes later');
       expect(story.steps[2]!.narrativeText).toContain(
-        '22 m away from IMG_0002.JPG at coordinates 48.96650, 2.29450.',
+        'approximately 22 m in straight-line displacement from IMG_0002.JPG at coordinates 48.96650, 2.29450.',
       );
       expect(story.steps[2]!.evidence.prevFileName).toBe('IMG_0002.JPG');
       expect(story.steps[2]!.narrativeText).toContain(
@@ -494,6 +494,142 @@ describe('Chronological Batch Narrative Engine', () => {
       });
       expect(enStory.steps[1]!.narrativeText).toContain('at A82, Highland, Scotland.');
       expect(enStory.steps[2]!.narrativeText).toContain('at Glen Coe, Highland, Scotland.');
+    });
+  });
+
+  describe('BP-DUALDIST-002: Dual-Distance Narrative Formatting and Localization', () => {
+    it('formats dual distance with displacement and road route when road distance is provided (en)', () => {
+      const assetA = createMockAsset({
+        fileName: '731.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:00:00',
+          latitude: 56.64500,
+          longitude: -4.79500,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: '732.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:35:00',
+          latitude: 56.78000,
+          longitude: -4.95000,
+        },
+      });
+
+      const story = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'en',
+        format: 'plain',
+        roadDistances: [21500],
+      });
+
+      expect(story.steps[1]!.evidence.distanceString).toBe('17.7 km');
+      expect(story.steps[1]!.evidence.roadDistanceMeters).toBe(21500);
+      expect(story.steps[1]!.evidence.roadDistanceString).toBe('21.5 km');
+      expect(story.steps[1]!.narrativeText).toContain(
+        'approximately 17.7 km in straight-line displacement (or ~21.5 km via road route) from 731.jpg',
+      );
+    });
+
+    it('falls back to displacement only when road distance is not provided (en)', () => {
+      const assetA = createMockAsset({
+        fileName: '731.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:00:00',
+          latitude: 56.64500,
+          longitude: -4.79500,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: '732.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:35:00',
+          latitude: 56.78000,
+          longitude: -4.95000,
+        },
+      });
+
+      const story = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'en',
+        format: 'plain',
+      });
+
+      expect(story.steps[1]!.evidence.roadDistanceMeters).toBeUndefined();
+      expect(story.steps[1]!.narrativeText).toContain(
+        'approximately 17.7 km in straight-line displacement from 731.jpg',
+      );
+      expect(story.steps[1]!.narrativeText).not.toContain('via road route');
+    });
+
+    it('formats dual distance and displacement fallback in Indonesian (id)', () => {
+      const assetA = createMockAsset({
+        fileName: '731.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:00:00',
+          latitude: 56.64500,
+          longitude: -4.79500,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: '732.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:35:00',
+          latitude: 56.78000,
+          longitude: -4.95000,
+        },
+      });
+
+      const storyWithRoad = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'id',
+        format: 'plain',
+        roadDistances: [21500],
+      });
+      expect(storyWithRoad.steps[1]!.narrativeText).toContain(
+        'sekitar 17.7 km perpindahan garis lurus (atau ~21.5 km melalui rute jalan) dari 731.jpg',
+      );
+
+      const storyWithoutRoad = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'id',
+        format: 'plain',
+      });
+      expect(storyWithoutRoad.steps[1]!.narrativeText).toContain(
+        'sekitar 17.7 km perpindahan garis lurus dari 731.jpg',
+      );
+    });
+
+    it('formats dual distance and displacement fallback in Arabic (ar)', () => {
+      const assetA = createMockAsset({
+        fileName: '731.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:00:00',
+          latitude: 56.64500,
+          longitude: -4.79500,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: '732.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:35:00',
+          latitude: 56.78000,
+          longitude: -4.95000,
+        },
+      });
+
+      const storyWithRoad = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'ar',
+        format: 'plain',
+        roadDistances: [21500],
+      });
+      expect(storyWithRoad.steps[1]!.narrativeText).toContain(
+        'حوالي 17.7 km إزاحة خط مستقيم (أو ~21.5 km عبر مسار الطريق) من 731.jpg',
+      );
+
+      const storyWithoutRoad = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'ar',
+        format: 'plain',
+      });
+      expect(storyWithoutRoad.steps[1]!.narrativeText).toContain(
+        'حوالي 17.7 km إزاحة خط مستقيم من 731.jpg',
+      );
     });
   });
 });
