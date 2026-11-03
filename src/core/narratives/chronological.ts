@@ -82,6 +82,64 @@ function formatDistance(distanceMeters: number): string {
   return `${distanceMeters} m`;
 }
 
+function formatSpanDuration(diffSeconds: number, locale: SupportedLocale): string {
+  const hours = diffSeconds / 3600;
+  if (hours >= 1) {
+    const formattedHours = (Math.round(hours * 10) / 10).toFixed(1).replace('.0', '');
+    if (locale === 'id') {
+      const idFormatted = formattedHours.replace('.', ',');
+      return `${idFormatted} jam`;
+    }
+    if (locale === 'ar') return `${formattedHours} ساعة`;
+    return `${formattedHours} hours`;
+  }
+  const minutes = Math.max(1, Math.round(diffSeconds / 60));
+  if (locale === 'id') return `${minutes} menit`;
+  if (locale === 'ar') return `${minutes} دقيقة`;
+  return `${minutes} minutes`;
+}
+
+function calculateTotalPathDistance(nodes: ChronologicalEventNode[]): number {
+  let totalKm = 0;
+  const geoNodes = nodes.filter(
+    (n) => n.hasGps && n.latitude !== null && n.longitude !== null,
+  );
+  if (geoNodes.length >= 2) {
+    for (let i = 0; i < geoNodes.length - 1; i++) {
+      totalKm += calculateDistance(
+        geoNodes[i]!.latitude!,
+        geoNodes[i]!.longitude!,
+        geoNodes[i + 1]!.latitude!,
+        geoNodes[i + 1]!.longitude!,
+      );
+    }
+  }
+  return totalKm;
+}
+
+function formatDualDistance(
+  distStr: string,
+  roadDistStr: string | undefined,
+  locale: SupportedLocale,
+): string {
+  if (locale === 'id') {
+    if (roadDistStr) {
+      return `sekitar ${distStr} perpindahan garis lurus (atau ~${roadDistStr} melalui rute jalan)`;
+    }
+    return `sekitar ${distStr} perpindahan garis lurus`;
+  }
+  if (locale === 'ar') {
+    if (roadDistStr) {
+      return `حوالي ${distStr} إزاحة خط مستقيم (أو ~${roadDistStr} عبر مسار الطريق)`;
+    }
+    return `حوالي ${distStr} إزاحة خط مستقيم`;
+  }
+  if (roadDistStr) {
+    return `approximately ${distStr} in straight-line displacement (or ~${roadDistStr} via road route)`;
+  }
+  return `approximately ${distStr} in straight-line displacement`;
+}
+
 
 /**
  * Parses and sorts an array of forensic assets into chronological event nodes (BP-NARRATIVE-001).
@@ -169,21 +227,84 @@ function buildBaseline(
     new Set(nodes.map((n) => n.deviceString).filter(Boolean)),
   );
 
-  if (devices.length === 1) {
-    const formattedDevice = formatEvidence(devices[0]!, format);
-    const template = getTemplate('chrono_baseline_single', locale);
-    return interpolate(template, { device: formattedDevice });
+  const timedNodes = nodes.filter((n) => n.hasCaptureTime);
+  let timeSpanInfo: {
+    spanString: string;
+    startDateString: string;
+    endDateString: string;
+  } | null = null;
+
+  if (timedNodes.length >= 2) {
+    const firstTime = timedNodes[0]!.timestamp;
+    const lastTime = timedNodes[timedNodes.length - 1]!.timestamp;
+    const diffMs = lastTime.getTime() - firstTime.getTime();
+    if (diffMs > 0) {
+      const diffSeconds = Math.round(diffMs / 1000);
+      timeSpanInfo = {
+        spanString: formatSpanDuration(diffSeconds, locale),
+        startDateString: formatNaturalDate(firstTime, locale),
+        endDateString: formatNaturalDate(lastTime, locale),
+      };
+    }
   }
 
-  if (devices.length > 1) {
-    const formattedList = devices
+  const totalDistanceKm = calculateTotalPathDistance(nodes);
+  const hasDistance = totalDistanceKm > 0;
+  const distanceString = hasDistance
+    ? formatDistance(Math.round(totalDistanceKm * 1000))
+    : '';
+
+  const deviceType =
+    devices.length === 1 ? 'single' : devices.length > 1 ? 'multiple' : 'unknown';
+  const hasTime = timeSpanInfo !== null;
+
+  if (!hasTime && !hasDistance) {
+    if (deviceType === 'single') {
+      const formattedDevice = formatEvidence(devices[0]!, format);
+      const template = getTemplate('chrono_baseline_single', locale);
+      return interpolate(template, { device: formattedDevice });
+    }
+    if (deviceType === 'multiple') {
+      const formattedList = devices
+        .map((d) => formatEvidence(d, format))
+        .join(', ');
+      const template = getTemplate('chrono_baseline_multiple', locale);
+      return interpolate(template, { devices: formattedList });
+    }
+    return getTemplate('chrono_baseline_unknown', locale);
+  }
+
+  let templateKey = '';
+  if (hasTime && hasDistance) {
+    templateKey = `chrono_macro_${deviceType}_full`;
+  } else if (hasTime && !hasDistance) {
+    templateKey = `chrono_macro_${deviceType}_no_geo`;
+  } else {
+    templateKey = `chrono_macro_${deviceType}_no_time`;
+  }
+
+  const template = getTemplate(templateKey, locale);
+  const params: Record<string, string> = {};
+
+  if (deviceType === 'single') {
+    params.device = formatEvidence(devices[0]!, format);
+  } else if (deviceType === 'multiple') {
+    params.devices = devices
       .map((d) => formatEvidence(d, format))
       .join(', ');
-    const template = getTemplate('chrono_baseline_multiple', locale);
-    return interpolate(template, { devices: formattedList });
   }
 
-  return getTemplate('chrono_baseline_unknown', locale);
+  if (timeSpanInfo) {
+    params.span = formatEvidence(timeSpanInfo.spanString, format);
+    params.startDate = formatEvidence(timeSpanInfo.startDateString, format);
+    params.endDate = formatEvidence(timeSpanInfo.endDateString, format);
+  }
+
+  if (hasDistance) {
+    params.distance = formatEvidence(distanceString, format);
+  }
+
+  return interpolate(template, params);
 }
 
 function buildInitialStep(
@@ -270,6 +391,7 @@ function buildSubsequentStep(
   stepIndex: number,
   locale: SupportedLocale,
   format: 'html' | 'markdown' | 'plain',
+  roadDistMeters?: number,
 ): ChronologicalStoryStep {
   const diffMs = curr.timestamp.getTime() - prev.timestamp.getTime();
   const diffSeconds = Math.max(0, Math.round(diffMs / 1000));
@@ -283,6 +405,8 @@ function buildSubsequentStep(
 
   let distanceMeters: number | undefined;
   let distanceString: string | undefined;
+  let roadDistanceMeters: number | undefined;
+  let roadDistanceString: string | undefined;
   let narrativeText = '';
 
   const hasBothGps =
@@ -302,7 +426,18 @@ function buildSubsequentStep(
     );
     distanceMeters = Math.round(distKm * 1000);
     distanceString = formatDistance(distanceMeters);
-    const highlightedDistance = formatEvidence(distanceString, format);
+
+    if (roadDistMeters != null && roadDistMeters > 0) {
+      roadDistanceMeters = roadDistMeters;
+      roadDistanceString = formatDistance(roadDistMeters);
+    }
+
+    const dualDistanceText = formatDualDistance(
+      distanceString,
+      roadDistanceString,
+      locale,
+    );
+    const highlightedDistance = formatEvidence(dualDistanceText, format);
 
     if (curr.locationName) {
       const highlightedLocation = formatEvidence(curr.locationName, format);
@@ -427,6 +562,8 @@ function buildSubsequentStep(
       prevFileName: prev.fileName,
       distanceMeters,
       distanceString,
+      roadDistanceMeters,
+      roadDistanceString,
       locationName: curr.locationName || undefined,
       deviceString: curr.deviceString,
       deviceChanged,
@@ -452,8 +589,36 @@ export function generateChronologicalBatchStory(
   const steps: ChronologicalStoryStep[] = [];
   steps.push(buildInitialStep(nodes[0]!, locale, format));
 
+  let gpsTransitionIdx = 0;
   for (let i = 1; i < nodes.length; i++) {
-    steps.push(buildSubsequentStep(nodes[i]!, nodes[i - 1]!, i, locale, format));
+    let roadDistMeters: number | undefined;
+    const hasBothGps =
+      nodes[i]!.hasGps &&
+      nodes[i - 1]!.hasGps &&
+      nodes[i]!.latitude !== null &&
+      nodes[i]!.longitude !== null &&
+      nodes[i - 1]!.latitude !== null &&
+      nodes[i - 1]!.longitude !== null;
+
+    if (
+      hasBothGps &&
+      options?.roadDistances &&
+      options.roadDistances.length > gpsTransitionIdx
+    ) {
+      roadDistMeters = options.roadDistances[gpsTransitionIdx];
+      gpsTransitionIdx++;
+    }
+
+    steps.push(
+      buildSubsequentStep(
+        nodes[i]!,
+        nodes[i - 1]!,
+        i,
+        locale,
+        format,
+        roadDistMeters,
+      ),
+    );
   }
 
   const fullNarrative = [baseline, ...steps.map((s) => s.narrativeText)].join('\n\n');

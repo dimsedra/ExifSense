@@ -34,6 +34,8 @@ export interface ChronologicalStoryStep {
     prevFileName?: string;
     distanceMeters?: number;
     distanceString?: string;
+    roadDistanceMeters?: number;
+    roadDistanceString?: string;
     locationName?: string;
     deviceString: string;
     deviceChanged: boolean;
@@ -51,4 +53,5 @@ export interface ChronologicalBatchStory {
 export interface ChronologicalStoryOptions {
   locale?: SupportedLocale;
   format?: 'html' | 'markdown' | 'plain';
+  roadDistances?: number[];
 }

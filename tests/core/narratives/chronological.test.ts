@@ -208,7 +208,7 @@ describe('Chronological Batch Narrative Engine', () => {
 
       // 1. Verify baseline text
       expect(story.baseline).toContain(
-        'All photos in this batch were captured using the same camera device: Sony ILCE-7M4.',
+        'All photos in this batch were captured using the same camera device: Sony ILCE-7M4',
       );
 
       // 2. Verify steps count
@@ -275,7 +275,7 @@ describe('Chronological Batch Narrative Engine', () => {
       });
 
       expect(story.baseline).toContain(
-        'Photos in this batch were captured across multiple devices: Apple iPhone 13 Pro, Canon EOS R5.',
+        'Photos in this batch were captured across multiple devices: Apple iPhone 13 Pro, Canon EOS R5',
       );
       expect(story.steps[1]!.narrativeText).toContain(
         'Camera device changed from Apple iPhone 13 Pro to Canon EOS R5.',
@@ -391,14 +391,13 @@ describe('Chronological Batch Narrative Engine', () => {
         format: 'plain',
       });
       expect(idStory.baseline).toContain(
-        'Semua foto dalam rangkaian ini diambil menggunakan perangkat kamera yang sama: Sony ILCE-7M4.',
+        'Semua foto dalam rangkaian ini diambil menggunakan perangkat kamera yang sama: Sony ILCE-7M4',
       );
       expect(idStory.steps[0]!.narrativeText).toContain('Urutan dimulai dengan photo_id_a.jpg');
       expect(idStory.steps[0]!.narrativeText).toContain('menggunakan lensa FE 24-70mm');
       expect(idStory.steps[1]!.narrativeText).toContain('30 menit kemudian');
-      expect(idStory.steps[1]!.narrativeText).toContain(
-        'sejauh 11.1 km dari photo_id_a.jpg di koordinat -6.30880, 106.84560.',
-      );
+      expect(idStory.steps[1]!.narrativeText).toContain('11.1 km');
+      expect(idStory.steps[1]!.narrativeText).toContain('photo_id_a.jpg di koordinat -6.30880, 106.84560.');
       expect(idStory.steps[1]!.narrativeText).toContain('Lensa kamera berganti dari FE 24-70mm ke FE 70-200mm');
 
       // Arabic
@@ -407,14 +406,13 @@ describe('Chronological Batch Narrative Engine', () => {
         format: 'plain',
       });
       expect(arStory.baseline).toContain(
-        'تم التقاط جميع الصور في هذه المجموعة باستخدام نفس جهاز الكاميرا: Sony ILCE-7M4.',
+        'تم التقاط جميع الصور في هذه المجموعة باستخدام نفس جهاز الكاميرا: Sony ILCE-7M4',
       );
       expect(arStory.steps[0]!.narrativeText).toContain('يبدأ التسلسل بـ photo_id_a.jpg');
       expect(arStory.steps[0]!.narrativeText).toContain('باستخدام عدسة FE 24-70mm');
       expect(arStory.steps[1]!.narrativeText).toContain('بعد 30 دقيقة');
-      expect(arStory.steps[1]!.narrativeText).toContain(
-        'على بعد 11.1 km من photo_id_a.jpg عند الإحداثيات -6.30880, 106.84560.',
-      );
+      expect(arStory.steps[1]!.narrativeText).toContain('11.1 km');
+      expect(arStory.steps[1]!.narrativeText).toContain('photo_id_a.jpg عند الإحداثيات -6.30880, 106.84560.');
       expect(arStory.steps[1]!.narrativeText).toContain('تغيرت عدسة الكاميرا من FE 24-70mm إلى FE 70-200mm');
     });
 
@@ -630,6 +628,187 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(storyWithoutRoad.steps[1]!.narrativeText).toContain(
         'حوالي 17.7 km إزاحة خط مستقيم من 731.jpg',
       );
+    });
+  });
+
+  describe('BP-SYNTHESIS-001: Unified Macro Baseline Synthesis', () => {
+    it('synthesizes single device, localized time span with natural dates, and total distance in one flowing sentence', () => {
+      const assetA = createMockAsset({
+        fileName: '731.jpg',
+        exifData: {
+          Make: 'LGE',
+          Model: 'Nexus 5X',
+          DateTimeOriginal: '2019:03:19 18:01:04',
+          latitude: 57.15961,
+          longitude: -4.56474,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: '735.jpg',
+        exifData: {
+          Make: 'LGE',
+          Model: 'Nexus 5X',
+          DateTimeOriginal: '2019:03:20 11:38:31',
+          latitude: 57.14829,
+          longitude: -2.08942,
+        },
+      });
+
+      const story = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'en',
+        format: 'plain',
+      });
+
+      expect(story.baseline).toContain(
+        'All photos in this batch were captured using the same camera device: LGE Nexus 5X',
+      );
+      expect(story.baseline).toContain('across a span of 17.6 hours');
+      expect(story.baseline).toContain('Tuesday, March 19, 2019 at 18:01:04');
+      expect(story.baseline).toContain('Wednesday, March 20, 2019 at 11:38:31');
+      expect(story.baseline).toContain('covering an estimated total travel distance of approximately 149.3 km');
+    });
+
+    it('synthesizes multiple devices with time span and distance in one sentence', () => {
+      const assetA = createMockAsset({
+        fileName: 'phone.jpg',
+        exifData: {
+          Make: 'Apple',
+          Model: 'iPhone 13 Pro',
+          DateTimeOriginal: '2019:03:19 18:01:04',
+          latitude: 57.15961,
+          longitude: -4.56474,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: 'dslr.jpg',
+        exifData: {
+          Make: 'Canon',
+          Model: 'EOS R5',
+          DateTimeOriginal: '2019:03:20 11:38:31',
+          latitude: 57.14829,
+          longitude: -2.08942,
+        },
+      });
+
+      const story = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'en',
+        format: 'plain',
+      });
+
+      expect(story.baseline).toContain(
+        'Photos in this batch were captured across multiple devices: Apple iPhone 13 Pro, Canon EOS R5',
+      );
+      expect(story.baseline).toContain('across a span of 17.6 hours');
+      expect(story.baseline).toContain('Tuesday, March 19, 2019 at 18:01:04');
+      expect(story.baseline).toContain('Wednesday, March 20, 2019 at 11:38:31');
+      expect(story.baseline).toContain('covering an estimated total travel distance of approximately 149.3 km');
+    });
+
+    it('omits distance gracefully when assets lack GPS coordinates', () => {
+      const assetA = createMockAsset({
+        fileName: 'a.jpg',
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          DateTimeOriginal: '2026:10:28 10:00:00',
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: 'b.jpg',
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          DateTimeOriginal: '2026:10:28 12:00:00',
+        },
+      });
+
+      const story = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'en',
+        format: 'plain',
+      });
+
+      expect(story.baseline).toContain(
+        'All photos in this batch were captured using the same camera device: Sony A7IV',
+      );
+      expect(story.baseline).toContain('across a span of 2 hours');
+      expect(story.baseline).not.toContain('travel distance');
+    });
+
+    it('omits time span gracefully when assets lack capture timestamps', () => {
+      const assetA = createMockAsset({
+        fileName: 'a.jpg',
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          latitude: 48.8584,
+          longitude: 2.2945,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: 'b.jpg',
+        exifData: {
+          Make: 'Sony',
+          Model: 'A7IV',
+          latitude: 48.9663,
+          longitude: 2.2945,
+        },
+      });
+
+      const story = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'en',
+        format: 'plain',
+      });
+
+      expect(story.baseline).toContain(
+        'All photos in this batch were captured using the same camera device: Sony A7IV',
+      );
+      expect(story.baseline).toContain('covering an estimated total travel distance of approximately 12 km');
+      expect(story.baseline).not.toContain('across a span');
+    });
+
+    it('localizes unified macro baseline into Indonesian (id) and Arabic (ar)', () => {
+      const assetA = createMockAsset({
+        fileName: '731.jpg',
+        exifData: {
+          Make: 'LGE',
+          Model: 'Nexus 5X',
+          DateTimeOriginal: '2019:03:19 18:01:04',
+          latitude: 57.15961,
+          longitude: -4.56474,
+        },
+      });
+      const assetB = createMockAsset({
+        fileName: '735.jpg',
+        exifData: {
+          Make: 'LGE',
+          Model: 'Nexus 5X',
+          DateTimeOriginal: '2019:03:20 11:38:31',
+          latitude: 57.14829,
+          longitude: -2.08942,
+        },
+      });
+
+      const storyId = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'id',
+        format: 'plain',
+      });
+      expect(storyId.baseline).toContain(
+        'Semua foto dalam rangkaian ini diambil menggunakan perangkat kamera yang sama: LGE Nexus 5X',
+      );
+      expect(storyId.baseline).toContain('dalam rentang waktu 17,6 jam');
+      expect(storyId.baseline).toContain('Selasa, 19 Maret 2019');
+      expect(storyId.baseline).toContain('Rabu, 20 Maret 2019');
+      expect(storyId.baseline).toContain('dengan estimasi total jarak perjalanan sekitar 149.3 km');
+
+      const storyAr = generateChronologicalBatchStory([assetA, assetB], {
+        locale: 'ar',
+        format: 'plain',
+      });
+      expect(storyAr.baseline).toContain(
+        'تم التقاط جميع الصور في هذه المجموعة باستخدام نفس جهاز الكاميرا: LGE Nexus 5X',
+      );
+      expect(storyAr.baseline).toContain('خلال فترة زمنية مدتها 17.6 ساعة');
+      expect(storyAr.baseline).toContain('مع تقدير إجمالي مسافة الرحلة بحوالي 149.3 km');
     });
   });
 });
