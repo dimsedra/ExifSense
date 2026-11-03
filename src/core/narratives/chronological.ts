@@ -140,6 +140,29 @@ function formatDualDistance(
   return `approximately ${distStr} in straight-line displacement`;
 }
 
+function formatMacroDualDistance(
+  distStr: string,
+  roadDistStr: string | undefined,
+  locale: SupportedLocale,
+): string {
+  if (locale === 'id') {
+    if (roadDistStr) {
+      return `mencakup perpindahan garis lurus kumulatif sekitar ${distStr} (atau ~${roadDistStr} melalui rute jalan)`;
+    }
+    return `mencakup perpindahan garis lurus kumulatif sekitar ${distStr}`;
+  }
+  if (locale === 'ar') {
+    if (roadDistStr) {
+      return `مغطية إزاحة خط مستقيم تراكمية بحوالي ${distStr} (أو ~${roadDistStr} عبر مسار الطريق)`;
+    }
+    return `مغطية إزاحة خط مستقيم تراكمية بحوالي ${distStr}`;
+  }
+  if (roadDistStr) {
+    return `covering approximately ${distStr} in cumulative straight-line displacement (or ~${roadDistStr} via road route)`;
+  }
+  return `covering approximately ${distStr} in cumulative straight-line displacement`;
+}
+
 
 /**
  * Parses and sorts an array of forensic assets into chronological event nodes (BP-NARRATIVE-001).
@@ -222,6 +245,7 @@ function buildBaseline(
   nodes: ChronologicalEventNode[],
   locale: SupportedLocale,
   format: 'html' | 'markdown' | 'plain',
+  totalRoadDistanceMeters?: number,
 ): string {
   const devices = Array.from(
     new Set(nodes.map((n) => n.deviceString).filter(Boolean)),
@@ -301,7 +325,16 @@ function buildBaseline(
   }
 
   if (hasDistance) {
-    params.distance = formatEvidence(distanceString, format);
+    const roadDistStr =
+      totalRoadDistanceMeters != null && totalRoadDistanceMeters > 0
+        ? formatDistance(totalRoadDistanceMeters)
+        : undefined;
+    const dualDistanceText = formatMacroDualDistance(
+      distanceString,
+      roadDistStr,
+      locale,
+    );
+    params.distance = formatEvidence(dualDistanceText, format);
   }
 
   return interpolate(template, params);
@@ -584,7 +617,12 @@ export function generateChronologicalBatchStory(
   const format: 'html' | 'markdown' | 'plain' = options?.format || 'html';
 
   const nodes = parseChronologicalEvents(assets);
-  const baseline = buildBaseline(nodes, locale, format);
+  const baseline = buildBaseline(
+    nodes,
+    locale,
+    format,
+    options?.totalRoadDistance,
+  );
 
   const steps: ChronologicalStoryStep[] = [];
   steps.push(buildInitialStep(nodes[0]!, locale, format));
