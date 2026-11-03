@@ -1,5 +1,6 @@
 import type { ForensicAsset, CollectiveIntelligenceResult } from '../core/forensics/types';
 import type { ChronologicalBatchStory } from '../core/narratives/types';
+import type { OsrmRouteDetails } from '../services/mapHelpers';
 import {
   generateHardwareNarrative,
   generateIntegrityNarrative,
@@ -121,7 +122,8 @@ export function formatBatchOutput(
   assets: ForensicAsset[],
   collective: CollectiveIntelligenceResult,
   story: ChronologicalBatchStory,
-  options?: CliOptions
+  options?: CliOptions,
+  roadRouteDetails?: OsrmRouteDetails | null,
 ): string {
   const locale = options?.locale || 'en';
   const isMarkdown = options?.format === 'markdown';
@@ -227,7 +229,10 @@ export function formatBatchOutput(
   const velocityAlert = collective.geospatial.velocityAlert;
   if (isMarkdown) {
     lines.push('## Geospatial & Movement');
-    lines.push(`- **Total Path Distance**: ${collective.geospatial.totalPathDistanceKm.toFixed(2)} km`);
+    lines.push(`- **Cumulative Displacement**: ${collective.geospatial.totalPathDistanceKm.toFixed(2)} km`);
+    if (roadRouteDetails && roadRouteDetails.totalDistanceMeters > 0) {
+      lines.push(`- **Estimated Road Route**: ${(roadRouteDetails.totalDistanceMeters / 1000).toFixed(2)} km`);
+    }
     lines.push(`- **Max Spread**: ${collective.geospatial.maxSpreadKm.toFixed(2)} km`);
     lines.push(`- **Spread Category**: ${collective.geospatial.spreadCategory}`);
     if (velocityAlert?.hasAnomaly) {
@@ -236,7 +241,10 @@ export function formatBatchOutput(
     lines.push('');
   } else {
     lines.push('--- Geospatial & Movement ---');
-    lines.push(`Total Path Distance   : ${collective.geospatial.totalPathDistanceKm.toFixed(2)} km`);
+    lines.push(`Cumulative Displacement : ${collective.geospatial.totalPathDistanceKm.toFixed(2)} km`);
+    if (roadRouteDetails && roadRouteDetails.totalDistanceMeters > 0) {
+      lines.push(`Estimated Road Route    : ${(roadRouteDetails.totalDistanceMeters / 1000).toFixed(2)} km`);
+    }
     lines.push(`Max Spread            : ${collective.geospatial.maxSpreadKm.toFixed(2)} km`);
     lines.push(`Spread Category       : ${collective.geospatial.spreadCategory}`);
     if (velocityAlert?.hasAnomaly) {

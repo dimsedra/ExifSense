@@ -5,6 +5,8 @@ import { loadAssetSource, resolveScenario, extractBaseline } from './loader';
 import { formatSingleOutput, formatBatchOutput } from './formatter';
 import { evaluateCollectiveIntelligence } from '../core/forensics/collective';
 import { generateChronologicalBatchStory } from '../core/narratives/chronological';
+import { parseExifDate } from '../core/forensics/metadata';
+import { fetchOsrmRouteDetails, type OsrmRouteDetails } from '../services/mapHelpers';
 import type { ForensicAsset } from '../core/forensics/types';
 
 export interface CliExecutionResult {
@@ -68,7 +70,7 @@ async function executeCommand(command: CliParsedCommand): Promise<CliExecutionRe
     const assets = await Promise.all(
       command.targetPaths.map((p) => loadAssetSource(p))
     );
-    const outputText = processBatchAssets(assets, command.options);
+    const outputText = await processBatchAssets(assets, command.options);
     await deliverOutput(outputText, command.options.out);
     return { success: true, exitCode: 0, outputText };
   }
@@ -77,7 +79,7 @@ async function executeCommand(command: CliParsedCommand): Promise<CliExecutionRe
     const result = await resolveScenario(command.scenarioName);
     let outputText = '';
     if (Array.isArray(result)) {
-      outputText = processBatchAssets(result, command.options);
+      outputText = await processBatchAssets(result, command.options);
     } else {
       outputText = formatSingleOutput(result, command.options);
     }
@@ -103,16 +105,61 @@ async function executeCommand(command: CliParsedCommand): Promise<CliExecutionRe
   return { success: false, exitCode: 1, errorText: 'Unhandled command' };
 }
 
-function processBatchAssets(
+async function processBatchAssets(
   assets: ForensicAsset[],
   options: { locale: 'en' | 'id' | 'ar'; format: 'plain' | 'markdown'; out?: string }
-): string {
+): Promise<string> {
+  let roadRouteDetails: OsrmRouteDetails | null = null;
+
+  if (assets && assets.length >= 2) {
+    const geoAssets = assets
+      .filter((a) => {
+        const lat = a.exifData?.latitude ?? a.exifData?.GPSLatitude;
+        const lng = a.exifData?.longitude ?? a.exifData?.GPSLongitude;
+        return (
+          lat != null &&
+          lng != null &&
+          !Number.isNaN(Number(lat)) &&
+          !Number.isNaN(Number(lng))
+        );
+      })
+      .map((a) => {
+        const rawDate =
+          a.exifData?.DateTimeOriginal ||
+          a.exifData?.CreateDate ||
+          a.exifData?.DateTime;
+        const d = parseExifDate(rawDate);
+        return {
+          asset: a,
+          time: d ? d.getTime() : a.fileDate || 0,
+          lat: Number(a.exifData?.latitude ?? a.exifData?.GPSLatitude),
+          lng: Number(a.exifData?.longitude ?? a.exifData?.GPSLongitude),
+        };
+      })
+      .sort((a, b) => a.time - b.time);
+
+    if (geoAssets.length >= 2) {
+      try {
+        const waypoints = geoAssets.map((g) => ({ lat: g.lat, lng: g.lng }));
+        const fetchPromise = fetchOsrmRouteDetails(waypoints);
+        const timeoutPromise = new Promise<null>((resolve) =>
+          setTimeout(() => resolve(null), 3000)
+        );
+        roadRouteDetails = await Promise.race([fetchPromise, timeoutPromise]);
+      } catch {
+        roadRouteDetails = null;
+      }
+    }
+  }
+
   const collective = evaluateCollectiveIntelligence(assets);
   const story = generateChronologicalBatchStory(assets, {
     locale: options.locale,
     format: options.format === 'markdown' ? 'markdown' : 'plain',
+    totalRoadDistance: roadRouteDetails?.totalDistanceMeters,
+    roadDistances: roadRouteDetails?.legDistancesMeters,
   });
-  return formatBatchOutput(assets, collective, story, options);
+  return formatBatchOutput(assets, collective, story, options, roadRouteDetails);
 }
 
 async function deliverOutput(text: string, outPath?: string): Promise<void> {
