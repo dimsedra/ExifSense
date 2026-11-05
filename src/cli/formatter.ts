@@ -1,6 +1,7 @@
 import type { ForensicAsset, CollectiveIntelligenceResult } from '../core/forensics/types';
 import type { ChronologicalBatchStory } from '../core/narratives/types';
 import type { OsrmRouteDetails } from '../services/mapHelpers';
+import type { FileHashResult } from './hasher';
 import {
   generateHardwareNarrative,
   generateIntegrityNarrative,
@@ -279,4 +280,77 @@ export function formatBatchOutput(
   }
 
   return lines.join('\n').trim();
+}
+
+/**
+ * Formats cryptographic hash manifest results into plain text ASCII table or markdown table.
+ */
+export function formatHashOutput(results: FileHashResult[], options?: CliOptions): string {
+  const isMarkdown = options?.format === 'markdown';
+  const totalFiles = results.length;
+
+  if (isMarkdown) {
+    const lines: string[] = [
+      '# ExifSense Cryptographic Hash Manifest',
+      `- **Total Files**: ${totalFiles}`,
+      '',
+    ];
+
+    if (totalFiles === 0) {
+      lines.push('No files found.');
+      return lines.join('\n');
+    }
+
+    lines.push('| File Name | Size (bytes) | SHA-256 | SHA-1 |');
+    lines.push('| --- | --- | --- | --- |');
+
+    for (const file of results) {
+      const safeName = file.fileName.replace(/\|/g, '\\|');
+      lines.push(`| ${safeName} | ${file.fileSize} | \`${file.sha256}\` | \`${file.sha1}\` |`);
+    }
+
+    return lines.join('\n');
+  }
+
+  // Plain text ASCII table format
+  const lines: string[] = [
+    '=== ExifSense Cryptographic Hash Manifest ===',
+    `Total Files: ${totalFiles}`,
+    '',
+  ];
+
+  if (totalFiles === 0) {
+    lines.push('No files found.');
+    return lines.join('\n');
+  }
+
+  let maxNameWidth = 'File Name'.length;
+  let maxSizeWidth = 'Size (bytes)'.length;
+
+  for (const file of results) {
+    if (file.fileName.length > maxNameWidth) {
+      maxNameWidth = file.fileName.length;
+    }
+    const sizeStr = String(file.fileSize);
+    if (sizeStr.length > maxSizeWidth) {
+      maxSizeWidth = sizeStr.length;
+    }
+  }
+
+  const headerName = 'File Name'.padEnd(maxNameWidth);
+  const headerSize = 'Size (bytes)'.padEnd(maxSizeWidth);
+  const headerSha256 = 'SHA-256'.padEnd(64);
+  const headerSha1 = 'SHA-1';
+
+  lines.push(`${headerName}  ${headerSize}  ${headerSha256}  ${headerSha1}`);
+
+  for (const file of results) {
+    const colName = file.fileName.padEnd(maxNameWidth);
+    const colSize = String(file.fileSize).padEnd(maxSizeWidth);
+    const colSha256 = file.sha256.padEnd(64);
+    const colSha1 = file.sha1;
+    lines.push(`${colName}  ${colSize}  ${colSha256}  ${colSha1}`);
+  }
+
+  return lines.join('\n');
 }

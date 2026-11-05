@@ -46,6 +46,7 @@ Identify post-processing signatures from common image editing software, timestam
 | **Single Image Analysis** | Detailed breakdown of camera hardware, optical settings, date history, and exact location. |
 | **Batch Comparison** | Inspect multiple files simultaneously with side-by-side technical correlation and combined map views. |
 | **CLI Analysis & Simulation** | Terminal-native execution harness for headless analysis, automated testing, and simulated edge-case presets. |
+| **Forensic Hash Inspection** | Instant SHA-256 and SHA-1 calculation across single files, batches, or directories for non-destructive verification. |
 | **Metadata Sanitization** | Selective or full removal of EXIF metadata categories with instant cleaned file downloads. |
 | **Interactive Mapping** | High-fidelity map rendering with reverse geocoding to display physical addresses. |
 | **Export Capability** | Export comprehensive reports as PDF, Markdown, CSV, or structured JSON data manifests. |
@@ -72,6 +73,10 @@ npm link
 ```bash
 # Analyze a single photo or JSON metadata file
 exifsense single photo.jpg
+
+# Inspect cryptographic hashes (SHA-256 & SHA-1) across files or directories
+exifsense hash photo1.jpg photo2.jpg
+exifsense hash path/to/folder/ --format markdown --out manifest.md
 
 # Analyze multiple photos and generate collective intelligence and chronological story
 exifsense batch photo1.jpg photo2.jpg photo3.jpg

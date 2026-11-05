@@ -19,6 +19,7 @@ export interface CliOptions {
 export type CliParsedCommand =
   | { command: 'single'; targetPath: string; options: CliOptions }
   | { command: 'batch'; targetPaths: string[]; options: CliOptions }
+  | { command: 'hash'; targetPaths: string[]; options: CliOptions }
   | { command: 'scenario'; scenarioName: string; options: CliOptions }
   | { command: 'extract'; sourcePath: string; outputPath?: string }
   | { command: 'help' }
@@ -100,6 +101,13 @@ export function parseCliArgs(rawArgs: string[]): CliParsedCommand {
       throw new CliArgumentError("Command 'batch' requires at least one target path.");
     }
     return { command: 'batch', targetPaths: rest, options };
+  }
+
+  if (command === 'hash') {
+    if (rest.length === 0) {
+      throw new CliArgumentError("Command 'hash' requires at least one target path.");
+    }
+    return { command: 'hash', targetPaths: rest, options };
   }
 
   if (command === 'scenario') {

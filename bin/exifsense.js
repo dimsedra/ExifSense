@@ -98,6 +98,14 @@ function parseCliArgs(rawArgs) {
 			options
 		};
 	}
+	if (command === "hash") {
+		if (rest.length === 0) throw new CliArgumentError("Command 'hash' requires at least one target path.");
+		return {
+			command: "hash",
+			targetPaths: rest,
+			options
+		};
+	}
 	if (command === "scenario") {
 		if (rest.length === 0 || !rest[0]) throw new CliArgumentError("Command 'scenario' requires a scenario name (e.g. 'missing-gps').");
 		return {
@@ -3739,6 +3747,55 @@ async function extractBaseline(sourceImagePath, destinationJsonPath) {
 	}
 	return rawExif;
 }
+// src/cli/hasher.ts
+/**
+* Resolves an array of file and directory paths, reads binary buffers,
+* and computes SHA-256 and SHA-1 cryptographic hashes for each file.
+* Directory scanning is non-recursive to keep execution predictable and fast.
+*/
+async function computeFileHashes(targetPaths) {
+	const resolvedFilePaths = await resolveTargetFiles(targetPaths);
+	const results = [];
+	for (const filePath of resolvedFilePaths) {
+		const buffer = await fs.promises.readFile(filePath);
+		const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
+		const [sha256, sha1] = await Promise.all([calculateFileHash(arrayBuffer, "SHA-256"), calculateFileHash(arrayBuffer, "SHA-1")]);
+		results.push({
+			fileName: path.basename(filePath),
+			filePath,
+			fileSize: buffer.byteLength,
+			sha256,
+			sha1
+		});
+	}
+	return results;
+}
+/**
+* Resolves paths into unique absolute file paths.
+* Expands directories into their direct child files without recursing into subdirectories.
+*/
+async function resolveTargetFiles(targetPaths) {
+	const fileSet = /* @__PURE__ */ new Set();
+	for (const rawPath of targetPaths) {
+		const absolutePath = path.resolve(process.cwd(), rawPath);
+		let stats;
+		try {
+			stats = await fs.promises.stat(absolutePath);
+		} catch {
+			throw new FileNotFoundError(`Target path does not exist on disk: '${rawPath}'`);
+		}
+		if (!stats.isDirectory()) {
+			fileSet.add(absolutePath);
+			continue;
+		}
+		const entries = await fs.promises.readdir(absolutePath, { withFileTypes: true });
+		for (const entry of entries) {
+			if (!entry.isFile()) continue;
+			fileSet.add(path.join(absolutePath, entry.name));
+		}
+	}
+	return Array.from(fileSet).sort((a, b) => a.localeCompare(b));
+}
 // src/locales/en.json
 var en_default = {
 	ui: {
@@ -5483,6 +5540,59 @@ function formatBatchOutput(assets, collective, story, options, roadRouteDetails)
 	}
 	return lines.join("\n").trim();
 }
+/**
+* Formats cryptographic hash manifest results into plain text ASCII table or markdown table.
+*/
+function formatHashOutput(results, options) {
+	const isMarkdown = options?.format === "markdown";
+	const totalFiles = results.length;
+	if (isMarkdown) {
+		const lines = [
+			"# ExifSense Cryptographic Hash Manifest",
+			`- **Total Files**: ${totalFiles}`,
+			""
+		];
+		if (totalFiles === 0) {
+			lines.push("No files found.");
+			return lines.join("\n");
+		}
+		lines.push("| File Name | Size (bytes) | SHA-256 | SHA-1 |");
+		lines.push("| --- | --- | --- | --- |");
+		for (const file of results) {
+			const safeName = file.fileName.replace(/\|/g, "\\|");
+			lines.push(`| ${safeName} | ${file.fileSize} | \`${file.sha256}\` | \`${file.sha1}\` |`);
+		}
+		return lines.join("\n");
+	}
+	const lines = [
+		"=== ExifSense Cryptographic Hash Manifest ===",
+		`Total Files: ${totalFiles}`,
+		""
+	];
+	if (totalFiles === 0) {
+		lines.push("No files found.");
+		return lines.join("\n");
+	}
+	let maxNameWidth = 9;
+	let maxSizeWidth = 12;
+	for (const file of results) {
+		if (file.fileName.length > maxNameWidth) maxNameWidth = file.fileName.length;
+		const sizeStr = String(file.fileSize);
+		if (sizeStr.length > maxSizeWidth) maxSizeWidth = sizeStr.length;
+	}
+	const headerName = "File Name".padEnd(maxNameWidth);
+	const headerSize = "Size (bytes)".padEnd(maxSizeWidth);
+	const headerSha256 = "SHA-256".padEnd(64);
+	lines.push(`${headerName}  ${headerSize}  ${headerSha256}  SHA-1`);
+	for (const file of results) {
+		const colName = file.fileName.padEnd(maxNameWidth);
+		const colSize = String(file.fileSize).padEnd(maxSizeWidth);
+		const colSha256 = file.sha256.padEnd(64);
+		const colSha1 = file.sha1;
+		lines.push(`${colName}  ${colSize}  ${colSha256}  ${colSha1}`);
+	}
+	return lines.join("\n");
+}
 // src/core/forensics/collective.ts
 function calculateDistance(lat1, lon1, lat2, lon2) {
 	const R = 6371;
@@ -6108,6 +6218,7 @@ const HELP_TEXT = `ExifSense CLI - Terminal-native photo metadata forensics & na
 Usage:
   exifsense single <path> [options]         Analyze a single image or JSON asset
   exifsense batch <path...> [options]       Analyze multiple images or JSON assets
+  exifsense hash <path...> [options]        Inspect SHA-256 and SHA-1 file hashes
   exifsense scenario <name> [options]       Run a preset simulation scenario
   exifsense extract <image-path> [out-json] Extract raw EXIF metadata into JSON
   exifsense --help                          Show this help message
@@ -6159,6 +6270,15 @@ async function executeCommand(command) {
 	}
 	if (command.command === "batch") {
 		const outputText = await processBatchAssets(await Promise.all(command.targetPaths.map((p) => loadAssetSource(p))), command.options);
+		await deliverOutput(outputText, command.options.out);
+		return {
+			success: true,
+			exitCode: 0,
+			outputText
+		};
+	}
+	if (command.command === "hash") {
+		const outputText = formatHashOutput(await computeFileHashes(command.targetPaths), command.options);
 		await deliverOutput(outputText, command.options.out);
 		return {
 			success: true,
