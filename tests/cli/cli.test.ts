@@ -151,6 +151,40 @@ describe('CLI Analysis and Simulation Harness', () => {
     it('Given unsupported format flag, When parsed, Then throws CliArgumentError', () => {
       expect(() => parseCliArgs(['single', 'test.jpg', '--format', 'pdf'])).toThrow(CliArgumentError);
     });
+
+    // BP-HASH-001: CLI Arguments Parsing for 'hash'
+    it('Given hash command with single target path, When parsed, Then returns hash command with targetPaths and default options', () => {
+      const result = parseCliArgs(['hash', 'img1.jpg']);
+      expect(result.command).toBe('hash');
+      if (result.command === 'hash') {
+        expect(result.targetPaths).toEqual(['img1.jpg']);
+        expect(result.options.format).toBe('plain');
+        expect(result.options.locale).toBe('en');
+        expect(result.options.out).toBeUndefined();
+      }
+    });
+
+    it('Given hash command with multiple targets and flags, When parsed, Then returns hash command with mapped options', () => {
+      const result = parseCliArgs([
+        'hash',
+        'img1.jpg',
+        'dir/img2.png',
+        '--format',
+        'markdown',
+        '--out',
+        'manifest.md',
+      ]);
+      expect(result.command).toBe('hash');
+      if (result.command === 'hash') {
+        expect(result.targetPaths).toEqual(['img1.jpg', 'dir/img2.png']);
+        expect(result.options.format).toBe('markdown');
+        expect(result.options.out).toBe('manifest.md');
+      }
+    });
+
+    it('Given hash command without target paths, When parsed, Then throws CliArgumentError', () => {
+      expect(() => parseCliArgs(['hash'])).toThrow(CliArgumentError);
+    });
   });
 
   // ==========================================
