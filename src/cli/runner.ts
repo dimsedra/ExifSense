@@ -2,7 +2,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { parseCliArgs, type CliParsedCommand } from './args';
 import { loadAssetSource, resolveScenario, extractBaseline } from './loader';
-import { formatSingleOutput, formatBatchOutput } from './formatter';
+import { computeFileHashes } from './hasher';
+import { formatSingleOutput, formatBatchOutput, formatHashOutput } from './formatter';
 import { evaluateCollectiveIntelligence } from '../core/forensics/collective';
 import { generateChronologicalBatchStory } from '../core/narratives/chronological';
 import { parseExifDate } from '../core/forensics/metadata';
@@ -21,6 +22,7 @@ const HELP_TEXT = `ExifSense CLI - Terminal-native photo metadata forensics & na
 Usage:
   exifsense single <path> [options]         Analyze a single image or JSON asset
   exifsense batch <path...> [options]       Analyze multiple images or JSON assets
+  exifsense hash <path...> [options]        Inspect SHA-256 and SHA-1 file hashes
   exifsense scenario <name> [options]       Run a preset simulation scenario
   exifsense extract <image-path> [out-json] Extract raw EXIF metadata into JSON
   exifsense --help                          Show this help message
@@ -71,6 +73,13 @@ async function executeCommand(command: CliParsedCommand): Promise<CliExecutionRe
       command.targetPaths.map((p) => loadAssetSource(p))
     );
     const outputText = await processBatchAssets(assets, command.options);
+    await deliverOutput(outputText, command.options.out);
+    return { success: true, exitCode: 0, outputText };
+  }
+
+  if (command.command === 'hash') {
+    const results = await computeFileHashes(command.targetPaths);
+    const outputText = formatHashOutput(results, command.options);
     await deliverOutput(outputText, command.options.out);
     return { success: true, exitCode: 0, outputText };
   }
