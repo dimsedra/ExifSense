@@ -305,7 +305,8 @@ export function formatHashOutput(results: FileHashResult[], options?: CliOptions
     lines.push('| --- | --- | --- | --- |');
 
     for (const file of results) {
-      lines.push(`| ${file.fileName} | ${file.fileSize} | \`${file.sha256}\` | \`${file.sha1}\` |`);
+      const safeName = file.fileName.replace(/\|/g, '\\|');
+      lines.push(`| ${safeName} | ${file.fileSize} | \`${file.sha256}\` | \`${file.sha1}\` |`);
     }
 
     return lines.join('\n');

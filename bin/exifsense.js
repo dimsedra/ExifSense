@@ -3757,14 +3757,13 @@ async function computeFileHashes(targetPaths) {
 	const resolvedFilePaths = await resolveTargetFiles(targetPaths);
 	const results = [];
 	for (const filePath of resolvedFilePaths) {
-		const stats = await fs.promises.stat(filePath);
 		const buffer = await fs.promises.readFile(filePath);
 		const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 		const [sha256, sha1] = await Promise.all([calculateFileHash(arrayBuffer, "SHA-256"), calculateFileHash(arrayBuffer, "SHA-1")]);
 		results.push({
 			fileName: path.basename(filePath),
 			filePath,
-			fileSize: stats.size,
+			fileSize: buffer.byteLength,
 			sha256,
 			sha1
 		});
@@ -3792,7 +3791,7 @@ async function resolveTargetFiles(targetPaths) {
 		const entries = await fs.promises.readdir(absolutePath, { withFileTypes: true });
 		for (const entry of entries) if (entry.isFile()) fileSet.add(path.join(absolutePath, entry.name));
 	}
-	return Array.from(fileSet);
+	return Array.from(fileSet).sort((a, b) => a.localeCompare(b));
 }
 // src/locales/en.json
 var en_default = {
@@ -5556,7 +5555,10 @@ function formatHashOutput(results, options) {
 		}
 		lines.push("| File Name | Size (bytes) | SHA-256 | SHA-1 |");
 		lines.push("| --- | --- | --- | --- |");
-		for (const file of results) lines.push(`| ${file.fileName} | ${file.fileSize} | \`${file.sha256}\` | \`${file.sha1}\` |`);
+		for (const file of results) {
+			const safeName = file.fileName.replace(/\|/g, "\\|");
+			lines.push(`| ${safeName} | ${file.fileSize} | \`${file.sha256}\` | \`${file.sha1}\` |`);
+		}
 		return lines.join("\n");
 	}
 	const lines = [

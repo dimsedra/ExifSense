@@ -21,7 +21,6 @@ export async function computeFileHashes(targetPaths: string[]): Promise<FileHash
   const results: FileHashResult[] = [];
 
   for (const filePath of resolvedFilePaths) {
-    const stats = await fs.promises.stat(filePath);
     const buffer = await fs.promises.readFile(filePath);
     const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength);
 
@@ -33,7 +32,7 @@ export async function computeFileHashes(targetPaths: string[]): Promise<FileHash
     results.push({
       fileName: path.basename(filePath),
       filePath,
-      fileSize: stats.size,
+      fileSize: buffer.byteLength,
       sha256,
       sha1,
     });
@@ -72,5 +71,5 @@ async function resolveTargetFiles(targetPaths: string[]): Promise<string[]> {
     }
   }
 
-  return Array.from(fileSet);
+  return Array.from(fileSet).sort((a, b) => a.localeCompare(b));
 }
