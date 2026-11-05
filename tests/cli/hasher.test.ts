@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { computeFileHashes, type FileHashResult } from '../../src/cli/hasher';
+import { computeFileHashes } from '../../src/cli/hasher';
 import { FileNotFoundError } from '../../src/cli/loader';
 
 describe('BP-HASH-002: computeFileHashes', () => {
