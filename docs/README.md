@@ -9,6 +9,7 @@ Catalog of technical documentation and design references for ExifSense.
 - [Intent: Dual-Distance Narrative (Displacement vs Road Route)](./intent/20261103_dual_distance_displacement_and_road_route.md) — Distinguishing straight-line coordinate displacement from estimated road travel distance in batch chronological narratives.
 - [Intent: Batch Macro Narrative Synthesis and Evidence Inspector](./intent/20261103_batch_narrative_synthesis.md) — Unifying batch macro narrative insights into Chronological Story lead with natural date formatting while repositioning Combined Analysis as a focused technical evidence inspector.
 - [Intent: CLI Local OSRM Provisioning for Fully Air-Gapped Environments](./intent/20261103_cli_local_osrm_provisioning.md) — Automated CLI helper commands to download and run regional OSRM containers locally for offline, privacy-first forensic operations.
+- [Intent: CLI File Hash Inspection for Forensic Integrity](./intent/20261105_cli_file_hash_inspection.md) — Dedicated lightweight CLI hashing command to record baseline pre-analysis hashes and verify post-analysis file immutability without external tools.
 
 ## Blueprint
 
