@@ -349,6 +349,42 @@ describe('CLI Analysis and Simulation Harness', () => {
       expect(result.exitCode).toBe(1);
       expect(result.errorText).toContain('File not found');
     });
+
+    // BP-HASH-004: End-to-End CLI Runner Execution for hash command
+    it('Given hash command on valid file, When executed, Then outputs cryptographic hash manifest', async () => {
+      const result = await runCli(['hash', sampleJpegPath]);
+      expect(result.success).toBe(true);
+      expect(result.exitCode).toBe(0);
+      expect(result.outputText).toContain('=== ExifSense Cryptographic Hash Manifest ===');
+      expect(result.outputText).toContain('Total Files: 1');
+      expect(result.outputText).toContain('sample.jpg');
+      expect(result.outputText).toContain('SHA-256');
+      expect(result.outputText).toContain('SHA-1');
+    });
+
+    it('Given hash command with --format markdown and --out flag, When executed, Then delivers markdown manifest to disk', async () => {
+      const hashOutFile = path.join(tempDir, 'hash-manifest.md');
+      const result = await runCli(['hash', sampleJpegPath, '--format', 'markdown', '--out', hashOutFile]);
+      expect(result.success).toBe(true);
+      expect(result.exitCode).toBe(0);
+      expect(fs.existsSync(hashOutFile)).toBe(true);
+      const content = await fs.promises.readFile(hashOutFile, 'utf8');
+      expect(content).toContain('# ExifSense Cryptographic Hash Manifest');
+      expect(content).toContain('| sample.jpg |');
+    });
+
+    it('Given hash command with non-existent file, When executed, Then returns failure with exitCode 1', async () => {
+      const result = await runCli(['hash', path.join(tempDir, 'non-existent.jpg')]);
+      expect(result.success).toBe(false);
+      expect(result.exitCode).toBe(1);
+      expect(result.errorText).toContain('Target path does not exist');
+    });
+
+    it('Given help flag, When executed, Then includes hash subcommand in usage guide', async () => {
+      const result = await runCli(['--help']);
+      expect(result.success).toBe(true);
+      expect(result.outputText).toContain('exifsense hash <path...>');
+    });
   });
 
   // ==========================================
