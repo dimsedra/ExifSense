@@ -17,6 +17,7 @@ Catalog of technical documentation and design references for ExifSense.
 - [Blueprint: CLI Analysis and Simulation Harness](./blueprint/20261102_cli_analysis_simulation.md) — Architecture, contracts, and verification strategy for headless command-line execution and persistent scenario fixtures.
 - [Blueprint: Dual-Distance Narrative (Displacement and Road Route)](./blueprint/20261103_dual_distance_narrative.md) — Architecture, contracts, and verification for OSRM leg distance extraction and dual-distance narrative formatting across Web and CLI.
 - [Blueprint: Batch Macro Narrative Synthesis and Evidence Inspector](./blueprint/20261103_batch_narrative_synthesis.md) — Architecture, contracts, and verification for unified macro story baseline with natural date formatting and collapsible evidence inspector.
+- [Blueprint: CLI File Hash Inspection](./blueprint/20261105_cli_file_hash_inspection.md) — Technical architecture, contracts, and TDD verification strategy for the dedicated `exifsense hash <path...>` CLI command.
 
 ## Design
 
