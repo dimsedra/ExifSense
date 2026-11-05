@@ -3789,7 +3789,10 @@ async function resolveTargetFiles(targetPaths) {
 			continue;
 		}
 		const entries = await fs.promises.readdir(absolutePath, { withFileTypes: true });
-		for (const entry of entries) if (entry.isFile()) fileSet.add(path.join(absolutePath, entry.name));
+		for (const entry of entries) {
+			if (!entry.isFile()) continue;
+			fileSet.add(path.join(absolutePath, entry.name));
+		}
 	}
 	return Array.from(fileSet).sort((a, b) => a.localeCompare(b));
 }

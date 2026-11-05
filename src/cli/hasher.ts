@@ -65,9 +65,8 @@ async function resolveTargetFiles(targetPaths: string[]): Promise<string[]> {
 
     const entries = await fs.promises.readdir(absolutePath, { withFileTypes: true });
     for (const entry of entries) {
-      if (entry.isFile()) {
-        fileSet.add(path.join(absolutePath, entry.name));
-      }
+      if (!entry.isFile()) continue;
+      fileSet.add(path.join(absolutePath, entry.name));
     }
   }
 
