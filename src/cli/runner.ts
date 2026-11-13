@@ -34,7 +34,7 @@ Usage:
   exifsense --version                       Show version
 
 Options:
-  --locale <en|id|ar>       Narrative language (default: en)
+  --locale <en|id>          Narrative language (default: en)
   --format <plain|markdown> Output formatting (default: plain)
   --out <path>              Write output text to file instead of stdout`;
 
@@ -146,7 +146,7 @@ async function executeCommand(command: CliParsedCommand): Promise<CliExecutionRe
 
 async function processBatchAssets(
   assets: ForensicAsset[],
-  options: { locale: 'en' | 'id' | 'ar'; format: 'plain' | 'markdown'; out?: string }
+  options: { locale: 'en' | 'id'; format: 'plain' | 'markdown'; out?: string }
 ): Promise<string> {
   let roadRouteDetails: OsrmRouteDetails | null = null;
 

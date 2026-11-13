@@ -72,7 +72,6 @@ function formatReadableFileSize(bytes: number): string {
 
 const DATE_LOCALE_MAP: Record<string, string> = {
   id: 'id-ID',
-  ar: 'ar-SA',
 };
 
 function formatFileModifiedDate(fileDate: number | undefined, locale: string): string {

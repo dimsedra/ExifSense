@@ -8,7 +8,7 @@ export class CliArgumentError extends Error {
 }
 
 export type SupportedFormat = 'plain' | 'markdown';
-export type SupportedLocale = 'en' | 'id' | 'ar';
+export type SupportedLocale = 'en' | 'id';
 
 export interface CliOptions {
   locale: SupportedLocale;
@@ -74,8 +74,8 @@ export function parseCliArgs(rawArgs: string[]): CliParsedCommand {
   }
 
   const locale = values.locale as string;
-  if (locale !== 'en' && locale !== 'id' && locale !== 'ar') {
-    throw new CliArgumentError(`Unsupported locale '${locale}'. Supported: en, id, ar.`);
+  if (locale !== 'en' && locale !== 'id') {
+    throw new CliArgumentError(`Unsupported locale '${locale}'. Supported: en, id.`);
   }
 
   const format = values.format as string;
