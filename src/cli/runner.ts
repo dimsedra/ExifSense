@@ -6,10 +6,9 @@ import { computeFileHashes } from './hasher';
 import { formatSingleOutput, formatBatchOutput, formatHashOutput } from './formatter';
 import { evaluateCollectiveIntelligence } from '../core/forensics/collective';
 import { generateChronologicalBatchStory } from '../core/narratives/chronological';
-import { parseExifDate } from '../core/forensics/metadata';
+import { parseExifDate, extractGpsCoordinates } from '../core/forensics/metadata';
 import {
   fetchOsrmRouteDetails,
-  isValidCoordinate,
   resolveLocationWithPacing,
   type OsrmRouteDetails,
 } from '../services/mapHelpers';
@@ -61,13 +60,12 @@ async function enrichSingleAssetLocation(asset: ForensicAsset): Promise<Forensic
     return asset;
   }
 
-  const lat = asset.exifData?.latitude ?? asset.exifData?.GPSLatitude;
-  const lng = asset.exifData?.longitude ?? asset.exifData?.GPSLongitude;
-  if (!isValidCoordinate(lat, lng)) {
+  const coords = extractGpsCoordinates(asset.exifData);
+  if (!coords) {
     return asset;
   }
 
-  const locData = await resolveLocationWithPacing(Number(lat), Number(lng));
+  const locData = await resolveLocationWithPacing(coords.lat, coords.lng);
   if (!locData?.display_name) {
     return asset;
   }
@@ -145,61 +143,64 @@ async function executeCommand(command: CliParsedCommand): Promise<CliExecutionRe
   return { success: false, exitCode: 1, errorText: 'Unhandled command' };
 }
 
+async function resolveBatchRoadRoute(assets: ForensicAsset[]): Promise<OsrmRouteDetails | null> {
+  if (assets.length < 2) {
+    return null;
+  }
+
+  const geoPoints: Array<{ time: number; lat: number; lng: number }> = [];
+  for (const asset of assets) {
+    const coords = extractGpsCoordinates(asset.exifData);
+    if (!coords) continue;
+
+    const rawDate =
+      asset.exifData?.DateTimeOriginal ||
+      asset.exifData?.CreateDate ||
+      asset.exifData?.DateTime;
+    const parsedDate = parseExifDate(rawDate);
+    geoPoints.push({
+      time: parsedDate ? parsedDate.getTime() : asset.fileDate || 0,
+      lat: coords.lat,
+      lng: coords.lng,
+    });
+  }
+
+  if (geoPoints.length < 2) {
+    return null;
+  }
+
+  geoPoints.sort((a, b) => a.time - b.time);
+
+  try {
+    const waypoints = geoPoints.map((point) => ({ lat: point.lat, lng: point.lng }));
+    const fetchPromise = fetchOsrmRouteDetails(waypoints);
+    const timeoutPromise = new Promise<null>((resolve) =>
+      setTimeout(() => resolve(null), 3000)
+    );
+    return await Promise.race([fetchPromise, timeoutPromise]);
+  } catch {
+    return null;
+  }
+}
+
 async function processBatchAssets(
   assets: ForensicAsset[],
   options: CliOptions
 ): Promise<string> {
-  let roadRouteDetails: OsrmRouteDetails | null = null;
-
-  if (assets && assets.length >= 2) {
-    const geoAssets = assets
-      .filter((a) => {
-        const lat = a.exifData?.latitude ?? a.exifData?.GPSLatitude;
-        const lng = a.exifData?.longitude ?? a.exifData?.GPSLongitude;
-        return (
-          lat != null &&
-          lng != null &&
-          !Number.isNaN(Number(lat)) &&
-          !Number.isNaN(Number(lng))
-        );
-      })
-      .map((a) => {
-        const rawDate =
-          a.exifData?.DateTimeOriginal ||
-          a.exifData?.CreateDate ||
-          a.exifData?.DateTime;
-        const d = parseExifDate(rawDate);
-        return {
-          asset: a,
-          time: d ? d.getTime() : a.fileDate || 0,
-          lat: Number(a.exifData?.latitude ?? a.exifData?.GPSLatitude),
-          lng: Number(a.exifData?.longitude ?? a.exifData?.GPSLongitude),
-        };
-      })
-      .sort((a, b) => a.time - b.time);
-
-    if (geoAssets.length >= 2) {
-      try {
-        const waypoints = geoAssets.map((g) => ({ lat: g.lat, lng: g.lng }));
-        const fetchPromise = fetchOsrmRouteDetails(waypoints);
-        const timeoutPromise = new Promise<null>((resolve) =>
-          setTimeout(() => resolve(null), 3000)
-        );
-        roadRouteDetails = await Promise.race([fetchPromise, timeoutPromise]);
-      } catch {
-        roadRouteDetails = null;
-      }
-    }
+  const enrichedAssets: ForensicAsset[] = [];
+  for (const asset of assets) {
+    enrichedAssets.push(await enrichSingleAssetLocation(asset));
   }
 
-  const collective = evaluateCollectiveIntelligence(assets);
-  const story = generateChronologicalBatchStory(assets, {
+  const roadRouteDetails = await resolveBatchRoadRoute(enrichedAssets);
+  const collective = evaluateCollectiveIntelligence(enrichedAssets);
+  const story = generateChronologicalBatchStory(enrichedAssets, {
     locale: options.locale,
     format: options.format === 'markdown' ? 'markdown' : 'plain',
     totalRoadDistance: roadRouteDetails?.totalDistanceMeters,
     roadDistances: roadRouteDetails?.legDistancesMeters,
   });
-  return formatBatchOutput(assets, collective, story, options, roadRouteDetails);
+  return formatBatchOutput(enrichedAssets, collective, story, options, roadRouteDetails);
 }
 
 async function deliverOutput(text: string, outPath?: string): Promise<void> {

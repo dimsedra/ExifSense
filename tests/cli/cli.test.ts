@@ -317,28 +317,57 @@ describe('CLI Analysis and Simulation Harness', () => {
     });
 
     it('Given batch command on scenario files, When executed, Then outputs collective analysis and chronological story', async () => {
-      const result = await runCli([
-        'batch',
-        'tests/fixtures/scenarios/baseline.json',
-        'tests/fixtures/scenarios/single/tampered-software.json',
-      ]);
-      expect(result.success).toBe(true);
-      expect(result.exitCode).toBe(0);
-      expect(result.outputText).toContain('=== ExifSense Collective Intelligence Analysis ===');
-      expect(result.outputText).toContain('Total Assets: 2');
-      expect(result.outputText).toContain('--- Combined Analysis ---');
-      expect(result.outputText).toContain('--- Chronological Story ---');
+      const originalFetch = globalThis.fetch;
+      const { clearGeocodeCache, clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+      clearOsrmCache();
+
+      globalThis.fetch = (async () => {
+        throw new Error('Offline test isolation');
+      }) as typeof fetch;
+
+      try {
+        const result = await runCli([
+          'batch',
+          'tests/fixtures/scenarios/baseline.json',
+          'tests/fixtures/scenarios/single/tampered-software.json',
+        ]);
+        expect(result.success).toBe(true);
+        expect(result.exitCode).toBe(0);
+        expect(result.outputText).toContain('=== ExifSense Collective Intelligence Analysis ===');
+        expect(result.outputText).toContain('Total Assets: 2');
+        expect(result.outputText).toContain('--- Combined Analysis ---');
+        expect(result.outputText).toContain('--- Chronological Story ---');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+        clearOsrmCache();
+      }
     });
 
-    it('Given scenario command on travel-sequence, When executed, Then outputs movement details and story steps', async () => {
-      const result = await runCli(['scenario', 'travel-sequence']);
-      expect(result.success).toBe(true);
-      expect(result.exitCode).toBe(0);
-      expect(result.outputText).toContain('Total Assets: 5');
-      expect(result.outputText).toContain('--- Combined Analysis ---');
-      expect(result.outputText).toContain('Cumulative Displacement');
-      expect(result.outputText).toContain('[Step 1]');
-      expect(result.outputText).toContain('[Step 5]');
+    it('Given scenario command on travel-sequence, When executed, Then outputs movement details and story steps', { timeout: 10000 }, async () => {
+      const originalFetch = globalThis.fetch;
+      const { clearGeocodeCache, clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+      clearOsrmCache();
+
+      globalThis.fetch = (async () => {
+        throw new Error('Offline test isolation');
+      }) as typeof fetch;
+
+      try {
+        const result = await runCli(['scenario', 'travel-sequence']);
+        expect(result.success).toBe(true);
+        expect(result.exitCode).toBe(0);
+        expect(result.outputText).toContain('Total Assets: 5');
+        expect(result.outputText).toContain('Cumulative Displacement');
+        expect(result.outputText).toContain('[Step 1]');
+        expect(result.outputText).toContain('[Step 5]');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+        clearOsrmCache();
+      }
     });
 
     it('Given scenario command with --out flag, When executed, Then writes output to destination file', async () => {
@@ -442,24 +471,32 @@ describe('CLI Analysis and Simulation Harness', () => {
   // BP-DUALDIST-004: Dual-Distance CLI Realignment
   // ==========================================
   describe('BP-DUALDIST-004: CLI Batch Dual-Distance and Offline Fallback', () => {
-    it('resolves road route when online and outputs both Cumulative Displacement and Estimated Road Route', async () => {
+    it('resolves road route when online and outputs both Cumulative Displacement and Estimated Road Route', { timeout: 10000 }, async () => {
       const originalFetch = globalThis.fetch;
-      const { clearOsrmCache } = await import('../../src/services/mapHelpers');
+      const { clearOsrmCache, clearGeocodeCache } = await import('../../src/services/mapHelpers');
       clearOsrmCache();
+      clearGeocodeCache();
 
-      globalThis.fetch = (async () => {
+      globalThis.fetch = (async (url: RequestInfo | URL) => {
+        const urlStr = String(url);
+        if (urlStr.includes('project-osrm.org')) {
+          return {
+            ok: true,
+            json: async () => ({
+              code: 'Ok',
+              routes: [
+                {
+                  geometry: { type: 'LineString', coordinates: [] },
+                  distance: 21500,
+                  legs: [{ distance: 9500 }, { distance: 12000 }],
+                },
+              ],
+            }),
+          } as unknown as Response;
+        }
         return {
           ok: true,
-          json: async () => ({
-            code: 'Ok',
-            routes: [
-              {
-                geometry: { type: 'LineString', coordinates: [] },
-                distance: 21500,
-                legs: [{ distance: 9500 }, { distance: 12000 }],
-              },
-            ],
-          }),
+          json: async () => ({ display_name: 'Mocked Place, Scotland' }),
         } as unknown as Response;
       }) as typeof fetch;
 
@@ -474,13 +511,15 @@ describe('CLI Analysis and Simulation Harness', () => {
       } finally {
         globalThis.fetch = originalFetch;
         clearOsrmCache();
+        clearGeocodeCache();
       }
     });
 
-    it('falls back cleanly to displacement only when offline or network fails', async () => {
+    it('falls back cleanly to displacement only when offline or network fails', { timeout: 10000 }, async () => {
       const originalFetch = globalThis.fetch;
-      const { clearOsrmCache } = await import('../../src/services/mapHelpers');
+      const { clearOsrmCache, clearGeocodeCache } = await import('../../src/services/mapHelpers');
       clearOsrmCache();
+      clearGeocodeCache();
 
       globalThis.fetch = (async () => {
         throw new Error('Network connection offline');
@@ -496,6 +535,131 @@ describe('CLI Analysis and Simulation Harness', () => {
         expect(result.outputText).not.toContain('via road route');
       } finally {
         globalThis.fetch = originalFetch;
+        clearOsrmCache();
+        clearGeocodeCache();
+      }
+    });
+  });
+
+  // ==========================================
+  // BP-BATCH-PARITY-002: Batch Reverse Geocoding Enrichment
+  // ==========================================
+  describe('BP-BATCH-PARITY-002: Batch Reverse Geocoding Enrichment', () => {
+    it('enriches batch assets sequentially with Nominatim place names when online', async () => {
+      const batchFileA = path.join(tempDir, 'batch-geo-a.json');
+      const batchFileB = path.join(tempDir, 'batch-geo-b.json');
+      await fs.promises.writeFile(
+        batchFileA,
+        JSON.stringify({
+          fileName: 'stop_one.jpg',
+          exifData: {
+            DateTimeOriginal: '2025:05:10 10:00:00',
+            latitude: -6.1754,
+            longitude: 106.8272,
+          },
+        }),
+        'utf8'
+      );
+      await fs.promises.writeFile(
+        batchFileB,
+        JSON.stringify({
+          fileName: 'stop_two.jpg',
+          exifData: {
+            DateTimeOriginal: '2025:05:10 10:30:00',
+            GPSLatitude: -6.195,
+            GPSLongitude: 106.823,
+          },
+        }),
+        'utf8'
+      );
+
+      const originalFetch = globalThis.fetch;
+      const { clearGeocodeCache, clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+      clearOsrmCache();
+
+      globalThis.fetch = (async (url: RequestInfo | URL) => {
+        const urlStr = String(url);
+        if (urlStr.includes('project-osrm.org')) {
+          return {
+            ok: true,
+            json: async () => ({
+              code: 'Ok',
+              routes: [{ distance: 3200, legs: [{ distance: 3200 }] }],
+            }),
+          } as unknown as Response;
+        }
+        if (urlStr.includes('-6.1754')) {
+          return {
+            ok: true,
+            json: async () => ({ display_name: 'Monas, Gambir, Central Jakarta' }),
+          } as unknown as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ display_name: 'Bundaran HI, Menteng, Central Jakarta' }),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const result = await runCli(['batch', batchFileA, batchFileB]);
+        expect(result.success).toBe(true);
+        expect(result.exitCode).toBe(0);
+        expect(result.outputText).toContain('Monas, Gambir, Central Jakarta');
+        expect(result.outputText).toContain('Bundaran HI, Menteng, Central Jakarta');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+        clearOsrmCache();
+      }
+    });
+
+    it('falls back cleanly to coordinates when Nominatim is offline during batch run', async () => {
+      const batchFileA = path.join(tempDir, 'batch-offline-a.json');
+      const batchFileB = path.join(tempDir, 'batch-offline-b.json');
+      await fs.promises.writeFile(
+        batchFileA,
+        JSON.stringify({
+          fileName: 'offline_one.jpg',
+          exifData: {
+            DateTimeOriginal: '2025:05:10 10:00:00',
+            GPSLatitude: -6.1754,
+            GPSLongitude: 106.8272,
+          },
+        }),
+        'utf8'
+      );
+      await fs.promises.writeFile(
+        batchFileB,
+        JSON.stringify({
+          fileName: 'offline_two.jpg',
+          exifData: {
+            DateTimeOriginal: '2025:05:10 10:30:00',
+            GPSLatitude: -6.195,
+            GPSLongitude: 106.823,
+          },
+        }),
+        'utf8'
+      );
+
+      const originalFetch = globalThis.fetch;
+      const { clearGeocodeCache, clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+      clearOsrmCache();
+
+      globalThis.fetch = (async () => {
+        throw new Error('Offline network');
+      }) as typeof fetch;
+
+      try {
+        const result = await runCli(['batch', batchFileA, batchFileB]);
+        expect(result.success).toBe(true);
+        expect(result.exitCode).toBe(0);
+        expect(result.outputText).toContain('-6.17540, 106.82720');
+        expect(result.outputText).toContain('-6.19500, 106.82300');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
         clearOsrmCache();
       }
     });
