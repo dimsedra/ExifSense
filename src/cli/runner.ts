@@ -27,7 +27,6 @@ Usage:
   exifsense single <path> [options]         Analyze a single image or JSON asset
   exifsense batch <path...> [options]       Analyze multiple images or JSON assets
   exifsense hash <path...> [options]        Inspect SHA-256 and SHA-1 file hashes
-  exifsense scenario <name> [options]       Run a preset simulation scenario
   exifsense extract <image-path> [out-json] Extract raw EXIF metadata into JSON
   exifsense --help                          Show this help message
   exifsense --version                       Show version

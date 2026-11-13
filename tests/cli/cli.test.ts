@@ -291,6 +291,7 @@ describe('CLI Analysis and Simulation Harness', () => {
       expect(result.exitCode).toBe(0);
       expect(result.outputText).toContain('Usage:');
       expect(result.outputText).toContain('--locale <en|id>');
+      expect(result.outputText).not.toContain('exifsense scenario');
     });
 
     it('Given --locale ar, When executed, Then fails fast with unsupported locale error', async () => {
