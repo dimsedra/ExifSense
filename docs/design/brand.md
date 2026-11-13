@@ -11,7 +11,7 @@ related_code:
   - src/css/history.css
   - src/css/guide.css
   - src/css/modal.css
-last_updated: 2026-10-30
+last_updated: 2026-11-14
 ---
 
 # Brand Design SOT: ExifSense
@@ -22,7 +22,7 @@ ExifSense ("EXIF Image Metadata, Made Easy for Everyone") is a browser-native ph
 
 - **What it is**: An approachable, trustworthy, zero-server tool that helps everyday users, photographers, travelers, and privacy-conscious individuals understand the story behind their photos and strip sensitive metadata before sharing.
 - **What it is not**: An intimidating, jargon-heavy "forensic intelligence" terminal reserved for security specialists, or a cloud SaaS that uploads user photos to remote servers.
-- **Tone & Copy**: Clear, human-readable, and welcoming across all three supported languages (English `en`, Bahasa Indonesia `id`, and Arabic `ar` with RTL support). Technical concepts are explained through plain cause-and-effect narratives rather than raw tag dumps alone.
+- **Tone & Copy**: Clear, human-readable, and welcoming across both supported languages (English `en` and Bahasa Indonesia `id`). Technical concepts are explained through plain cause-and-effect narratives rather than raw tag dumps alone.
 
 ## Target User & Context
 
@@ -31,13 +31,13 @@ ExifSense ("EXIF Image Metadata, Made Easy for Everyone") is a browser-native ph
   1. Inspect a single image's metadata, location, and modification history in plain language.
   2. Compare a batch of images side-by-side with combined timeline and route reconstruction.
   3. Sanitize sensitive metadata (GPS, device info, camera settings, timestamps) for single or batch files with live privacy feedback before downloading.
-- **Constraints**: Works across desktop and mobile viewports (`360x640` to `1280x800+`), 100% offline/client-side processing, and instant switching between `en`, `id`, and `ar`.
+- **Constraints**: Works across desktop and mobile viewports (`360x640` to `1280x800+`), 100% offline/client-side processing, and instant switching between `en` and `id`.
 
 ## Generic Baseline to Avoid
 
 - Avoid pseudo-military or cyber-forensic clichés ("Forensic Intelligence", neon green terminal text, intimidating legalese).
 - Avoid purple-blue AI gradients, glassmorphic rainbow blobs, or unstyled raw EXIF key-value tables with no human context.
-- Avoid hardcoded English strings that break when switching to Bahasa Indonesia or Arabic.
+- Avoid hardcoded English strings that break when switching to Bahasa Indonesia.
 
 ## Design Decisions
 
@@ -54,7 +54,7 @@ ExifSense ("EXIF Image Metadata, Made Easy for Everyone") is a browser-native ph
   - UI & Headings (`--font-sans`): `Space Grotesk` (400, 500, 600, 700)
   - Technical Values, Coordinates & Hashes (`--font-mono`): `JetBrains Mono` (400, 500)
 - **Layout Hierarchy**:
-  - **Header**: Sticky top bar with `EXIFSENSE` logo, Guide button, Language selector (`EN` / `ID` / `AR`), contextual Export dropdown, Analyze New button, and Sanitize Metadata primary CTA.
+  - **Header**: Sticky top bar with `EXIFSENSE` logo, Guide button, Language selector (`EN` / `ID`), contextual Export dropdown, Analyze New button, and Sanitize Metadata primary CTA.
   - **Home (`#/`)**: Hero section with badge (`hero_badge`), two-tone title (`hero_title_part1` + `hero_title_span`), friendly description (`hero_desc`), and primary/outline CTAs (`Start Exploring`, `Review History`), followed by the unified Action Zone (`New Analysis` and `History` tabs), mode toggle (`Single Asset`, `Batch Analysis`, `Remove Metadata`), dropzone with mode description, technical advisory callout, and 4-card Bento feature grid (`Automatic Image Analysis` 2-col first, `Secure by Design` 1-col second, `Spoofing Protection` 1-col third, `Metadata Sanitization` 2-col fourth).
   - **Guide (`#/guide`)**: 3-tab card (`Overview`, `Navigation`, `Features`) rendering structured `.guide-feature-item` cards and CTA buttons directly from locale keys.
   - **Dashboard (`#/dashboard`)**: Full-width interactive Leaflet map card on top (with route toggle, GPS coordinates bar, and external map links), Combined Metadata Insights card (for batch mode), and a 2-column grid (Left: Source File card with actual image preview and basic file/hash info; Right: Individual Asset Analysis narrative tabs + categorized raw metadata cards).
