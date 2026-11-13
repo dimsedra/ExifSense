@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { parseCliArgs, type CliParsedCommand } from './args';
+import { parseCliArgs, type CliOptions, type CliParsedCommand } from './args';
 import { loadAssetSource, resolveScenario, extractBaseline } from './loader';
 import { computeFileHashes } from './hasher';
 import { formatSingleOutput, formatBatchOutput, formatHashOutput } from './formatter';
@@ -36,6 +36,7 @@ Usage:
 Options:
   --locale <en|id>          Narrative language (default: en)
   --format <plain|markdown> Output formatting (default: plain)
+  --detailed                Include full per-asset details in batch output
   --out <path>              Write output text to file instead of stdout`;
 
 const VERSION_TEXT = 'ExifSense CLI v1.0.0';
@@ -146,7 +147,7 @@ async function executeCommand(command: CliParsedCommand): Promise<CliExecutionRe
 
 async function processBatchAssets(
   assets: ForensicAsset[],
-  options: { locale: 'en' | 'id'; format: 'plain' | 'markdown'; out?: string }
+  options: CliOptions
 ): Promise<string> {
   let roadRouteDetails: OsrmRouteDetails | null = null;
 

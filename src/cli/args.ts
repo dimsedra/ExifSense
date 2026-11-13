@@ -14,6 +14,7 @@ export interface CliOptions {
   locale: SupportedLocale;
   format: SupportedFormat;
   out?: string;
+  detailed?: boolean;
 }
 
 export type CliParsedCommand =
@@ -38,6 +39,7 @@ export function parseCliArgs(rawArgs: string[]): CliParsedCommand {
         locale: { type: 'string', default: 'en' },
         format: { type: 'string', default: 'plain' },
         out: { type: 'string' },
+        detailed: { type: 'boolean', default: false },
         help: { type: 'boolean', short: 'h' },
         version: { type: 'boolean', short: 'v' },
       },
@@ -87,6 +89,7 @@ export function parseCliArgs(rawArgs: string[]): CliParsedCommand {
     locale,
     format,
     out: typeof values.out === 'string' ? values.out : undefined,
+    detailed: Boolean(values.detailed),
   };
 
   if (command === 'single') {

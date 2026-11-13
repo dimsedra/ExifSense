@@ -99,19 +99,30 @@ describe('CLI Analysis and Simulation Harness', () => {
       }
     });
 
-    it('Given batch command with multiple files, When parsed, Then returns all target paths', () => {
+    it('Given batch command with multiple files, When parsed, Then returns all target paths with detailed false by default', () => {
       const result = parseCliArgs(['batch', 'file1.jpg', 'file2.jpg', 'file3.json']);
       expect(result.command).toBe('batch');
       if (result.command === 'batch') {
         expect(result.targetPaths).toEqual(['file1.jpg', 'file2.jpg', 'file3.json']);
+        expect(result.options.detailed).toBe(false);
       }
     });
 
-    it('Given scenario command with preset name, When parsed, Then returns scenario name', () => {
-      const result = parseCliArgs(['scenario', 'missing-gps']);
+    it('Given batch command with --detailed flag, When parsed, Then sets detailed option to true', () => {
+      const result = parseCliArgs(['batch', 'file1.jpg', 'file2.jpg', '--detailed']);
+      expect(result.command).toBe('batch');
+      if (result.command === 'batch') {
+        expect(result.targetPaths).toEqual(['file1.jpg', 'file2.jpg']);
+        expect(result.options.detailed).toBe(true);
+      }
+    });
+
+    it('Given scenario command with preset name and --detailed flag, When parsed, Then returns scenario name and detailed true', () => {
+      const result = parseCliArgs(['scenario', 'missing-gps', '--detailed']);
       expect(result.command).toBe('scenario');
       if (result.command === 'scenario') {
         expect(result.scenarioName).toBe('missing-gps');
+        expect(result.options.detailed).toBe(true);
       }
     });
 
@@ -391,10 +402,11 @@ describe('CLI Analysis and Simulation Harness', () => {
       expect(result.errorText).toContain('Target path does not exist');
     });
 
-    it('Given help flag, When executed, Then includes hash subcommand in usage guide', async () => {
+    it('Given help flag, When executed, Then includes hash subcommand and --detailed option in usage guide', async () => {
       const result = await runCli(['--help']);
       expect(result.success).toBe(true);
       expect(result.outputText).toContain('exifsense hash <path...>');
+      expect(result.outputText).toContain('--detailed');
     });
   });
 
