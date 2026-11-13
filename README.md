@@ -45,7 +45,7 @@ Identify post-processing signatures from common image editing software, timestam
 | :--- | :--- |
 | **Single Image Analysis** | Detailed breakdown of camera hardware, optical settings, date history, and exact location. |
 | **Batch Comparison** | Inspect multiple files simultaneously with side-by-side technical correlation and combined map views. |
-| **CLI Analysis & Simulation** | Terminal-native execution harness for headless analysis, automated testing, and simulated edge-case presets. |
+| **Command-Line Interface** | Terminal-native execution harness for headless single-image, batch, hash, and EXIF extraction workflows. |
 | **Forensic Hash Inspection** | Instant SHA-256 and SHA-1 calculation across single files, batches, or directories for non-destructive verification. |
 | **Metadata Sanitization** | Selective or full removal of EXIF metadata categories with instant cleaned file downloads. |
 | **Interactive Mapping** | High-fidelity map rendering with reverse geocoding to display physical addresses. |
@@ -84,9 +84,6 @@ exifsense batch photo1.jpg photo2.jpg photo3.jpg
 # Include full per-asset single-file breakdowns at the end of a batch report
 exifsense batch photo1.jpg photo2.jpg --detailed
 
-# Run a pre-configured simulation scenario from disk
-exifsense scenario travel-sequence
-
 # Extract raw EXIF metadata into a clean JSON file
 exifsense extract photo.jpg metadata.json
 
@@ -106,21 +103,8 @@ exifsense batch photo1.jpg photo2.jpg --locale id --format markdown --detailed -
 ### Output Structure
 
 * **Single Analysis (`single`)**: Displays file metadata with SHA-256 and SHA-1 hashes, Integrity Alerts, all 7 Forensic Narrative sections, and all 8 Categorized EXIF Metadata groups.
-* **Batch Analysis (`batch` & multi-asset `scenario`)**: Follows the Web dashboard order with `Total Assets`, `Asset Integrity Alerts` (when anomalies exist), `Chronological Story`, and `Combined Analysis` (Integrity Matrix, 7-column Hardware Comparison table, Timeline bounds and gaps, and Geospatial metrics with adaptive `m`/`km` distances and road-route estimates).
+* **Batch Analysis (`batch`)**: Follows the Web dashboard order with `Total Assets`, `Asset Integrity Alerts` (when anomalies exist), `Chronological Story`, and `Combined Analysis` (Integrity Matrix, 7-column Hardware Comparison table, Timeline bounds and gaps, and Geospatial metrics with adaptive `m`/`km` distances and road-route estimates).
 * **Detailed Batch Mode (`--detailed`)**: Preserves the full batch summary above and appends `Individual Asset Analysis` (`ASSET 1` through `ASSET N`) in input order using single-asset formatting.
-
-### Simulation Scenarios
-
-Curated test scenarios are stored as version-controlled JSON files in `tests/fixtures/scenarios/`. These allow reproducible testing of edge cases without checking bulky image binaries into Git:
-
-* `baseline`: Clean metadata extracted from real-world geotagged photos.
-* `missing-gps`: Evaluates integrity alerts when GPS coordinates are omitted.
-* `missing-datetime`: Evaluates timeline fallbacks when capture dates are missing.
-* `missing-device`: Evaluates hardware fallbacks when camera make and model are stripped.
-* `tampered-software`: Simulates third-party editing tags (such as Photoshop or GIMP).
-* `travel-sequence`: Multi-asset movement sequence generating a step-by-step travel story.
-* `time-jump-anomaly`: Multi-asset sequence simulating an artificial multi-day break between photos.
-* `hardware-discrepancy`: Multi-asset sequence simulating a camera model switch midway through a trip.
 
 ---
 
