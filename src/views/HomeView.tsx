@@ -125,7 +125,7 @@ export const HomeView: React.FC = () => {
               });
             }}
           >
-            <Play size={20} className="rtl-flip-icon" />
+            <Play size={20} />
             <span>{t('begin_investigation')}</span>
           </button>
           <button

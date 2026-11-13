@@ -70,7 +70,6 @@ export const Header: React.FC<HeaderProps> = ({
   const langLabels: Record<SupportedLanguage, string> = {
     en: 'EN',
     id: 'ID',
-    ar: 'AR',
   };
 
   return (
@@ -79,7 +78,6 @@ export const Header: React.FC<HeaderProps> = ({
         <div
           className="logo"
           id="home-logo"
-          dir="ltr"
           style={{ cursor: 'pointer' }}
           onClick={() => {
             window.location.hash = '#/';
@@ -135,12 +133,6 @@ export const Header: React.FC<HeaderProps> = ({
                   onClick={() => handleSelectLang('id')}
                 >
                   Bahasa Indonesia
-                </button>
-                <button
-                  className={`lang-option ${currentLang === 'ar' ? 'active' : ''}`}
-                  onClick={() => handleSelectLang('ar')}
-                >
-                  العربية
                 </button>
               </div>
             )}

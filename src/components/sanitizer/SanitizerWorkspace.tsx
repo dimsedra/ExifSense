@@ -86,8 +86,7 @@ export const SanitizerWorkspace: React.FC<SanitizerWorkspaceProps> = ({
   const rawDate =
     exifData.DateTimeOriginal || exifData.CreateDate || exifData.ModifyDate;
   const parsedDate = rawDate ? parseExifDate(rawDate) : null;
-  const locale =
-    currentLang === 'id' ? 'id-ID' : currentLang === 'ar' ? 'ar-SA' : 'en-US';
+  const locale = currentLang === 'id' ? 'id-ID' : 'en-US';
   const dateStr = parsedDate
     ? parsedDate.toLocaleDateString(locale, {
         month: 'short',

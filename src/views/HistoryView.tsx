@@ -121,8 +121,7 @@ export const HistoryView: React.FC<HistoryViewProps> = ({ embedded = false }) =>
   const formatSessionDate = (isoDate: string): string => {
     try {
       const dateObj = new Date(isoDate);
-      const locale =
-        currentLang === 'id' ? 'id-ID' : currentLang === 'ar' ? 'ar-SA' : 'en-US';
+      const locale = currentLang === 'id' ? 'id-ID' : 'en-US';
       return `${dateObj.toLocaleDateString(locale)} ${dateObj.toLocaleTimeString(locale, {
         hour: '2-digit',
         minute: '2-digit',

@@ -70,8 +70,7 @@ export const AssetPreviewCard: React.FC<AssetPreviewCardProps> = ({ asset }) => 
     }
   };
 
-  const locale =
-    currentLang === 'id' ? 'id-ID' : currentLang === 'ar' ? 'ar-SA' : 'en-US';
+  const locale = currentLang === 'id' ? 'id-ID' : 'en-US';
   const formattedDate = asset.fileDate
     ? new Date(asset.fileDate).toLocaleString(locale)
     : t('unknown', {}, 'reports');

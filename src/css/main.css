@@ -694,11 +694,6 @@ input[type="checkbox"] {
     }
 }
 
-
-[dir="rtl"] .rtl-flip-icon {
-    transform: scaleX(-1);
-}
-
 @media (max-width: 640px) {
     .header {
         padding: 0.6rem 0;

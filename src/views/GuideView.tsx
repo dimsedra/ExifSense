@@ -107,7 +107,7 @@ export const GuideView: React.FC = () => {
                   window.location.hash = '#/';
                 }}
               >
-                <Play size={16} className="rtl-flip-icon" />
+                <Play size={16} />
                 <span>{t('guide_btn_start')}</span>
               </button>
               <button
