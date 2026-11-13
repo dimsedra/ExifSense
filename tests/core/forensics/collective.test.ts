@@ -364,5 +364,54 @@ describe('evaluateCollectiveIntelligence - Integrity Matrix (REQ-COL-001)', () =
       expect(result.geospatial.velocityAlert?.fromFileName).toBe('place-a.jpg');
       expect(result.geospatial.velocityAlert?.toFileName).toBe('place-b.jpg');
     });
+
+    it('falls back to numeric GPSLatitude and GPSLongitude when latitude and longitude are absent', () => {
+      const assetA: SingleAssetInput = {
+        fileName: 'gps-a.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T10:00:00.000Z',
+          GPSLatitude: -6.1754,
+          GPSLongitude: 106.8272,
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const assetB: SingleAssetInput = {
+        fileName: 'gps-b.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T11:00:00.000Z',
+          GPSLatitude: -6.195,
+          GPSLongitude: 106.823,
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const assetDmsArrayOnly: SingleAssetInput = {
+        fileName: 'dms-only.jpg',
+        fileSize: 1000,
+        fileDate: Date.now(),
+        exifData: {
+          DateTimeOriginal: '2025-05-10T12:00:00.000Z',
+          GPSLatitude: [55, 51, 52],
+          GPSLongitude: [4, 25, 47],
+        },
+        actualWidth: 1920,
+        actualHeight: 1080,
+      };
+
+      const result = evaluateCollectiveIntelligence([assetA, assetB, assetDmsArrayOnly]);
+
+      expect(result.integrity.matrix[0]?.presence.Geospatial).toBe(true);
+      expect(result.integrity.matrix[1]?.presence.Geospatial).toBe(true);
+      expect(result.geospatial.missingCoordinatesCount).toBe(1);
+      expect(result.geospatial.jumps).toHaveLength(1);
+      expect(result.geospatial.totalPathDistanceKm).toBeGreaterThan(2.1);
+    });
   });
 });

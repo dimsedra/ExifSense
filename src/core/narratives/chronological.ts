@@ -1,5 +1,5 @@
 import { ForensicAsset } from '../forensics/types';
-import { parseExifDate, formatNaturalDate } from '../forensics/metadata';
+import { parseExifDate, formatNaturalDate, extractGpsCoordinates } from '../forensics/metadata';
 import { calculateDistance } from '../forensics/collective';
 import type {
   SupportedLocale,
@@ -166,13 +166,10 @@ export function parseChronologicalEvents(
     const hasCaptureTime = parsedDate !== null;
     const timestamp = parsedDate || new Date(asset.fileDate || 0);
 
-    const latRaw = exif.latitude != null ? Number(exif.latitude) : null;
-    const lngRaw = exif.longitude != null ? Number(exif.longitude) : null;
-    const hasGps =
-      latRaw !== null &&
-      lngRaw !== null &&
-      !Number.isNaN(latRaw) &&
-      !Number.isNaN(lngRaw);
+    const coords = extractGpsCoordinates(exif);
+    const latRaw = coords?.lat ?? null;
+    const lngRaw = coords?.lng ?? null;
+    const hasGps = coords !== null;
 
     const make =
       typeof exif.Make === 'string' && exif.Make.trim()

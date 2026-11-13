@@ -1,4 +1,4 @@
-import { categorizeExif, parseExifDate } from './metadata';
+import { categorizeExif, extractGpsCoordinates, parseExifDate } from './metadata';
 import { evaluateSingleAssetIntegrity } from './integrity';
 import type {
   SingleAssetInput,
@@ -68,9 +68,8 @@ export function evaluateCollectiveIntelligence(
     for (const cat of EXIF_CATEGORIES) {
       const hasProps = Object.keys(categorized[cat] || {}).length > 0;
       if (cat === 'Geospatial') {
-        const hasCoords =
-          asset.exifData?.latitude != null && asset.exifData?.longitude != null;
-        presence[cat] = hasProps || hasCoords;
+        const coords = extractGpsCoordinates(asset.exifData);
+        presence[cat] = hasProps || coords !== null;
       } else {
         presence[cat] = hasProps;
       }
@@ -223,10 +222,7 @@ export function evaluateCollectiveIntelligence(
   // Geospatial Analysis
   const geoAssets = assets
     .map((a) => {
-      const lat =
-        a.exifData?.latitude != null ? Number(a.exifData.latitude) : null;
-      const lng =
-        a.exifData?.longitude != null ? Number(a.exifData.longitude) : null;
+      const coords = extractGpsCoordinates(a.exifData);
       const date = parseExifDate(
         a.exifData?.DateTimeOriginal ||
           a.exifData?.CreateDate ||
@@ -234,18 +230,15 @@ export function evaluateCollectiveIntelligence(
       );
       return {
         fileName: a.fileName,
-        lat,
-        lng,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
         date,
         time: date ? date.getTime() : null,
       };
     })
     .filter(
       (g): g is typeof g & { lat: number; lng: number } =>
-        g.lat != null &&
-        g.lng != null &&
-        !Number.isNaN(g.lat) &&
-        !Number.isNaN(g.lng),
+        g.lat !== null && g.lng !== null,
     );
 
   const missingCoordinatesCount = assets.length - geoAssets.length;

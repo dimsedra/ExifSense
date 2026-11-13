@@ -113,6 +113,34 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(nodes[1]!.longitude).toBeNull();
     });
 
+    it('falls back to numeric GPSLatitude and GPSLongitude when latitude and longitude are absent', () => {
+      const assetFallbackGps = createMockAsset({
+        fileName: 'fallback_gps.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:00:00',
+          GPSLatitude: 55.86449,
+          GPSLongitude: -4.42989,
+        },
+      });
+      const assetEmptyStr = createMockAsset({
+        fileName: 'empty_gps.jpg',
+        exifData: {
+          DateTimeOriginal: '2026:10:28 10:05:00',
+          GPSLatitude: '',
+          GPSLongitude: '',
+        },
+      });
+
+      const nodes = parseChronologicalEvents([assetFallbackGps, assetEmptyStr]);
+
+      expect(nodes[0]!.hasGps).toBe(true);
+      expect(nodes[0]!.latitude).toBeCloseTo(55.86449);
+      expect(nodes[0]!.longitude).toBeCloseTo(-4.42989);
+      expect(nodes[1]!.hasGps).toBe(false);
+      expect(nodes[1]!.latitude).toBeNull();
+      expect(nodes[1]!.longitude).toBeNull();
+    });
+
     it('throws descriptive error if fewer than 2 assets are passed (Core Invariant & Error Path)', () => {
       const single = createMockAsset();
 

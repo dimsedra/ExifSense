@@ -246,3 +246,34 @@ export function formatLabel(key: string): string {
   if (!key) return '';
   return key.replace(/([A-Z])/g, ' $1').trim();
 }
+
+function isValidScalarCoordinate(val: unknown): boolean {
+  if (val == null || typeof val === 'boolean' || Array.isArray(val)) {
+    return false;
+  }
+  if (typeof val === 'string' && val.trim() === '') {
+    return false;
+  }
+  return Number.isFinite(Number(val));
+}
+
+/**
+ * Extracts validated decimal GPS coordinates from EXIF data, falling back from latitude/longitude
+ * to numeric GPSLatitude/GPSLongitude while rejecting arrays, booleans, and empty strings.
+ */
+export function extractGpsCoordinates(
+  exif: Record<string, unknown> | null | undefined,
+): { lat: number; lng: number } | null {
+  if (!exif) return null;
+  const rawLat = exif.latitude ?? exif.GPSLatitude;
+  const rawLng = exif.longitude ?? exif.GPSLongitude;
+  if (!isValidScalarCoordinate(rawLat) || !isValidScalarCoordinate(rawLng)) {
+    return null;
+  }
+  const lat = Number(rawLat);
+  const lng = Number(rawLng);
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    return null;
+  }
+  return { lat, lng };
+}
