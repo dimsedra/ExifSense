@@ -10,6 +10,7 @@ Catalog of technical documentation and design references for ExifSense.
 - [Intent: Batch Macro Narrative Synthesis and Evidence Inspector](./intent/20261103_batch_narrative_synthesis.md) — Unifying batch macro narrative insights into Chronological Story lead with natural date formatting while repositioning Combined Analysis as a focused technical evidence inspector.
 - [Intent: CLI Local OSRM Provisioning for Fully Air-Gapped Environments](./intent/20261103_cli_local_osrm_provisioning.md) — Automated CLI helper commands to download and run regional OSRM containers locally for offline, privacy-first forensic operations.
 - [Intent: CLI File Hash Inspection for Forensic Integrity](./intent/20261105_cli_file_hash_inspection.md) — Dedicated lightweight CLI hashing command to record baseline pre-analysis hashes and verify post-analysis file immutability without external tools.
+- [Intent: CLI Single-Asset Web Parity](./intent/20261114_cli_single_analysis_web_parity.md) — Aligning `exifsense single` output 1:1 with the Web single-asset dashboard across all 7 narratives, live Nominatim place name resolution, file info, and all 8 categorized raw EXIF groups.
 
 ## Blueprint
 
@@ -18,6 +19,7 @@ Catalog of technical documentation and design references for ExifSense.
 - [Blueprint: Dual-Distance Narrative (Displacement and Road Route)](./blueprint/20261103_dual_distance_narrative.md) — Architecture, contracts, and verification for OSRM leg distance extraction and dual-distance narrative formatting across Web and CLI.
 - [Blueprint: Batch Macro Narrative Synthesis and Evidence Inspector](./blueprint/20261103_batch_narrative_synthesis.md) — Architecture, contracts, and verification for unified macro story baseline with natural date formatting and collapsible evidence inspector.
 - [Blueprint: CLI File Hash Inspection](./blueprint/20261105_cli_file_hash_inspection.md) — Technical architecture, contracts, and TDD verification strategy for the dedicated `exifsense hash <path...>` CLI command.
+- [Blueprint: CLI Single-Asset Web Parity](./blueprint/20261114_cli_single_analysis_web_parity.md) — Module boundaries, contracts, and verification plan for 1:1 parity between `exifsense single` and the Web single-asset dashboard.
 
 ## Design
 
