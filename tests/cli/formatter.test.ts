@@ -234,21 +234,4 @@ describe('BP-PARITY-003: formatSingleOutput 8-Category Raw EXIF Metadata', () =>
     expect(output).toContain('| Exposure Time | 1/250 |');
     expect(output).toContain('Tidak ada tag data standar yang ditemukan.');
   });
-
-  it('Given ar locale, When formatted, Then prints Arabic headings for all 7 narratives and 8 raw categories', async () => {
-    const { formatSingleOutput } = await import('../../src/cli/formatter');
-    const output = formatSingleOutput(sampleAsset, { format: 'markdown', locale: 'ar' });
-
-    expect(output).toContain('### تحليل السلامة الرقمية');
-    expect(output).toContain('### تحليل الموقع الجغرافي');
-    expect(output).toContain('### تحليل العتاد');
-    expect(output).toContain('### تحليل التعريض');
-    expect(output).toContain('### تحليل البصريات');
-    expect(output).toContain('### تحليل الجودة');
-    expect(output).toContain('### تحليل الجدول الزمني');
-    expect(output).toContain('### عتاد الجهاز');
-    expect(output).toContain('### بيانات متنوعة');
-    expect(output).toContain('| الخاصية | القيمة الموثقة |');
-    expect(output).toContain('لم يتم العثور على أي وسوم بيانات تعريف قياسية في هذه الفئة.');
-  });
 });

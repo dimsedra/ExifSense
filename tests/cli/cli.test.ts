@@ -146,6 +146,9 @@ describe('CLI Analysis and Simulation Harness', () => {
 
     it('Given unsupported locale flag, When parsed, Then throws CliArgumentError', () => {
       expect(() => parseCliArgs(['single', 'test.jpg', '--locale', 'fr'])).toThrow(CliArgumentError);
+      expect(() => parseCliArgs(['single', 'test.jpg', '--locale', 'ar'])).toThrow(
+        "Unsupported locale 'ar'. Supported: en, id."
+      );
     });
 
     it('Given unsupported format flag, When parsed, Then throws CliArgumentError', () => {
@@ -276,6 +279,14 @@ describe('CLI Analysis and Simulation Harness', () => {
       expect(result.success).toBe(true);
       expect(result.exitCode).toBe(0);
       expect(result.outputText).toContain('Usage:');
+      expect(result.outputText).toContain('--locale <en|id>');
+    });
+
+    it('Given --locale ar, When executed, Then fails fast with unsupported locale error', async () => {
+      const result = await runCli(['scenario', 'baseline', '--locale', 'ar']);
+      expect(result.success).toBe(false);
+      expect(result.exitCode).toBe(1);
+      expect(result.errorText).toContain("Unsupported locale 'ar'. Supported: en, id.");
     });
 
     it('Given version flag, When executed, Then returns success with version text', async () => {
