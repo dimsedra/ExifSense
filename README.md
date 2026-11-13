@@ -56,7 +56,7 @@ Identify post-processing signatures from common image editing software, timestam
 
 ## Command-Line Interface (CLI)
 
-ExifSense includes a standalone, terminal-native CLI executable (`exifsense`) that runs single-asset and batch forensic analyses directly from your shell, completely bypassing the browser interface. It allows developers and investigators to analyze real images, extract raw EXIF metadata, and run version-controlled simulation scenarios.
+ExifSense includes a standalone, terminal-native CLI executable (`exifsense`) that runs single-asset and batch forensic analyses directly from your shell with 1:1 output parity to the Web dashboard, completely bypassing the browser interface. When online, single and batch runs automatically enrich GPS coordinates with physical addresses via Nominatim reverse geocoding (sequentially paced for batches) and estimate driving distances via OSRM, falling back cleanly to numeric coordinates when offline.
 
 ### Setup
 
@@ -71,15 +71,18 @@ npm link
 ### Usage
 
 ```bash
-# Analyze a single photo or JSON metadata file
+# Analyze a single photo or JSON metadata file (hashes, alerts, 7 narratives, 8 EXIF categories)
 exifsense single photo.jpg
 
 # Inspect cryptographic hashes (SHA-256 & SHA-1) across files or directories
 exifsense hash photo1.jpg photo2.jpg
 exifsense hash path/to/folder/ --format markdown --out manifest.md
 
-# Analyze multiple photos and generate collective intelligence and chronological story
+# Analyze multiple photos (Alerts, Chronological Story, and 4 Combined Analysis evidence views)
 exifsense batch photo1.jpg photo2.jpg photo3.jpg
+
+# Include full per-asset single-file breakdowns at the end of a batch report
+exifsense batch photo1.jpg photo2.jpg --detailed
 
 # Run a pre-configured simulation scenario from disk
 exifsense scenario travel-sequence
@@ -87,12 +90,24 @@ exifsense scenario travel-sequence
 # Extract raw EXIF metadata into a clean JSON file
 exifsense extract photo.jpg metadata.json
 
-# Format output as Markdown or write directly to a file
-exifsense scenario time-jump-anomaly --format markdown --out report.md
-
-# Switch narrative language (en, id)
-exifsense single photo.jpg --locale id
+# Format output as Markdown in Indonesian and write directly to a file
+exifsense batch photo1.jpg photo2.jpg --locale id --format markdown --detailed --out report.md
 ```
+
+### Options
+
+| Flag | Description | Default |
+| :--- | :--- | :--- |
+| `--locale <en\|id>` | Narrative and table language (`en` or `id`) | `en` |
+| `--format <plain\|markdown>` | Output rendering format (`plain` text or `markdown`) | `plain` |
+| `--detailed` | Append individual single-asset breakdowns (`exifsense single` output) to batch reports | `false` |
+| `--out <path>` | Write output directly to a file instead of standard output | stdout |
+
+### Output Structure
+
+* **Single Analysis (`single`)**: Displays file metadata with SHA-256 and SHA-1 hashes, Integrity Alerts, all 7 Forensic Narrative sections, and all 8 Categorized EXIF Metadata groups.
+* **Batch Analysis (`batch` & multi-asset `scenario`)**: Follows the Web dashboard order with `Total Assets`, `Asset Integrity Alerts` (when anomalies exist), `Chronological Story`, and `Combined Analysis` (Integrity Matrix, 7-column Hardware Comparison table, Timeline bounds and gaps, and Geospatial metrics with adaptive `m`/`km` distances and road-route estimates).
+* **Detailed Batch Mode (`--detailed`)**: Preserves the full batch summary above and appends `Individual Asset Analysis` (`ASSET 1` through `ASSET N`) in input order using single-asset formatting.
 
 ### Simulation Scenarios
 
