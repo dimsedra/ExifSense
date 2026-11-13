@@ -50,7 +50,7 @@ Identify post-processing signatures from common image editing software, timestam
 | **Metadata Sanitization** | Selective or full removal of EXIF metadata categories with instant cleaned file downloads. |
 | **Interactive Mapping** | High-fidelity map rendering with reverse geocoding to display physical addresses. |
 | **Export Capability** | Export comprehensive reports as PDF, Markdown, CSV, or structured JSON data manifests. |
-| **Multi-Language Support** | Full localization in English, Bahasa Indonesia, and Arabic (RTL layout supported). |
+| **Multi-Language Support** | Full localization in English and Bahasa Indonesia. |
 
 ---
 
@@ -90,7 +90,7 @@ exifsense extract photo.jpg metadata.json
 # Format output as Markdown or write directly to a file
 exifsense scenario time-jump-anomaly --format markdown --out report.md
 
-# Switch narrative language (en, id, ar)
+# Switch narrative language (en, id)
 exifsense single photo.jpg --locale id
 ```
 
