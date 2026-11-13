@@ -2,7 +2,7 @@
 title: "Blueprint: CLI Batch Analysis Web Parity"
 type: blueprint
 parent_intent: docs/intent/20261114_cli_batch_analysis_web_parity.md
-status: Approved
+status: Completed
 last_updated: 2026-11-14
 ---
 
