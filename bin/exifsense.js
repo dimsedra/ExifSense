@@ -51,6 +51,10 @@ function parseCliArgs(rawArgs) {
 					default: "plain"
 				},
 				out: { type: "string" },
+				detailed: {
+					type: "boolean",
+					default: false
+				},
 				help: {
 					type: "boolean",
 					short: "h"
@@ -80,7 +84,8 @@ function parseCliArgs(rawArgs) {
 	const options = {
 		locale,
 		format,
-		out: typeof values.out === "string" ? values.out : void 0
+		out: typeof values.out === "string" ? values.out : void 0,
+		detailed: Boolean(values.detailed)
 	};
 	if (command === "single") {
 		if (rest.length === 0 || !rest[0]) throw new CliArgumentError("Command 'single' requires a target path (image or JSON file).");
@@ -3443,6 +3448,28 @@ function formatLabel(key) {
 	if (!key) return "";
 	return key.replace(/([A-Z])/g, " $1").trim();
 }
+function isValidScalarCoordinate(val) {
+	if (val == null || typeof val === "boolean" || Array.isArray(val)) return false;
+	if (typeof val === "string" && val.trim() === "") return false;
+	return Number.isFinite(Number(val));
+}
+/**
+* Extracts validated decimal GPS coordinates from EXIF data, falling back from latitude/longitude
+* to numeric GPSLatitude/GPSLongitude while rejecting arrays, booleans, and empty strings.
+*/
+function extractGpsCoordinates(exif) {
+	if (!exif) return null;
+	const rawLat = exif.latitude ?? exif.GPSLatitude;
+	const rawLng = exif.longitude ?? exif.GPSLongitude;
+	if (!isValidScalarCoordinate(rawLat) || !isValidScalarCoordinate(rawLng)) return null;
+	const lat = Number(rawLat);
+	const lng = Number(rawLng);
+	if (lat < -90 || lat > 90 || lng < -180 || lng > 180) return null;
+	return {
+		lat,
+		lng
+	};
+}
 // src/core/forensics/integrity.ts
 const MEANINGFUL_CATEGORIES = [
 	"Device Hardware",
@@ -4242,7 +4269,24 @@ var en_default = {
 		"copy_story_markdown": "Copy Markdown",
 		"copy_story_plain": "Copy Plain Text",
 		"story_copied": "Copied to clipboard",
-		"inspect_asset": "Inspect Photo"
+		"inspect_asset": "Inspect Photo",
+		"batch_total_assets": "Total Assets",
+		"batch_asset_alerts": "Asset Integrity Alerts",
+		"no_integrity_anomalies": "No integrity anomalies detected.",
+		"batch_integrity_clean": "Clean",
+		"batch_integrity_partial": "Partially Stripped",
+		"batch_integrity_stripped": "Fully Stripped",
+		"consistent_hardware": "Consistent Hardware",
+		"unique_devices": "Unique Devices",
+		"none_detected": "None detected",
+		"spread_category": "Spread Category",
+		"spread_concentrated": "Concentrated",
+		"spread_localized": "Localized",
+		"spread_trail": "Trail",
+		"spread_none": "None",
+		"time_anomaly_tag": "TIME ANOMALY",
+		"velocity_anomaly_label": "CRITICAL Velocity Anomaly",
+		"velocity_anomaly_desc": "Impossible speed detected between {from} and {to} ({speed} km/h)."
 	},
 	narratives: {
 		"integrity_clean": "This photo retains its original date and location details. No common indicators of external editing tools were found in the basic metadata.",
@@ -4689,7 +4733,24 @@ var id_default = {
 		"copy_story_markdown": "Salin Markdown",
 		"copy_story_plain": "Salin Teks Biasa",
 		"story_copied": "Tersalin ke papan klip",
-		"inspect_asset": "Periksa Foto"
+		"inspect_asset": "Periksa Foto",
+		"batch_total_assets": "Total Aset",
+		"batch_asset_alerts": "Peringatan Integritas Aset",
+		"no_integrity_anomalies": "Tidak ada anomali integritas yang terdeteksi.",
+		"batch_integrity_clean": "Bersih",
+		"batch_integrity_partial": "Terhapus Sebagian",
+		"batch_integrity_stripped": "Terhapus Total",
+		"consistent_hardware": "Perangkat Keras Konsisten",
+		"unique_devices": "Perangkat Unik",
+		"none_detected": "Tidak ada terdeteksi",
+		"spread_category": "Kategori Sebaran",
+		"spread_concentrated": "Terkonsentrasi",
+		"spread_localized": "Lokal",
+		"spread_trail": "Jejak Perjalanan",
+		"spread_none": "Tidak ada",
+		"time_anomaly_tag": "ANOMALI WAKTU",
+		"velocity_anomaly_label": "ANOMALI KECEPATAN KRITIS",
+		"velocity_anomaly_desc": "Kecepatan tidak wajar terdeteksi antara {from} dan {to} ({speed} km/jam)."
 	},
 	narratives: {
 		"integrity_clean": "Foto ini mempertahankan detail tanggal dan lokasi aslinya. Tidak ditemukan indikator umum penggunaan alat pengeditan eksternal pada metadata dasar.",
@@ -4991,70 +5052,6 @@ function generateGeospatialNarrative(latitude, longitude, locationName, locale =
 		lng: longitude.toFixed(5)
 	}, locale);
 }
-/**
-* Generates natural language multi-asset collective narratives for PDF, Markdown, and UI displays.
-*/
-function generateCollectiveNarratives(collective, totalAssets, locale = "en") {
-	const sections = [];
-	let integrityText = "";
-	if (collective.integrity.fullyStrippedCount === totalAssets) integrityText = translate("combined_integrity_stripped_all", {
-		count: totalAssets,
-		total: totalAssets
-	}, locale);
-	else if (collective.integrity.cleanCount === totalAssets) integrityText = translate("combined_integrity_clean", { total: totalAssets }, locale);
-	else integrityText = translate("combined_integrity_mix", {
-		total: totalAssets,
-		fully: collective.integrity.fullyStrippedCount,
-		partially: collective.integrity.partiallyStrippedCount,
-		clean: collective.integrity.cleanCount
-	}, locale);
-	sections.push({
-		title: translate("analysis_integrity", {}, locale, "ui"),
-		narrative: integrityText
-	});
-	let hwText = "";
-	if (collective.hardware.uniqueDevices.length === 1 && collective.hardware.missingCount === 0) hwText = translate("combined_hw_consistent", { device: collective.hardware.uniqueDevices[0] }, locale);
-	else if (collective.hardware.uniqueDevices.length > 1) hwText = translate("combined_hw_discrepancy", { deviceList: collective.hardware.uniqueDevices.join(", ") }, locale);
-	else if (collective.hardware.uniqueDevices.length === 1 && collective.hardware.missingCount > 0) hwText = translate("combined_hw_sparse_consistent", {
-		count: totalAssets - collective.hardware.missingCount,
-		total: totalAssets,
-		device: collective.hardware.uniqueDevices[0]
-	}, locale);
-	if (collective.hardware.hasSerialMatch && collective.hardware.uniqueSerials.length === 1) {
-		const serialNote = translate("combined_serial_match", { serial: collective.hardware.uniqueSerials[0] }, locale);
-		hwText = hwText ? `${hwText}\n\n${serialNote}` : serialNote;
-	}
-	sections.push({
-		title: translate("analysis_hardware", {}, locale, "ui"),
-		narrative: hwText
-	});
-	let timelineText = "";
-	if (collective.timeline.totalDurationMs > 0 && collective.timeline.startTime && collective.timeline.endTime) timelineText = translate("combined_timeline", {
-		diffHours: (collective.timeline.totalDurationMs / 36e5).toFixed(1).replace(".0", ""),
-		start: formatFullDate(collective.timeline.startTime),
-		end: formatFullDate(collective.timeline.endTime)
-	}, locale);
-	else if (collective.timeline.missingAssets.length === totalAssets - 1) timelineText = translate("combined_timeline_sparse", { total: totalAssets }, locale);
-	sections.push({
-		title: translate("analysis_timeline", {}, locale, "ui"),
-		narrative: timelineText
-	});
-	let geoText = "";
-	const dist = collective.geospatial.totalPathDistanceKm;
-	if (collective.geospatial.spreadCategory === "concentrated") geoText = translate("combined_geo_concentrated", {}, locale);
-	else if (collective.geospatial.spreadCategory === "localized") geoText = translate("combined_geo_localized", { dist: Math.round(dist * 1e3) }, locale);
-	else if (collective.geospatial.spreadCategory === "trail") geoText = translate("combined_geo_trail", { dist: dist.toFixed(1) }, locale);
-	if (collective.geospatial.velocityAlert?.hasAnomaly) {
-		const speed = collective.geospatial.velocityAlert.maxSpeedKmh;
-		const velNote = translate("velocity_warning", { speed }, locale);
-		geoText = geoText ? `${geoText}\n\n${velNote}` : velNote;
-	}
-	sections.push({
-		title: translate("analysis_geospatial", {}, locale, "ui"),
-		narrative: geoText
-	});
-	return sections;
-}
 // src/cli/formatter.ts
 const RAW_METADATA_CATEGORIES = [
 	{
@@ -5214,140 +5211,249 @@ function formatSingleOutput(asset, options) {
 	}
 	return lines.join("\n").trim();
 }
-function formatDuration(ms) {
-	if (ms <= 0) return "0s";
+function stripTrailingColon(label) {
+	return label.replace(/:\s*$/, "");
+}
+function formatKeyValueRows(rows, format) {
+	if (rows.length === 0) return [];
+	if (format === "markdown") return rows.map(([key, val]) => `- **${stripTrailingColon(key)}**: ${val}`);
+	const normalized = rows.map(([key, val]) => [stripTrailingColon(key), val]);
+	const maxWidth = Math.max(...normalized.map(([key]) => key.length));
+	return normalized.map(([key, val]) => `${key.padEnd(maxWidth)} : ${val}`);
+}
+function formatTable(headers, rows, format) {
+	if (rows.length === 0) return [];
+	if (format === "markdown") return [
+		`| ${headers.map((h) => escapeMarkdownCell(h)).join(" | ")} |`,
+		`| ${headers.map(() => "---").join(" | ")} |`,
+		...rows.map((row) => `| ${row.map((cell) => escapeMarkdownCell(cell)).join(" | ")} |`)
+	];
+	const colWidths = headers.map((header, colIdx) => {
+		const rowWidths = rows.map((row) => (row[colIdx] ?? "").length);
+		return Math.max(header.length, ...rowWidths);
+	});
+	const padRow = (cells) => cells.map((cell, idx) => cell.padEnd(colWidths[idx] ?? 0)).join("  ");
+	const lines = [`  ${padRow(headers)}`];
+	for (const row of rows) lines.push(`  ${padRow(row)}`);
+	return lines;
+}
+function formatLocalizedDuration(days, hours, minutes, seconds, locale) {
+	const parts = [];
+	if (days > 0) parts.push(`${days} ${translate("time_day", {}, locale, "narratives")}`);
+	if (hours > 0) parts.push(`${hours} ${translate("time_hour", {}, locale, "narratives")}`);
+	if (minutes > 0) parts.push(`${minutes} ${translate("time_minute", {}, locale, "narratives")}`);
+	if (seconds > 0 || parts.length === 0) parts.push(`${seconds} ${translate("time_second", {}, locale, "narratives")}`);
+	return parts.join(" ");
+}
+function formatDurationFromMs(ms, locale) {
+	if (ms <= 0) return formatLocalizedDuration(0, 0, 0, 0, locale);
 	const seconds = Math.floor(ms / 1e3) % 60;
 	const minutes = Math.floor(ms / 6e4) % 60;
 	const hours = Math.floor(ms / 36e5) % 24;
-	const days = Math.floor(ms / 864e5);
-	const parts = [];
-	if (days > 0) parts.push(`${days}d`);
-	if (hours > 0) parts.push(`${hours}h`);
-	if (minutes > 0) parts.push(`${minutes}m`);
-	if (seconds > 0 || parts.length === 0) parts.push(`${seconds}s`);
-	return parts.join(" ");
+	return formatLocalizedDuration(Math.floor(ms / 864e5), hours, minutes, seconds, locale);
 }
-function formatBatchOutput(assets, collective, story, options, roadRouteDetails) {
-	const locale = options?.locale || "en";
-	const isMarkdown = options?.format === "markdown";
-	const lines = [];
-	if (isMarkdown) {
-		lines.push("# ExifSense Collective Intelligence Analysis");
-		lines.push(`- **Total Assets**: ${assets.length}`);
-		lines.push("");
-	} else {
-		lines.push("=== ExifSense Collective Intelligence Analysis ===");
-		lines.push(`Total Assets: ${assets.length}`);
-		lines.push("");
-	}
+function formatGeoDistance(km, meters) {
+	if (km >= 1) return `${km.toFixed(2)} km`;
+	return `${Math.round(meters)} m`;
+}
+function resolveMatrixStatusLabel(presence, locale) {
+	const hasGps = Boolean(presence["Geospatial"]);
+	const hasHardware = Boolean(presence["Device Hardware"]);
+	const hasTimeline = Boolean(presence["Timeline & Date"]);
+	if (hasGps && hasHardware && hasTimeline) return translate("filter_complete", {}, locale, "narratives");
+	if (hasHardware || hasTimeline || hasGps) return translate("privacy_score_risk", {}, locale, "ui");
+	return translate("filter_stripped", {}, locale, "narratives");
+}
+function appendBatchAlerts(lines, assets, format, locale) {
 	const assetAlerts = [];
 	for (const asset of assets) for (const alert of asset.integrityAlerts) assetAlerts.push({
 		fileName: asset.fileName,
 		severity: alert.severity,
 		message: alert.defaultMessage
 	});
-	if (assetAlerts.length > 0) {
-		if (isMarkdown) {
-			lines.push(`## Asset Integrity Alerts (${assetAlerts.length})`);
-			for (const a of assetAlerts) lines.push(`- **[${a.severity.toUpperCase()}]** \`${a.fileName}\`: ${a.message}`);
-			lines.push("");
-		} else {
-			lines.push(`--- Asset Integrity Alerts (${assetAlerts.length}) ---`);
-			for (const a of assetAlerts) lines.push(`[${a.severity.toUpperCase()}] ${a.fileName}: ${a.message}`);
-			lines.push("");
+	if (assetAlerts.length === 0) return;
+	const title = translate("batch_asset_alerts", {}, locale, "ui");
+	if (format === "markdown") {
+		lines.push(`## ${title} (${assetAlerts.length})`);
+		for (const alert of assetAlerts) lines.push(`- **[${alert.severity.toUpperCase()}]** \`${alert.fileName}\`: ${alert.message}`);
+		lines.push("");
+		return;
+	}
+	lines.push(`--- ${title} (${assetAlerts.length}) ---`);
+	for (const alert of assetAlerts) lines.push(`[${alert.severity.toUpperCase()}] ${alert.fileName}: ${alert.message}`);
+	lines.push("");
+}
+function appendChronologicalStorySection(lines, story, format, locale) {
+	const title = translate("chronological_story_title", {}, locale, "ui");
+	lines.push(format === "markdown" ? `## ${title}` : `--- ${title} ---`);
+	if (story.baseline) {
+		lines.push(format === "markdown" ? `> ${story.baseline}` : story.baseline);
+		lines.push("");
+	}
+	for (const step of story.steps) {
+		const stepHeader = format === "markdown" ? `### Step ${step.stepIndex + 1}: ${step.fileName}` : `[Step ${step.stepIndex + 1}] ${step.fileName}`;
+		lines.push(stepHeader);
+		lines.push(step.narrativeText);
+		lines.push("");
+	}
+}
+function appendIntegrityEvidenceSection(lines, assets, collective, format, locale) {
+	const title = translate("analysis_integrity", {}, locale, "ui");
+	lines.push(format === "markdown" ? `### ${title}` : `[${title}]`);
+	const cleanLbl = translate("batch_integrity_clean", {}, locale, "ui");
+	const partialLbl = translate("batch_integrity_partial", {}, locale, "ui");
+	const strippedLbl = translate("batch_integrity_stripped", {}, locale, "ui");
+	const { cleanCount, partiallyStrippedCount, fullyStrippedCount, matrix } = collective.integrity;
+	if (format === "markdown") lines.push(`- **${cleanLbl}**: ${cleanCount} | **${partialLbl}**: ${partiallyStrippedCount} | **${strippedLbl}**: ${fullyStrippedCount}`);
+	else lines.push(`${cleanLbl}: ${cleanCount} | ${partialLbl}: ${partiallyStrippedCount} | ${strippedLbl}: ${fullyStrippedCount}`);
+	const headers = [
+		translate("file_name", {}, locale, "ui"),
+		title,
+		translate("cat_hardware", {}, locale, "ui"),
+		"GPS"
+	];
+	const yesText = translate("yes", {}, locale, "ui");
+	const noText = translate("no", {}, locale, "ui");
+	const unknownText = translate("unknown", {}, locale, "reports");
+	const rows = matrix.map((row, idx) => {
+		const asset = assets[idx];
+		const hardwareLabel = String(asset?.exifData?.Make || asset?.exifData?.Model || unknownText);
+		const hasGps = extractGpsCoordinates(asset?.exifData) !== null;
+		return [
+			row.fileName,
+			resolveMatrixStatusLabel(row.presence, locale),
+			hardwareLabel,
+			hasGps ? yesText : noText
+		];
+	});
+	lines.push(...formatTable(headers, rows, format));
+	lines.push("");
+}
+function appendHardwareEvidenceSection(lines, collective, format, locale) {
+	const title = translate("analysis_hardware", {}, locale, "ui");
+	lines.push(format === "markdown" ? `### ${title}` : `[${title}]`);
+	const yesText = translate("yes", {}, locale, "ui");
+	const noText = translate("no", {}, locale, "ui");
+	const noneText = translate("none_detected", {}, locale, "ui");
+	lines.push(...formatKeyValueRows([[translate("consistent_hardware", {}, locale, "ui"), collective.hardware.isConsistent ? yesText : noText], [translate("unique_devices", {}, locale, "ui"), collective.hardware.uniqueDevices.join(", ") || noneText]], format));
+	const headers = [
+		translate("file_name", {}, locale, "ui"),
+		"Make",
+		"Model",
+		"Software",
+		"Lens Model",
+		"Body Serial",
+		"Lens Serial"
+	];
+	const rows = collective.hardware.details.map((hw) => [
+		hw.fileName,
+		hw.make,
+		hw.model,
+		hw.software,
+		hw.lensModel,
+		hw.bodySerial,
+		hw.lensSerial
+	]);
+	lines.push(...formatTable(headers, rows, format));
+	lines.push("");
+}
+function appendTimelineEvidenceSection(lines, collective, format, locale) {
+	const title = translate("analysis_timeline", {}, locale, "ui");
+	lines.push(format === "markdown" ? `### ${title}` : `[${title}]`);
+	const { startTime, endTime, totalDurationMs, jumps, missingAssets } = collective.timeline;
+	const startStr = startTime ? formatNaturalDate(startTime, locale) : "-";
+	const endStr = endTime ? formatNaturalDate(endTime, locale) : "-";
+	lines.push(...formatKeyValueRows([
+		[translate("reconstruct_start", {}, locale, "narratives"), startStr],
+		[translate("reconstruct_end", {}, locale, "narratives"), endStr],
+		[translate("reconstruct_total", {}, locale, "narratives"), formatDurationFromMs(totalDurationMs, locale)],
+		[translate("reconstruct_jumps", {}, locale, "narratives"), String(jumps.length)]
+	], format));
+	const anomalyTag = translate("time_anomaly_tag", {}, locale, "ui");
+	for (const jump of jumps) {
+		const delta = formatLocalizedDuration(jump.deltaDays, jump.deltaHours, jump.deltaMinutes, jump.deltaSeconds, locale);
+		let prefix = "";
+		if (jump.deltaDays > 0) prefix = format === "markdown" ? `**[${anomalyTag}]** ` : `[${anomalyTag}] `;
+		const lineBody = `${prefix}${jump.fromFileName} -> (+${delta}) ${jump.toFileName}`;
+		lines.push(format === "markdown" ? `  - ${lineBody}` : `  ${lineBody}`);
+	}
+	if (missingAssets.length > 0) {
+		const missingLabel = stripTrailingColon(translate("reconstruct_missing", { count: missingAssets.length }, locale, "narratives"));
+		lines.push(format === "markdown" ? `- **${missingLabel}**:` : `${missingLabel}:`);
+		for (const fileName of missingAssets) lines.push(`  - ${fileName}`);
+	}
+	lines.push("");
+}
+function appendGeospatialEvidenceSection(lines, collective, format, locale, roadRouteDetails) {
+	const title = translate("analysis_geospatial", {}, locale, "ui");
+	lines.push(format === "markdown" ? `### ${title}` : `[${title}]`);
+	const { maxSpreadKm, totalPathDistanceKm, spreadCategory, jumps, velocityAlert } = collective.geospatial;
+	const hasRoadRoute = Boolean(roadRouteDetails && roadRouteDetails.totalDistanceMeters > 0);
+	const rows = [[translate("geo_max_spread", {}, locale, "narratives"), formatGeoDistance(maxSpreadKm, maxSpreadKm * 1e3)], [translate("geo_reconstruct_range", {}, locale, "narratives"), formatGeoDistance(totalPathDistanceKm, totalPathDistanceKm * 1e3)]];
+	if (hasRoadRoute && roadRouteDetails) rows.push([translate("geo_estimated_road_route", {}, locale, "narratives"), formatGeoDistance(roadRouteDetails.totalDistanceMeters / 1e3, roadRouteDetails.totalDistanceMeters)]);
+	rows.push([translate("spread_category", {}, locale, "ui"), translate(`spread_${spreadCategory}`, {}, locale, "ui")]);
+	lines.push(...formatKeyValueRows(rows, format));
+	lines.push(translate(hasRoadRoute ? "geo_reconstruct_note_road" : "geo_reconstruct_note_displacement", {}, locale, "narratives"));
+	if (velocityAlert?.hasAnomaly) {
+		const alertLabel = translate("velocity_anomaly_label", {}, locale, "ui");
+		const alertDesc = translate("velocity_anomaly_desc", {
+			from: velocityAlert.fromFileName || "-",
+			to: velocityAlert.toFileName || "-",
+			speed: velocityAlert.maxSpeedKmh
+		}, locale, "ui");
+		lines.push(format === "markdown" ? `- **[${alertLabel}]**: ${alertDesc}` : `[${alertLabel}] ${alertDesc}`);
+	}
+	if (jumps.length > 0) {
+		const jumpsLabel = stripTrailingColon(translate("geo_reconstruct_jumps", {}, locale, "narratives"));
+		lines.push(format === "markdown" ? `- **${jumpsLabel}**:` : `${jumpsLabel}:`);
+		const viaRoadText = translate("geo_via_road", {}, locale, "narratives");
+		for (let idx = 0; idx < jumps.length; idx++) {
+			const jump = jumps[idx];
+			const directDist = formatGeoDistance(jump.distanceKm, jump.distanceMeters);
+			const legMeters = roadRouteDetails?.legDistancesMeters?.[idx];
+			const roadSuffix = legMeters != null && legMeters > 0 ? ` (~${formatGeoDistance(legMeters / 1e3, legMeters)} ${viaRoadText})` : "";
+			const entry = `${jump.fromFileName} -> (+${directDist}${roadSuffix}) ${jump.toFileName}`;
+			lines.push(format === "markdown" ? `  - ${entry}` : `  ${entry}`);
 		}
 	}
-	const collectiveSections = generateCollectiveNarratives(collective, assets.length, locale);
-	if (collectiveSections.length > 0) {
-		if (isMarkdown) {
-			lines.push("## Combined Analysis");
-			for (const sec of collectiveSections) {
-				if (!sec.narrative) continue;
-				lines.push(`### ${sec.title}`);
-				lines.push(sec.narrative);
-				lines.push("");
-			}
-		} else {
-			lines.push("--- Combined Analysis ---");
-			for (const sec of collectiveSections) {
-				if (!sec.narrative) continue;
-				lines.push(`[${sec.title}]`);
-				lines.push(sec.narrative);
-				lines.push("");
-			}
-		}
+	lines.push("");
+}
+function appendIndividualAssetBreakdown(lines, assets, options, format, locale) {
+	if (!options?.detailed || assets.length === 0) return;
+	const sectionTitle = translate("individual_analysis", {}, locale, "ui");
+	lines.push(format === "markdown" ? `## ${sectionTitle}` : `=== ${sectionTitle} ===`);
+	lines.push("");
+	for (let i = 0; i < assets.length; i++) {
+		const asset = assets[i];
+		const heading = `${translate("asset_header", { n: i + 1 }, locale, "reports")}: ${asset.fileName}`;
+		lines.push(format === "markdown" ? `### ${heading}` : `--- ${heading} ---`);
+		lines.push(formatSingleOutput(asset, options));
+		lines.push("");
 	}
-	if (isMarkdown) {
-		lines.push("## Device Hardware");
-		lines.push(`- **Consistent Hardware**: ${collective.hardware.isConsistent ? "Yes" : "No"}`);
-		lines.push(`- **Unique Devices**: ${collective.hardware.uniqueDevices.join(", ") || "None detected"}`);
+}
+function formatBatchOutput(assets, collective, story, options, roadRouteDetails) {
+	const locale = options?.locale || "en";
+	const format = options?.format === "markdown" ? "markdown" : "plain";
+	const lines = [];
+	const totalAssetsLabel = translate("batch_total_assets", {}, locale, "ui");
+	if (format === "markdown") {
+		lines.push("# ExifSense Collective Intelligence Analysis");
+		lines.push(`- **${totalAssetsLabel}**: ${assets.length}`);
 		lines.push("");
 	} else {
-		lines.push("--- Device Hardware ---");
-		lines.push(`Consistent Hardware : ${collective.hardware.isConsistent ? "Yes" : "No"}`);
-		lines.push(`Unique Devices      : ${collective.hardware.uniqueDevices.join(", ") || "None detected"}`);
+		lines.push("=== ExifSense Collective Intelligence Analysis ===");
+		lines.push(`${totalAssetsLabel}: ${assets.length}`);
 		lines.push("");
 	}
-	if (isMarkdown) {
-		lines.push("## Timeline & Sequence");
-		lines.push(`- **Total Duration**: ${formatDuration(collective.timeline.totalDurationMs)}`);
-		lines.push(`- **Time Gaps Between Photos**: ${collective.timeline.jumps.length}`);
-		for (const jump of collective.timeline.jumps) {
-			const tag = jump.deltaDays > 0 ? "**[TIME ANOMALY]** " : "";
-			lines.push(`  - ${tag}${jump.fromFileName} -> ${jump.toFileName}: ${formatDuration(jump.deltaMs)}`);
-		}
-		lines.push("");
-	} else {
-		lines.push("--- Timeline & Sequence ---");
-		lines.push(`Total Duration            : ${formatDuration(collective.timeline.totalDurationMs)}`);
-		lines.push(`Time Gaps Between Photos  : ${collective.timeline.jumps.length}`);
-		for (const jump of collective.timeline.jumps) {
-			const tag = jump.deltaDays > 0 ? "[TIME ANOMALY] " : "";
-			lines.push(`  ${tag}Gap: ${jump.fromFileName} -> ${jump.toFileName} (${formatDuration(jump.deltaMs)})`);
-		}
-		lines.push("");
-	}
-	const velocityAlert = collective.geospatial.velocityAlert;
-	if (isMarkdown) {
-		lines.push("## Geospatial & Movement");
-		lines.push(`- **Cumulative Displacement**: ${collective.geospatial.totalPathDistanceKm.toFixed(2)} km`);
-		if (roadRouteDetails && roadRouteDetails.totalDistanceMeters > 0) lines.push(`- **Estimated Road Route**: ${(roadRouteDetails.totalDistanceMeters / 1e3).toFixed(2)} km`);
-		lines.push(`- **Max Spread**: ${collective.geospatial.maxSpreadKm.toFixed(2)} km`);
-		lines.push(`- **Spread Category**: ${collective.geospatial.spreadCategory}`);
-		if (velocityAlert?.hasAnomaly) lines.push(`- **[CRITICAL VELOCITY ANOMALY]**: Impossible speed detected between ${velocityAlert.fromFileName} and ${velocityAlert.toFileName} (${velocityAlert.maxSpeedKmh} km/h).`);
-		lines.push("");
-	} else {
-		lines.push("--- Geospatial & Movement ---");
-		lines.push(`Cumulative Displacement : ${collective.geospatial.totalPathDistanceKm.toFixed(2)} km`);
-		if (roadRouteDetails && roadRouteDetails.totalDistanceMeters > 0) lines.push(`Estimated Road Route    : ${(roadRouteDetails.totalDistanceMeters / 1e3).toFixed(2)} km`);
-		lines.push(`Max Spread            : ${collective.geospatial.maxSpreadKm.toFixed(2)} km`);
-		lines.push(`Spread Category       : ${collective.geospatial.spreadCategory}`);
-		if (velocityAlert?.hasAnomaly) lines.push(`[CRITICAL] Velocity Anomaly: Impossible speed between ${velocityAlert.fromFileName} and ${velocityAlert.toFileName} (${velocityAlert.maxSpeedKmh} km/h)`);
-		lines.push("");
-	}
-	if (isMarkdown) {
-		lines.push("## Chronological Story");
-		if (story.baseline) {
-			lines.push(`> ${story.baseline}`);
-			lines.push("");
-		}
-		for (const step of story.steps) {
-			lines.push(`### Step ${step.stepIndex + 1}: ${step.fileName}`);
-			lines.push(step.narrativeText);
-			lines.push("");
-		}
-	} else {
-		lines.push("--- Chronological Story ---");
-		if (story.baseline) {
-			lines.push(`Baseline: ${story.baseline}`);
-			lines.push("");
-		}
-		for (const step of story.steps) {
-			lines.push(`[Step ${step.stepIndex + 1}] ${step.fileName}`);
-			lines.push(step.narrativeText);
-			lines.push("");
-		}
-	}
+	appendBatchAlerts(lines, assets, format, locale);
+	appendChronologicalStorySection(lines, story, format, locale);
+	const combinedTitle = translate("combined_intel", {}, locale, "ui");
+	lines.push(format === "markdown" ? `## ${combinedTitle}` : `--- ${combinedTitle} ---`);
+	appendIntegrityEvidenceSection(lines, assets, collective, format, locale);
+	appendHardwareEvidenceSection(lines, collective, format, locale);
+	appendTimelineEvidenceSection(lines, collective, format, locale);
+	appendGeospatialEvidenceSection(lines, collective, format, locale, roadRouteDetails);
+	appendIndividualAssetBreakdown(lines, assets, options, format, locale);
 	return lines.join("\n").trim();
 }
 /**
@@ -5442,8 +5548,8 @@ function evaluateCollectiveIntelligence(assets) {
 		for (const cat of EXIF_CATEGORIES) {
 			const hasProps = Object.keys(categorized[cat] || {}).length > 0;
 			if (cat === "Geospatial") {
-				const hasCoords = asset.exifData?.latitude != null && asset.exifData?.longitude != null;
-				presence[cat] = hasProps || hasCoords;
+				const coords = extractGpsCoordinates(asset.exifData);
+				presence[cat] = hasProps || coords !== null;
 			} else presence[cat] = hasProps;
 		}
 		return {
@@ -5524,17 +5630,16 @@ function evaluateCollectiveIntelligence(assets) {
 		}
 	}
 	const geoAssets = assets.map((a) => {
-		const lat = a.exifData?.latitude != null ? Number(a.exifData.latitude) : null;
-		const lng = a.exifData?.longitude != null ? Number(a.exifData.longitude) : null;
+		const coords = extractGpsCoordinates(a.exifData);
 		const date = parseExifDate(a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime);
 		return {
 			fileName: a.fileName,
-			lat,
-			lng,
+			lat: coords?.lat ?? null,
+			lng: coords?.lng ?? null,
 			date,
 			time: date ? date.getTime() : null
 		};
-	}).filter((g) => g.lat != null && g.lng != null && !Number.isNaN(g.lat) && !Number.isNaN(g.lng));
+	}).filter((g) => g.lat !== null && g.lng !== null);
 	const missingCoordinatesCount = assets.length - geoAssets.length;
 	let maxSpreadKm = 0;
 	let totalPathDistanceKm = 0;
@@ -5703,9 +5808,10 @@ function parseChronologicalEvents(assets) {
 		const parsedDate = parseExifDate(exif.DateTimeOriginal || exif.CreateDate || exif.DateTime);
 		const hasCaptureTime = parsedDate !== null;
 		const timestamp = parsedDate || new Date(asset.fileDate || 0);
-		const latRaw = exif.latitude != null ? Number(exif.latitude) : null;
-		const lngRaw = exif.longitude != null ? Number(exif.longitude) : null;
-		const hasGps = latRaw !== null && lngRaw !== null && !Number.isNaN(latRaw) && !Number.isNaN(lngRaw);
+		const coords = extractGpsCoordinates(exif);
+		const latRaw = coords?.lat ?? null;
+		const lngRaw = coords?.lng ?? null;
+		const hasGps = coords !== null;
 		const make = typeof exif.Make === "string" && exif.Make.trim() ? exif.Make.trim() : "";
 		const model = typeof exif.Model === "string" && exif.Model.trim() ? exif.Model.trim() : "";
 		const deviceString = [make, model].filter(Boolean).join(" ");
@@ -5994,6 +6100,7 @@ Usage:
 Options:
   --locale <en|id>          Narrative language (default: en)
   --format <plain|markdown> Output formatting (default: plain)
+  --detailed                Include full per-asset details in batch output
   --out <path>              Write output text to file instead of stdout`;
 const VERSION_TEXT = "ExifSense CLI v1.0.0";
 async function runCli(argv) {
@@ -6011,10 +6118,9 @@ async function runCli(argv) {
 }
 async function enrichSingleAssetLocation(asset) {
 	if (asset.locationName || typeof asset.locationData?.display_name === "string") return asset;
-	const lat = asset.exifData?.latitude ?? asset.exifData?.GPSLatitude;
-	const lng = asset.exifData?.longitude ?? asset.exifData?.GPSLongitude;
-	if (!isValidCoordinate(lat, lng)) return asset;
-	const locData = await resolveLocationWithPacing(Number(lat), Number(lng));
+	const coords = extractGpsCoordinates(asset.exifData);
+	if (!coords) return asset;
+	const locData = await resolveLocationWithPacing(coords.lat, coords.lng);
 	if (!locData?.display_name) return asset;
 	return {
 		...asset,
@@ -6098,34 +6204,37 @@ async function executeCommand(command) {
 		errorText: "Unhandled command"
 	};
 }
-async function processBatchAssets(assets, options) {
-	let roadRouteDetails = null;
-	if (assets && assets.length >= 2) {
-		const geoAssets = assets.filter((a) => {
-			const lat = a.exifData?.latitude ?? a.exifData?.GPSLatitude;
-			const lng = a.exifData?.longitude ?? a.exifData?.GPSLongitude;
-			return lat != null && lng != null && !Number.isNaN(Number(lat)) && !Number.isNaN(Number(lng));
-		}).map((a) => {
-			const d = parseExifDate(a.exifData?.DateTimeOriginal || a.exifData?.CreateDate || a.exifData?.DateTime);
-			return {
-				asset: a,
-				time: d ? d.getTime() : a.fileDate || 0,
-				lat: Number(a.exifData?.latitude ?? a.exifData?.GPSLatitude),
-				lng: Number(a.exifData?.longitude ?? a.exifData?.GPSLongitude)
-			};
-		}).sort((a, b) => a.time - b.time);
-		if (geoAssets.length >= 2) try {
-			const fetchPromise = fetchOsrmRouteDetails(geoAssets.map((g) => ({
-				lat: g.lat,
-				lng: g.lng
-			})));
-			const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 3e3));
-			roadRouteDetails = await Promise.race([fetchPromise, timeoutPromise]);
-		} catch {
-			roadRouteDetails = null;
-		}
+async function resolveBatchRoadRoute(assets) {
+	if (assets.length < 2) return null;
+	const geoPoints = [];
+	for (const asset of assets) {
+		const coords = extractGpsCoordinates(asset.exifData);
+		if (!coords) continue;
+		const parsedDate = parseExifDate(asset.exifData?.DateTimeOriginal || asset.exifData?.CreateDate || asset.exifData?.DateTime);
+		geoPoints.push({
+			time: parsedDate ? parsedDate.getTime() : asset.fileDate || 0,
+			lat: coords.lat,
+			lng: coords.lng
+		});
 	}
-	return formatBatchOutput(assets, evaluateCollectiveIntelligence(assets), generateChronologicalBatchStory(assets, {
+	if (geoPoints.length < 2) return null;
+	geoPoints.sort((a, b) => a.time - b.time);
+	try {
+		const fetchPromise = fetchOsrmRouteDetails(geoPoints.map((point) => ({
+			lat: point.lat,
+			lng: point.lng
+		})));
+		const timeoutPromise = new Promise((resolve) => setTimeout(() => resolve(null), 3e3));
+		return await Promise.race([fetchPromise, timeoutPromise]);
+	} catch {
+		return null;
+	}
+}
+async function processBatchAssets(assets, options) {
+	const enrichedAssets = [];
+	for (const asset of assets) enrichedAssets.push(await enrichSingleAssetLocation(asset));
+	const roadRouteDetails = await resolveBatchRoadRoute(enrichedAssets);
+	return formatBatchOutput(enrichedAssets, evaluateCollectiveIntelligence(enrichedAssets), generateChronologicalBatchStory(enrichedAssets, {
 		locale: options.locale,
 		format: options.format === "markdown" ? "markdown" : "plain",
 		totalRoadDistance: roadRouteDetails?.totalDistanceMeters,
