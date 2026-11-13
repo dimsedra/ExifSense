@@ -183,7 +183,6 @@ export function formatNaturalDate(
   const localeMap: Record<string, string> = {
     id: 'id-ID',
     en: 'en-US',
-    ar: 'ar-SA',
   };
   const targetLocale = localeMap[locale] || 'en-US';
 

@@ -10,12 +10,10 @@ import type {
 } from './types';
 import enLocale from '../../locales/en.json';
 import idLocale from '../../locales/id.json';
-import arLocale from '../../locales/ar.json';
 
 const LOCALES: Record<SupportedLocale, Record<string, Record<string, string>>> = {
   en: enLocale as unknown as Record<string, Record<string, string>>,
   id: idLocale as unknown as Record<string, Record<string, string>>,
-  ar: arLocale as unknown as Record<string, Record<string, string>>,
 };
 
 function getTemplate(
@@ -90,12 +88,10 @@ function formatSpanDuration(diffSeconds: number, locale: SupportedLocale): strin
       const idFormatted = formattedHours.replace('.', ',');
       return `${idFormatted} jam`;
     }
-    if (locale === 'ar') return `${formattedHours} ساعة`;
     return `${formattedHours} hours`;
   }
   const minutes = Math.max(1, Math.round(diffSeconds / 60));
   if (locale === 'id') return `${minutes} menit`;
-  if (locale === 'ar') return `${minutes} دقيقة`;
   return `${minutes} minutes`;
 }
 
@@ -128,12 +124,6 @@ function formatDualDistance(
     }
     return `sekitar ${distStr} perpindahan garis lurus`;
   }
-  if (locale === 'ar') {
-    if (roadDistStr) {
-      return `حوالي ${distStr} إزاحة خط مستقيم (أو ~${roadDistStr} عبر مسار الطريق)`;
-    }
-    return `حوالي ${distStr} إزاحة خط مستقيم`;
-  }
   if (roadDistStr) {
     return `approximately ${distStr} in straight-line displacement (or ~${roadDistStr} via road route)`;
   }
@@ -150,12 +140,6 @@ function formatMacroDualDistance(
       return `mencakup perpindahan garis lurus kumulatif sekitar ${distStr} (atau ~${roadDistStr} melalui rute jalan)`;
     }
     return `mencakup perpindahan garis lurus kumulatif sekitar ${distStr}`;
-  }
-  if (locale === 'ar') {
-    if (roadDistStr) {
-      return `مغطية إزاحة خط مستقيم تراكمية بحوالي ${distStr} (أو ~${roadDistStr} عبر مسار الطريق)`;
-    }
-    return `مغطية إزاحة خط مستقيم تراكمية بحوالي ${distStr}`;
   }
   if (roadDistStr) {
     return `covering approximately ${distStr} in cumulative straight-line displacement (or ~${roadDistStr} via road route)`;

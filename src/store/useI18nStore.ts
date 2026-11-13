@@ -1,16 +1,13 @@
 import { create } from 'zustand';
 import enLocale from '../locales/en.json';
 import idLocale from '../locales/id.json';
-import arLocale from '../locales/ar.json';
 
 export const LANG_STORAGE_KEY = 'exifsense_lang';
 
-export type SupportedLanguage = 'en' | 'id' | 'ar';
-export type TextDirection = 'ltr' | 'rtl';
+export type SupportedLanguage = 'en' | 'id';
 
 export interface I18nStoreState {
   currentLang: SupportedLanguage;
-  direction: TextDirection;
   dictionary: Record<string, Record<string, string>>;
 
   setLanguage: (lang: SupportedLanguage) => Promise<void>;
@@ -20,7 +17,6 @@ export interface I18nStoreState {
 const dictionaries: Record<SupportedLanguage, Record<string, Record<string, string>>> = {
   en: enLocale as unknown as Record<string, Record<string, string>>,
   id: idLocale as unknown as Record<string, Record<string, string>>,
-  ar: arLocale as unknown as Record<string, Record<string, string>>,
 };
 
 export function interpolateParams(
@@ -35,28 +31,26 @@ export function interpolateParams(
 
 export const useI18nStore = create<I18nStoreState>((set, get) => ({
   currentLang: 'en',
-  direction: 'ltr',
   dictionary: dictionaries['en'],
 
   setLanguage: async (lang: SupportedLanguage) => {
-    const direction: TextDirection = lang === 'ar' ? 'rtl' : 'ltr';
-    const dict = dictionaries[lang] || dictionaries['en'];
+    const activeLang: SupportedLanguage =
+      lang === 'en' || lang === 'id' ? lang : 'en';
+    const dict = dictionaries[activeLang];
 
     try {
-      localStorage.setItem(LANG_STORAGE_KEY, lang);
+      localStorage.setItem(LANG_STORAGE_KEY, activeLang);
     } catch (err) {
       console.warn('Failed to persist language preference to localStorage:', err);
     }
 
     if (typeof document !== 'undefined' && document.documentElement) {
-      document.documentElement.lang = lang;
-      document.documentElement.dir = direction;
+      document.documentElement.lang = activeLang;
       document.title = dict['ui']?.['title'] || 'ExifSense | Photo Analysis & Privacy';
     }
 
     set({
-      currentLang: lang,
-      direction,
+      currentLang: activeLang,
       dictionary: dict,
     });
   },

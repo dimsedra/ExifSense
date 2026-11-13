@@ -1,4 +1,4 @@
-export type SupportedLocale = 'en' | 'id' | 'ar';
+export type SupportedLocale = 'en' | 'id';
 
 export interface NarrativeSection {
   title: string;

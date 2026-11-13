@@ -3,12 +3,10 @@ import { parseExifDate, formatFullDate } from '../forensics/metadata';
 import { SupportedLocale, NarrativeSection } from './types';
 import enLocale from '../../locales/en.json';
 import idLocale from '../../locales/id.json';
-import arLocale from '../../locales/ar.json';
 
 const LOCALES: Record<SupportedLocale, Record<string, Record<string, string>>> = {
   en: enLocale as unknown as Record<string, Record<string, string>>,
   id: idLocale as unknown as Record<string, Record<string, string>>,
-  ar: arLocale as unknown as Record<string, Record<string, string>>
 };
 
 /**
