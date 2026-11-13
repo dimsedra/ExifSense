@@ -88,11 +88,15 @@ describe('mapHelpers', () => {
       expect(bounds).toBeNull();
     });
 
-    it('validates coordinate ranges correctly', () => {
+    it('validates coordinate ranges and rejects non-numeric coercions correctly', () => {
       expect(isValidCoordinate(90, 180)).toBe(true);
       expect(isValidCoordinate(-90, -180)).toBe(true);
       expect(isValidCoordinate(90.1, 0)).toBe(false);
       expect(isValidCoordinate(0, 180.1)).toBe(false);
+      expect(isValidCoordinate('', '')).toBe(false);
+      expect(isValidCoordinate('   ', '   ')).toBe(false);
+      expect(isValidCoordinate(false, false)).toBe(false);
+      expect(isValidCoordinate([], [])).toBe(false);
     });
   });
 
@@ -172,6 +176,97 @@ describe('mapHelpers', () => {
       try {
         const res = await reverseGeocode(56.1023, -4.6404);
         expect(res).toBeNull();
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+      }
+    });
+
+    it('paces consecutive uncached lookups while serving first call and cache hits immediately', async () => {
+      const { resolveLocationWithPacing, clearGeocodeCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+
+      const originalFetch = globalThis.fetch;
+      const callTimestamps: number[] = [];
+      let capturedHeaders: Record<string, string> | undefined;
+
+      globalThis.fetch = (async (_url: RequestInfo | URL, init?: RequestInit) => {
+        callTimestamps.push(Date.now());
+        capturedHeaders = init?.headers as Record<string, string> | undefined;
+        return {
+          ok: true,
+          json: async () => ({
+            display_name: `Place ${callTimestamps.length}`,
+            address: {},
+          }),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const first = await resolveLocationWithPacing(55.86449, -4.42989, { minIntervalMs: 80 });
+        expect(first?.display_name).toBe('Place 1');
+        expect(capturedHeaders?.['User-Agent']).toContain('ExifSense');
+
+        const cached = await resolveLocationWithPacing(55.86449, -4.42989, { minIntervalMs: 80 });
+        expect(cached?.display_name).toBe('Place 1');
+        expect(callTimestamps.length).toBe(1);
+
+        const second = await resolveLocationWithPacing(55.86183, -4.41538, { minIntervalMs: 80 });
+        expect(second?.display_name).toBe('Place 2');
+        expect(callTimestamps.length).toBe(2);
+        expect(callTimestamps[1]! - callTimestamps[0]!).toBeGreaterThanOrEqual(70);
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+      }
+    });
+
+    it('returns null gracefully when Nominatim request exceeds timeoutMs', async () => {
+      const { resolveLocationWithPacing, clearGeocodeCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = (() => new Promise(() => {})) as unknown as typeof fetch;
+
+      try {
+        const res = await resolveLocationWithPacing(55.86449, -4.42989, {
+          minIntervalMs: 0,
+          timeoutMs: 30,
+        });
+        expect(res).toBeNull();
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+      }
+    });
+
+    it('coalesces concurrent uncached lookups for identical coordinates into a single fetch', async () => {
+      const { resolveLocationWithPacing, clearGeocodeCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+
+      const originalFetch = globalThis.fetch;
+      let fetchCalls = 0;
+
+      globalThis.fetch = (async () => {
+        fetchCalls++;
+        await new Promise((r) => setTimeout(r, 20));
+        return {
+          ok: true,
+          json: async () => ({
+            display_name: 'Coalesced Place',
+            address: {},
+          }),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const [a, b] = await Promise.all([
+          resolveLocationWithPacing(55.86449, -4.42989, { minIntervalMs: 0 }),
+          resolveLocationWithPacing(55.86449, -4.42989, { minIntervalMs: 0 }),
+        ]);
+        expect(fetchCalls).toBe(1);
+        expect(a?.display_name).toBe('Coalesced Place');
+        expect(b?.display_name).toBe('Coalesced Place');
       } finally {
         globalThis.fetch = originalFetch;
         clearGeocodeCache();

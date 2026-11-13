@@ -15,14 +15,25 @@ export interface MapBoundsResult {
   center: [number, number];
 }
 
+function isNumericCoordinateValue(val: unknown): boolean {
+  if (val == null || typeof val === 'boolean' || Array.isArray(val)) {
+    return false;
+  }
+  if (typeof val === 'string' && val.trim() === '') {
+    return false;
+  }
+  return Number.isFinite(Number(val));
+}
+
 /**
  * Validates if a latitude/longitude pair falls within valid spherical coordinates.
  */
 export function isValidCoordinate(lat: unknown, lng: unknown): boolean {
-  if (lat == null || lng == null) return false;
+  if (!isNumericCoordinateValue(lat) || !isNumericCoordinateValue(lng)) {
+    return false;
+  }
   const numLat = Number(lat);
   const numLng = Number(lng);
-  if (isNaN(numLat) || isNaN(numLng)) return false;
   return numLat >= -90 && numLat <= 90 && numLng >= -180 && numLng <= 180;
 }
 
@@ -91,14 +102,115 @@ export interface ReverseGeocodeResult {
   [key: string]: unknown;
 }
 
+export interface GeocodeOptions {
+  minIntervalMs?: number;
+  timeoutMs?: number;
+}
+
 const geocodeCache = new Map<string, ReverseGeocodeResult | null>();
+const inFlightGeocodes = new Map<string, Promise<ReverseGeocodeResult | null>>();
+let lastGeocodeScheduledAt = 0;
+
+function waitForDelay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function createAbortTimeout(
+  timeoutMs: number,
+  controller?: AbortController
+): { promise: Promise<null>; clear: () => void } {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const promise = new Promise<null>((resolve) => {
+    timeoutId = setTimeout(() => {
+      controller?.abort();
+      resolve(null);
+    }, timeoutMs);
+  });
+  return {
+    promise,
+    clear: () => {
+      if (timeoutId !== undefined) clearTimeout(timeoutId);
+    },
+  };
+}
+
+async function performNominatimRequest(
+  url: string,
+  fetchInit: RequestInit
+): Promise<ReverseGeocodeResult | null> {
+  const response = await fetch(url, fetchInit);
+  if (!response.ok) {
+    return null;
+  }
+  return (await response.json()) as ReverseGeocodeResult;
+}
+
+async function fetchNominatimJson(url: string, timeoutMs: number): Promise<ReverseGeocodeResult | null> {
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+  const fetchInit: RequestInit = {};
+
+  if (typeof window === 'undefined') {
+    fetchInit.headers = {
+      'User-Agent': 'ExifSense-CLI/1.0',
+      Accept: 'application/json',
+    };
+  }
+  if (controller) {
+    fetchInit.signal = controller.signal;
+  }
+
+  const timeout = createAbortTimeout(timeoutMs, controller);
+
+  try {
+    return await Promise.race([performNominatimRequest(url, fetchInit), timeout.promise]);
+  } catch (error) {
+    console.error('Reverse geocoding failed:', error);
+    return null;
+  } finally {
+    timeout.clear();
+  }
+}
+
+async function executePacedGeocode(
+  cacheKey: string,
+  lat: number,
+  lng: number,
+  options?: GeocodeOptions
+): Promise<ReverseGeocodeResult | null> {
+  const minIntervalMs = options?.minIntervalMs ?? 1000;
+  const timeoutMs = options?.timeoutMs ?? 3000;
+  const now = Date.now();
+  const waitMs =
+    lastGeocodeScheduledAt > 0 && minIntervalMs > 0
+      ? Math.max(0, lastGeocodeScheduledAt + minIntervalMs - now)
+      : 0;
+  lastGeocodeScheduledAt = Math.max(lastGeocodeScheduledAt, now + waitMs);
+
+  if (waitMs > 0) {
+    await waitForDelay(waitMs);
+  }
+
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(
+    lat
+  )}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1`;
+
+  const data = await fetchNominatimJson(url, timeoutMs);
+  if (!data) {
+    return null;
+  }
+
+  geocodeCache.set(cacheKey, data);
+  return data;
+}
 
 /**
- * Performs reverse geocoding via OpenStreetMap Nominatim with memory caching.
+ * Resolves coordinates via Nominatim with automatic rate-limit pacing,
+ * request timeout protection, in-flight coalescing, and memory caching.
  */
-export async function reverseGeocode(
+export async function resolveLocationWithPacing(
   lat: number,
-  lng: number
+  lng: number,
+  options?: GeocodeOptions
 ): Promise<ReverseGeocodeResult | null> {
   if (!isValidCoordinate(lat, lng)) {
     return null;
@@ -109,28 +221,35 @@ export async function reverseGeocode(
     return geocodeCache.get(cacheKey) ?? null;
   }
 
-  try {
-    const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(
-      lat
-    )}&lon=${encodeURIComponent(lng)}&zoom=18&addressdetails=1`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      return null;
-    }
-    const data = (await response.json()) as ReverseGeocodeResult;
-    geocodeCache.set(cacheKey, data);
-    return data;
-  } catch (error) {
-    console.error('Reverse geocoding failed:', error);
-    return null;
+  const pending = inFlightGeocodes.get(cacheKey);
+  if (pending) {
+    return pending;
   }
+
+  const requestPromise = executePacedGeocode(cacheKey, lat, lng, options).finally(() => {
+    inFlightGeocodes.delete(cacheKey);
+  });
+  inFlightGeocodes.set(cacheKey, requestPromise);
+  return requestPromise;
 }
 
 /**
- * Resets the in-memory geocoding cache (useful for testing).
+ * Performs reverse geocoding via OpenStreetMap Nominatim with memory caching.
+ */
+export async function reverseGeocode(
+  lat: number,
+  lng: number
+): Promise<ReverseGeocodeResult | null> {
+  return resolveLocationWithPacing(lat, lng, { minIntervalMs: 0, timeoutMs: 3000 });
+}
+
+/**
+ * Resets the in-memory geocoding cache and pacing timer (useful for testing).
  */
 export function clearGeocodeCache(): void {
   geocodeCache.clear();
+  inFlightGeocodes.clear();
+  lastGeocodeScheduledAt = 0;
 }
 
 export interface OsrmRouteDetails {
