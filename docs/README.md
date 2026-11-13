@@ -27,6 +27,10 @@ Catalog of technical documentation and design references for ExifSense.
 
 - [Brand Design SOT: ExifSense](./design/brand.md) — Brand positioning, target user context, visual system, and layout hierarchy across all views.
 
+## Decisions
+
+- [ADR-001: Restrict Localization Strictly to English and Indonesian Without RTL](./decisions/adr_001_drop_arabic_locale_and_rtl.md) — Rationale, alternatives, and consequences for dropping Arabic (`ar`) localization and RTL layout infrastructure.
+
 ## Lesson
 
 - [Lesson: Haversine Algorithm and OSRM Road Routing](./lesson/haversine_and_osrm/haversine_and_osrm.md) — Intuitive mental models and mathematical mechanics of great-circle displacement versus road network routing in batch analysis.

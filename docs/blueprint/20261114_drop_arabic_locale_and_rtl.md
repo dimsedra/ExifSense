@@ -2,7 +2,7 @@
 title: "Blueprint: Drop Arabic Locale and RTL Support"
 type: blueprint
 parent_intent: docs/intent/20261114_drop_arabic_locale_and_rtl.md
-status: Approved
+status: Completed
 last_updated: 2026-11-14
 ---
 
