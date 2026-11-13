@@ -819,4 +819,116 @@ describe('CLI Analysis and Simulation Harness', () => {
       }
     });
   });
+
+  // ==========================================
+  // BP-BATCH-PARITY-005: End-to-End Batch Web Parity and --detailed
+  // ==========================================
+  describe('BP-BATCH-PARITY-005: End-to-End Batch Web Parity and --detailed', () => {
+    it('outputs Web-ordered travel-sequence batch in Indonesian Markdown with default omission vs --detailed inclusion', { timeout: 10000 }, async () => {
+      const originalFetch = globalThis.fetch;
+      const { clearGeocodeCache, clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+      clearOsrmCache();
+
+      globalThis.fetch = (async (url: RequestInfo | URL) => {
+        const urlStr = String(url);
+        if (urlStr.includes('project-osrm.org')) {
+          return {
+            ok: true,
+            json: async () => ({
+              code: 'Ok',
+              routes: [
+                {
+                  distance: 18400,
+                  legs: [{ distance: 4000 }, { distance: 5000 }, { distance: 4200 }, { distance: 5200 }],
+                },
+              ],
+            }),
+          } as unknown as Response;
+        }
+        return {
+          ok: true,
+          json: async () => ({ display_name: 'Glasgow City Centre, Scotland' }),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const defaultRun = await runCli([
+          'scenario',
+          'travel-sequence',
+          '--locale',
+          'id',
+          '--format',
+          'markdown',
+        ]);
+        expect(defaultRun.success).toBe(true);
+        expect(defaultRun.exitCode).toBe(0);
+        const defaultOut = defaultRun.outputText ?? '';
+        const storyIdx = defaultOut.indexOf('## Kisah Kronologis');
+        const combinedIdx = defaultOut.indexOf('## Analisis Gabungan');
+        expect(storyIdx).toBeGreaterThan(-1);
+        expect(combinedIdx).toBeGreaterThan(storyIdx);
+        expect(defaultOut).toContain('Glasgow City Centre, Scotland');
+        expect(defaultOut).toContain('### Analisis Integritas');
+        expect(defaultOut).toContain('### Analisis Perangkat Keras');
+        expect(defaultOut).toContain('### Analisis Kronologi');
+        expect(defaultOut).toContain('### Analisis Geospasial');
+        expect(defaultOut).toContain('18.40 km');
+        expect(defaultOut).not.toContain('Analisis Aset Individu');
+        expect(defaultOut).not.toContain('## Categorized EXIF Metadata');
+
+        const detailedRun = await runCli([
+          'scenario',
+          'travel-sequence',
+          '--locale',
+          'id',
+          '--format',
+          'markdown',
+          '--detailed',
+        ]);
+        expect(detailedRun.success).toBe(true);
+        expect(detailedRun.exitCode).toBe(0);
+        const detailedOut = detailedRun.outputText ?? '';
+        expect(detailedOut).toContain('## Analisis Aset Individu');
+        expect(detailedOut).toContain('### ASET 1: 000.jpg');
+        expect(detailedOut).toContain('### ASET 5: 004.jpg');
+        expect(detailedOut).toContain('## Categorized EXIF Metadata');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+        clearOsrmCache();
+      }
+    });
+
+    it('renders time-jump-anomaly and hardware-discrepancy batch scenarios offline cleanly', { timeout: 10000 }, async () => {
+      const originalFetch = globalThis.fetch;
+      const { clearGeocodeCache, clearOsrmCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+      clearOsrmCache();
+
+      globalThis.fetch = (async () => {
+        throw new Error('Offline network isolation');
+      }) as typeof fetch;
+
+      try {
+        const timeRes = await runCli(['scenario', 'time-jump-anomaly']);
+        expect(timeRes.success).toBe(true);
+        expect(timeRes.exitCode).toBe(0);
+        expect(timeRes.outputText).toContain('[TIME ANOMALY]');
+        expect(timeRes.outputText).toContain('--- Chronological Story ---');
+        expect(timeRes.outputText).toContain('--- Combined Analysis ---');
+
+        const hwRes = await runCli(['scenario', 'hardware-discrepancy']);
+        expect(hwRes.success).toBe(true);
+        expect(hwRes.exitCode).toBe(0);
+        expect(hwRes.outputText).toContain('Consistent Hardware : No');
+        expect(hwRes.outputText).toContain('Body Serial');
+        expect(hwRes.outputText).toContain('Lens Model');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+        clearOsrmCache();
+      }
+    });
+  });
 });

@@ -558,5 +558,68 @@ describe('BP-BATCH-PARITY-003 & BP-BATCH-PARITY-004: formatBatchOutput Web Parit
     expect(teleOut).toContain('tele_a.jpg -> (+');
     expect(teleOut).toContain('km) tele_b.jpg');
   });
+
+  it('Given detailed false or omitted, When formatted, Then omits per-asset individual analysis breakdown', () => {
+    const collective = evaluateCollectiveIntelligence(mixedBatch);
+    const story = generateChronologicalBatchStory(mixedBatch, { locale: 'en', format: 'plain' });
+
+    const defaultOut = formatBatchOutput(mixedBatch, collective, story, {
+      locale: 'en',
+      format: 'plain',
+    });
+    const explicitFalseOut = formatBatchOutput(mixedBatch, collective, story, {
+      locale: 'en',
+      format: 'plain',
+      detailed: false,
+    });
+
+    for (const out of [defaultOut, explicitFalseOut]) {
+      expect(out).not.toContain('Individual Asset Analysis');
+      expect(out).not.toContain('ASSET 1:');
+      expect(out).not.toContain('Categorized EXIF Metadata');
+      expect(out).not.toContain('=== ExifSense Forensic Analysis ===');
+    }
+  });
+
+  it('Given detailed true, When formatted, Then appends localized per-asset single-file breakdowns in input order at end of batch report', () => {
+    // Reversed chronological input order to verify input order is preserved for per-asset output
+    const reverseChronoBatch = [assetPartialTwo, assetCleanOne, assetStrippedThree];
+    const collective = evaluateCollectiveIntelligence(reverseChronoBatch);
+    const story = generateChronologicalBatchStory(reverseChronoBatch, {
+      locale: 'en',
+      format: 'plain',
+    });
+
+    const plainDetailed = formatBatchOutput(reverseChronoBatch, collective, story, {
+      locale: 'en',
+      format: 'plain',
+      detailed: true,
+    });
+
+    const combinedIdx = plainDetailed.indexOf('--- Combined Analysis ---');
+    const individualIdx = plainDetailed.indexOf('=== Individual Asset Analysis ===');
+    const asset1Idx = plainDetailed.indexOf('--- ASSET 1: day3|spot.jpg ---');
+    const asset2Idx = plainDetailed.indexOf('--- ASSET 2: day1_start.jpg ---');
+    const asset3Idx = plainDetailed.indexOf('--- ASSET 3: stripped_social.jpg ---');
+
+    expect(individualIdx).toBeGreaterThan(combinedIdx);
+    expect(asset1Idx).toBeGreaterThan(individualIdx);
+    expect(asset2Idx).toBeGreaterThan(asset1Idx);
+    expect(asset3Idx).toBeGreaterThan(asset2Idx);
+    expect(plainDetailed).toContain('=== ExifSense Forensic Analysis ===');
+    expect(plainDetailed).toContain('--- Categorized EXIF Metadata ---');
+    expect(plainDetailed).toContain('SHA-256');
+
+    const idMarkdownDetailed = formatBatchOutput(reverseChronoBatch, collective, story, {
+      locale: 'id',
+      format: 'markdown',
+      detailed: true,
+    });
+    expect(idMarkdownDetailed).toContain('## Analisis Aset Individu');
+    expect(idMarkdownDetailed).toContain('### ASET 1: day3|spot.jpg');
+    expect(idMarkdownDetailed).toContain('### ASET 2: day1_start.jpg');
+    expect(idMarkdownDetailed).toContain('# ExifSense Forensic Analysis');
+    expect(idMarkdownDetailed).toContain('## Categorized EXIF Metadata');
+  });
 });
 

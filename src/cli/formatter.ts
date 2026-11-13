@@ -510,12 +510,10 @@ function appendTimelineEvidenceSection(
       jump.deltaSeconds,
       locale
     );
-    const prefix =
-      jump.deltaDays > 0
-        ? format === 'markdown'
-          ? `**[${anomalyTag}]** `
-          : `[${anomalyTag}] `
-        : '';
+    let prefix = '';
+    if (jump.deltaDays > 0) {
+      prefix = format === 'markdown' ? `**[${anomalyTag}]** ` : `[${anomalyTag}] `;
+    }
     const lineBody = `${prefix}${jump.fromFileName} -> (+${delta}) ${jump.toFileName}`;
     lines.push(format === 'markdown' ? `  - ${lineBody}` : `  ${lineBody}`);
   }
@@ -624,6 +622,29 @@ function appendGeospatialEvidenceSection(
   lines.push('');
 }
 
+function appendIndividualAssetBreakdown(
+  lines: string[],
+  assets: ForensicAsset[],
+  options: CliOptions | undefined,
+  format: SupportedFormat,
+  locale: string
+): void {
+  if (!options?.detailed || assets.length === 0) return;
+
+  const sectionTitle = translate('individual_analysis', {}, locale, 'ui');
+  lines.push(format === 'markdown' ? `## ${sectionTitle}` : `=== ${sectionTitle} ===`);
+  lines.push('');
+
+  for (let i = 0; i < assets.length; i++) {
+    const asset = assets[i]!;
+    const assetLabel = translate('asset_header', { n: i + 1 }, locale, 'reports');
+    const heading = `${assetLabel}: ${asset.fileName}`;
+    lines.push(format === 'markdown' ? `### ${heading}` : `--- ${heading} ---`);
+    lines.push(formatSingleOutput(asset, options));
+    lines.push('');
+  }
+}
+
 export function formatBatchOutput(
   assets: ForensicAsset[],
   collective: CollectiveIntelligenceResult,
@@ -655,6 +676,7 @@ export function formatBatchOutput(
   appendHardwareEvidenceSection(lines, collective, format, locale);
   appendTimelineEvidenceSection(lines, collective, format, locale);
   appendGeospatialEvidenceSection(lines, collective, format, locale, roadRouteDetails);
+  appendIndividualAssetBreakdown(lines, assets, options, format, locale);
 
   return lines.join('\n').trim();
 }
