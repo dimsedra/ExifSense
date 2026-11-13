@@ -1,6 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { formatHashOutput } from '../../src/cli/formatter';
+import { formatHashOutput, formatBatchOutput } from '../../src/cli/formatter';
 import type { FileHashResult } from '../../src/cli/hasher';
+import { evaluateCollectiveIntelligence } from '../../src/core/forensics/collective';
+import { generateChronologicalBatchStory } from '../../src/core/narratives/chronological';
+import type { ForensicAsset } from '../../src/core/forensics/types';
 
 describe('BP-HASH-003: formatHashOutput', () => {
   const sampleResults: FileHashResult[] = [
@@ -235,3 +238,325 @@ describe('BP-PARITY-003: formatSingleOutput 8-Category Raw EXIF Metadata', () =>
     expect(output).toContain('Tidak ada tag data standar yang ditemukan.');
   });
 });
+
+describe('BP-BATCH-PARITY-003 & BP-BATCH-PARITY-004: formatBatchOutput Web Parity', () => {
+  const assetCleanOne: ForensicAsset = {
+    id: 'batch-1',
+    fileName: 'day1_start.jpg',
+    fileSize: 204800,
+    fileType: 'image/jpeg',
+    fileDate: new Date('2025-05-10T08:00:00Z').getTime(),
+    sha256: '1'.repeat(64),
+    sha1: '2'.repeat(40),
+    actualWidth: 4000,
+    actualHeight: 3000,
+    locationName: 'Monas, Central Jakarta',
+    exifData: {
+      Make: 'Sony',
+      Model: 'ILCE-7M4',
+      Software: 'ILCE-7M4 v2.00',
+      LensModel: 'FE 24-70mm F2.8 GM II',
+      BodySerialNumber: 'SN-BODY-001',
+      LensSerialNumber: 'SN-LENS-999',
+      DateTimeOriginal: '2025:05:10 08:00:00',
+      latitude: -6.17539,
+      longitude: 106.82715,
+    },
+    categorizedExif: {
+      'Device Hardware': { Make: 'Sony', Model: 'ILCE-7M4' },
+      'Exposure Settings': {},
+      'Optics & Lens': {},
+      'Image Quality': {},
+      'Timeline & Date': { DateTimeOriginal: '2025:05:10 08:00:00' },
+      Geospatial: { latitude: -6.17539, longitude: 106.82715 },
+      'Standards & Info': {},
+      Miscellaneous: {},
+    },
+    integrityAlerts: [],
+  };
+
+  const assetPartialTwo: ForensicAsset = {
+    id: 'batch-2',
+    fileName: 'day3|spot.jpg',
+    fileSize: 150000,
+    fileType: 'image/jpeg',
+    fileDate: new Date('2025-05-12T09:15:30Z').getTime(),
+    sha256: '3'.repeat(64),
+    sha1: '4'.repeat(40),
+    actualWidth: 4000,
+    actualHeight: 3000,
+    locationName: 'National Museum, Central Jakarta',
+    exifData: {
+      Make: 'Canon',
+      Model: 'EOS R5',
+      Software: 'Adobe Photoshop 2024',
+      DateTimeOriginal: '2025:05:12 09:15:30',
+      GPSLatitude: -6.17639,
+      GPSLongitude: 106.82166,
+    },
+    categorizedExif: {
+      'Device Hardware': { Make: 'Canon', Model: 'EOS R5', Software: 'Adobe Photoshop 2024' },
+      'Exposure Settings': {},
+      'Optics & Lens': {},
+      'Image Quality': {},
+      'Timeline & Date': { DateTimeOriginal: '2025:05:12 09:15:30' },
+      Geospatial: { GPSLatitude: -6.17639, GPSLongitude: 106.82166 },
+      'Standards & Info': {},
+      Miscellaneous: {},
+    },
+    integrityAlerts: [
+      {
+        type: 'editing_software',
+        severity: 'info',
+        messageParam: { software: 'Adobe Photoshop 2024' },
+        defaultMessage: 'Editing software signature found: "Adobe Photoshop 2024".',
+      },
+    ],
+  };
+
+  const assetStrippedThree: ForensicAsset = {
+    id: 'batch-3',
+    fileName: 'stripped_social.jpg',
+    fileSize: 64000,
+    fileType: 'image/jpeg',
+    fileDate: new Date('2025-05-12T10:00:00Z').getTime(),
+    sha256: '5'.repeat(64),
+    sha1: '6'.repeat(40),
+    actualWidth: 1080,
+    actualHeight: 1350,
+    exifData: {},
+    categorizedExif: {
+      'Device Hardware': {},
+      'Exposure Settings': {},
+      'Optics & Lens': {},
+      'Image Quality': {},
+      'Timeline & Date': {},
+      Geospatial: {},
+      'Standards & Info': {},
+      Miscellaneous: {},
+    },
+    integrityAlerts: [
+      {
+        type: 'fully_stripped',
+        severity: 'info',
+        defaultMessage: 'No EXIF metadata found in this file.',
+      },
+    ],
+  };
+
+  const assetPartialHardwareOnly: ForensicAsset = {
+    id: 'batch-4',
+    fileName: 'partial_hw_only.jpg',
+    fileSize: 92000,
+    fileType: 'image/jpeg',
+    fileDate: new Date('2025-05-12T10:30:00Z').getTime(),
+    sha256: '7'.repeat(64),
+    sha1: '8'.repeat(40),
+    actualWidth: 4000,
+    actualHeight: 3000,
+    exifData: {
+      Make: 'Nikon',
+      Model: 'Z8',
+    },
+    categorizedExif: {
+      'Device Hardware': { Make: 'Nikon', Model: 'Z8' },
+      'Exposure Settings': {},
+      'Optics & Lens': {},
+      'Image Quality': {},
+      'Timeline & Date': {},
+      Geospatial: {},
+      'Standards & Info': {},
+      Miscellaneous: {},
+    },
+    integrityAlerts: [
+      {
+        type: 'missing_gps',
+        severity: 'info',
+        defaultMessage: 'Selective Metadata Removal: GPS data is absent while other metadata is present.',
+      },
+      {
+        type: 'missing_datetime',
+        severity: 'info',
+        defaultMessage: 'Selective Metadata Removal: DATETIME data is absent while other metadata is present.',
+      },
+    ],
+  };
+
+  const mixedBatch = [assetCleanOne, assetPartialTwo, assetPartialHardwareOnly, assetStrippedThree];
+
+  it('Given plain English output with road route, When formatted, Then puts Chronological Story before Combined Analysis and omits legacy summary paragraphs', () => {
+    const collective = evaluateCollectiveIntelligence(mixedBatch);
+    const roadRouteDetails = {
+      totalDistanceMeters: 850,
+      legDistancesMeters: [850],
+    };
+    const story = generateChronologicalBatchStory(mixedBatch, {
+      locale: 'en',
+      format: 'plain',
+      totalRoadDistance: roadRouteDetails.totalDistanceMeters,
+      roadDistances: roadRouteDetails.legDistancesMeters,
+    });
+
+    const output = formatBatchOutput(
+      mixedBatch,
+      collective,
+      story,
+      { locale: 'en', format: 'plain' },
+      roadRouteDetails
+    );
+
+    const headerIdx = output.indexOf('=== ExifSense Collective Intelligence Analysis ===');
+    const alertsIdx = output.indexOf('--- Asset Integrity Alerts (4) ---');
+    const storyIdx = output.indexOf('--- Chronological Story ---');
+    const combinedIdx = output.indexOf('--- Combined Analysis ---');
+
+    expect(headerIdx).toBeGreaterThan(-1);
+    expect(alertsIdx).toBeGreaterThan(headerIdx);
+    expect(storyIdx).toBeGreaterThan(alertsIdx);
+    expect(combinedIdx).toBeGreaterThan(storyIdx);
+
+    // Removes redundant legacy generateCollectiveNarratives paragraphs
+    expect(output).not.toContain('Mixed Completeness Status:');
+    expect(output).not.toContain('Multiple different cameras detected:');
+    expect(output).not.toContain('Location spread shows the photographer traveled');
+
+    // Integrity counts & matrix
+    expect(output).toContain('[Integrity Analysis]');
+    expect(output).toContain('Clean: 2 | Partially Stripped: 1 | Fully Stripped: 1');
+    expect(output).toContain('Complete Data');
+    expect(output).toContain('Contains Sensitive Data');
+    expect(output).toContain('Without Details');
+    expect(output).toContain('Unknown');
+
+    // Hardware table & summary
+    expect(output).toContain('[Hardware Analysis]');
+    expect(output).toContain('Consistent Hardware : No');
+    expect(output).toContain('Unique Devices      : Sony ILCE-7M4, Canon EOS R5, Nikon Z8');
+    expect(output).toContain('FE 24-70mm F2.8 GM II');
+    expect(output).toContain('SN-BODY-001');
+    expect(output).toContain('SN-LENS-999');
+
+    // Timeline bounds, duration units, time anomaly, missing assets
+    expect(output).toContain('[Timeline Analysis]');
+    expect(output).toContain('May 10, 2025');
+    expect(output).toContain('May 12, 2025');
+    expect(output).toContain('2 Days 1 Hours 15 Minutes 30 Seconds');
+    expect(output).toContain('[TIME ANOMALY]');
+    expect(output).toContain('Photos Lacking Time Data (2)');
+    expect(output).toContain('partial_hw_only.jpg');
+    expect(output).toContain('stripped_social.jpg');
+
+    // Geospatial adaptive meters/km, spread category, disclaimer, per-leg jumps
+    expect(output).toContain('[Geospatial Analysis]');
+    expect(output).toContain('617 m');
+    expect(output).toContain('850 m');
+    expect(output).toContain('Localized');
+    expect(output).toContain('*Estimated driving transit distance along road networks via OSRM.');
+    expect(output).toContain('day1_start.jpg -> (+617 m (~850 m via road)) day3|spot.jpg');
+  });
+
+  it('Given markdown format and id locale offline, When formatted, Then renders localized Markdown tables, escaped pipes, Indonesian labels, and offline displacement fallback', () => {
+    const collective = evaluateCollectiveIntelligence(mixedBatch);
+    const story = generateChronologicalBatchStory(mixedBatch, {
+      locale: 'id',
+      format: 'markdown',
+    });
+
+    const output = formatBatchOutput(
+      mixedBatch,
+      collective,
+      story,
+      { locale: 'id', format: 'markdown' },
+      null
+    );
+
+    const storyIdx = output.indexOf('## Kisah Kronologis');
+    const combinedIdx = output.indexOf('## Analisis Gabungan');
+    expect(storyIdx).toBeGreaterThan(-1);
+    expect(combinedIdx).toBeGreaterThan(storyIdx);
+
+    expect(output).toContain('- **Total Aset**: 4');
+    expect(output).toContain('## Peringatan Integritas Aset (4)');
+    expect(output).toContain('### Analisis Integritas');
+    expect(output).toContain('- **Bersih**: 2 | **Terhapus Sebagian**: 1 | **Terhapus Total**: 1');
+    expect(output).toContain('| Nama | Analisis Integritas | Perangkat Keras | GPS |');
+    expect(output).toContain('| day3\\|spot.jpg |');
+    expect(output).toContain('| day1_start.jpg | Data Lengkap | Sony | Ya |');
+    expect(output).toContain('| partial_hw_only.jpg | Mengandung Data Sensitif | Nikon | Tidak |');
+    expect(output).toContain('| stripped_social.jpg | Tanpa Detail | Tidak Diketahui | Tidak |');
+
+    expect(output).toContain('### Analisis Perangkat Keras');
+    expect(output).toContain('- **Perangkat Keras Konsisten**: Tidak');
+    expect(output).toContain('| Nama | Make | Model | Software | Lens Model | Body Serial | Lens Serial |');
+
+    expect(output).toContain('### Analisis Kronologi');
+    expect(output).toContain('Mei 2025');
+    expect(output).toContain('2 Hari 1 Jam 15 Menit 30 Detik');
+    expect(output).toContain('**[ANOMALI WAKTU]**');
+    expect(output).toContain('**Foto Tanpa Data Waktu (2)**');
+
+    expect(output).toContain('### Analisis Geospasial');
+    expect(output).toContain('- **Kategori Sebaran**: Lokal');
+    expect(output).not.toContain('Estimasi Rute Jalan');
+    expect(output).toContain('*Dihitung murni sebagai perpindahan garis lurus antara koordinat.');
+    expect(output).toContain('day1_start.jpg -> (+617 m) day3|spot.jpg');
+  });
+
+  it('Given empty timestamp and no-device batch with impossible speed, When formatted, Then renders null-safe dashes, None detected, and velocity anomaly warning', () => {
+    const teleportA: ForensicAsset = {
+      ...assetStrippedThree,
+      id: 'tele-a',
+      fileName: 'tele_a.jpg',
+      integrityAlerts: [],
+      exifData: {
+        DateTimeOriginal: '2025:05:10 10:00:00',
+        latitude: -6.2,
+        longitude: 106.8,
+      },
+    };
+    const teleportB: ForensicAsset = {
+      ...assetStrippedThree,
+      id: 'tele-b',
+      fileName: 'tele_b.jpg',
+      integrityAlerts: [],
+      exifData: {
+        DateTimeOriginal: '2025:05:10 10:01:00',
+        latitude: -7.2575,
+        longitude: 112.7521,
+      },
+    };
+    const noTimestampPair: ForensicAsset[] = [
+      { ...assetStrippedThree, id: 'nt-1', fileName: 'nt1.jpg' },
+      { ...assetStrippedThree, id: 'nt-2', fileName: 'nt2.jpg' },
+    ];
+
+    const nullCollective = evaluateCollectiveIntelligence(noTimestampPair);
+    const nullStory = generateChronologicalBatchStory(noTimestampPair, {
+      locale: 'en',
+      format: 'plain',
+    });
+    const nullOut = formatBatchOutput(noTimestampPair, nullCollective, nullStory, {
+      locale: 'en',
+      format: 'plain',
+    });
+    expect(nullOut).toContain('Unique Devices      : None detected');
+    expect(nullOut).toContain('Start of Capture        : -');
+    expect(nullOut).toContain('End of Capture          : -');
+    expect(nullOut).toContain('Spread Category                  : None');
+
+    const teleBatch = [teleportA, teleportB];
+    const teleCollective = evaluateCollectiveIntelligence(teleBatch);
+    const teleStory = generateChronologicalBatchStory(teleBatch, {
+      locale: 'en',
+      format: 'plain',
+    });
+    const teleOut = formatBatchOutput(teleBatch, teleCollective, teleStory, {
+      locale: 'en',
+      format: 'plain',
+    });
+    expect(teleOut).toContain('CRITICAL Velocity Anomaly');
+    expect(teleOut).toContain('tele_a.jpg -> (+');
+    expect(teleOut).toContain('km) tele_b.jpg');
+  });
+});
+
