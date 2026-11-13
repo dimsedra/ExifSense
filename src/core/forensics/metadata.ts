@@ -180,11 +180,7 @@ export function formatNaturalDate(
   const d = dateVal instanceof Date ? dateVal : parseExifDate(dateVal);
   if (!d || isNaN(d.getTime())) return 'Unknown';
 
-  const localeMap: Record<string, string> = {
-    id: 'id-ID',
-    en: 'en-US',
-  };
-  const targetLocale = localeMap[locale] || 'en-US';
+  const targetLocale = locale === 'id' ? 'id-ID' : 'en-US';
 
   const formatter = new Intl.DateTimeFormat(targetLocale, {
     weekday: 'long',

@@ -70,10 +70,6 @@ function formatReadableFileSize(bytes: number): string {
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 }
 
-const DATE_LOCALE_MAP: Record<string, string> = {
-  id: 'id-ID',
-};
-
 function formatFileModifiedDate(fileDate: number | undefined, locale: string): string {
   if (fileDate == null || !Number.isFinite(fileDate) || fileDate <= 0) {
     return translate('unknown', {}, locale, 'reports');
@@ -82,7 +78,7 @@ function formatFileModifiedDate(fileDate: number | undefined, locale: string): s
   if (Number.isNaN(parsedDate.getTime())) {
     return translate('unknown', {}, locale, 'reports');
   }
-  const localeCode = DATE_LOCALE_MAP[locale] ?? 'en-US';
+  const localeCode = locale === 'id' ? 'id-ID' : 'en-US';
   return parsedDate.toLocaleString(localeCode);
 }
 

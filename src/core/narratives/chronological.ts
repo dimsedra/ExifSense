@@ -597,7 +597,7 @@ export function generateChronologicalBatchStory(
   assets: ForensicAsset[],
   options?: ChronologicalStoryOptions,
 ): ChronologicalBatchStory {
-  const locale: SupportedLocale = options?.locale || 'en';
+  const locale: SupportedLocale = options?.locale === 'id' ? 'id' : 'en';
   const format: 'html' | 'markdown' | 'plain' = options?.format || 'html';
 
   const nodes = parseChronologicalEvents(assets);

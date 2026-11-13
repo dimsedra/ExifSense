@@ -3402,10 +3402,7 @@ function formatFullDate(dateVal) {
 function formatNaturalDate(dateVal, locale = "en") {
 	const d = dateVal instanceof Date ? dateVal : parseExifDate(dateVal);
 	if (!d || isNaN(d.getTime())) return "Unknown";
-	const targetLocale = {
-		id: "id-ID",
-		en: "en-US"
-	}[locale] || "en-US";
+	const targetLocale = locale === "id" ? "id-ID" : "en-US";
 	let str = new Intl.DateTimeFormat(targetLocale, {
 		weekday: "long",
 		day: "numeric",
@@ -4848,8 +4845,12 @@ const LOCALES$1 = {
 * Translates a key with parameter substitution and strips HTML tags to produce pure plain text.
 */
 function translate(key, params = {}, locale = "en", section = "narratives") {
-	const activeLocale = locale in LOCALES$1 ? locale : "en";
-	let template = (LOCALES$1[activeLocale]?.[section] || LOCALES$1.en[section] || {})[key] || LOCALES$1.en[section]?.[key] || key;
+	const activeLocale = locale === "id" ? "id" : "en";
+	const dictionary = Object.hasOwn(LOCALES$1[activeLocale], section) ? LOCALES$1[activeLocale][section] : {};
+	const fallbackDictionary = Object.hasOwn(LOCALES$1.en, section) ? LOCALES$1.en[section] : {};
+	let template = key;
+	if (Object.hasOwn(dictionary, key)) template = dictionary[key];
+	else if (Object.hasOwn(fallbackDictionary, key)) template = fallbackDictionary[key];
 	for (const [k, v] of Object.entries(params)) template = template.replace(new RegExp(`\\{${k}\\}`, "g"), () => String(v ?? ""));
 	return template.replace(/<br\s*\/?>/gi, "\n").replace(/<\/div>/gi, "\n").replace(/<[^>]*>/g, "").trim();
 }
@@ -5111,12 +5112,11 @@ function formatReadableFileSize(bytes) {
 	if (bytes < 1048576) return `${(bytes / 1024).toFixed(1)} KB`;
 	return `${(bytes / 1048576).toFixed(2)} MB`;
 }
-const DATE_LOCALE_MAP = { id: "id-ID" };
 function formatFileModifiedDate(fileDate, locale) {
 	if (fileDate == null || !Number.isFinite(fileDate) || fileDate <= 0) return translate("unknown", {}, locale, "reports");
 	const parsedDate = new Date(fileDate);
 	if (Number.isNaN(parsedDate.getTime())) return translate("unknown", {}, locale, "reports");
-	const localeCode = DATE_LOCALE_MAP[locale] ?? "en-US";
+	const localeCode = locale === "id" ? "id-ID" : "en-US";
 	return parsedDate.toLocaleString(localeCode);
 }
 function formatSingleOutput(asset, options) {
@@ -5958,7 +5958,7 @@ function buildSubsequentStep(curr, prev, stepIndex, locale, format, roadDistMete
 * Synthesizes a sequential, chronological batch narrative across multiple forensic assets (BP-NARRATIVE-003).
 */
 function generateChronologicalBatchStory(assets, options) {
-	const locale = options?.locale || "en";
+	const locale = options?.locale === "id" ? "id" : "en";
 	const format = options?.format || "html";
 	const nodes = parseChronologicalEvents(assets);
 	const baseline = buildBaseline(nodes, locale, format, options?.totalRoadDistance);

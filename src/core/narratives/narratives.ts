@@ -18,10 +18,20 @@ export function translate(
   locale: string = 'en',
   section: string = 'narratives'
 ): string {
-  const activeLocale: SupportedLocale =
-    locale in LOCALES ? (locale as SupportedLocale) : 'en';
-  const dictionary = LOCALES[activeLocale]?.[section] || LOCALES.en[section] || {};
-  let template = dictionary[key] || LOCALES.en[section]?.[key] || key;
+  const activeLocale: SupportedLocale = locale === 'id' ? 'id' : 'en';
+  const dictionary = Object.hasOwn(LOCALES[activeLocale], section)
+    ? LOCALES[activeLocale][section]!
+    : {};
+  const fallbackDictionary = Object.hasOwn(LOCALES.en, section)
+    ? LOCALES.en[section]!
+    : {};
+
+  let template = key;
+  if (Object.hasOwn(dictionary, key)) {
+    template = dictionary[key]!;
+  } else if (Object.hasOwn(fallbackDictionary, key)) {
+    template = fallbackDictionary[key]!;
+  }
 
   for (const [k, v] of Object.entries(params)) {
     template = template.replace(new RegExp(`\\{${k}\\}`, 'g'), () => String(v ?? ''));
