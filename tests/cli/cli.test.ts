@@ -477,4 +477,159 @@ describe('CLI Analysis and Simulation Harness', () => {
       }
     });
   });
+
+  // ==========================================
+  // BP-PARITY-001: Single-Asset Reverse Geocoding Enrichment
+  // ==========================================
+  describe('BP-PARITY-001: Single-Asset Reverse Geocoding', () => {
+    it('preserves locationName and locationData when present in JSON asset', async () => {
+      const jsonWithLocation = path.join(tempDir, 'with-location.json');
+      await fs.promises.writeFile(
+        jsonWithLocation,
+        JSON.stringify({
+          fileName: 'preloaded.jpg',
+          exifData: { latitude: 55.86449, longitude: -4.42989 },
+          locationName: 'Paisley, Renfrewshire, Scotland',
+          locationData: { display_name: 'Paisley, Renfrewshire, Scotland' },
+        }),
+        'utf8'
+      );
+
+      const asset = await loadAssetSource(jsonWithLocation);
+      expect(asset.locationName).toBe('Paisley, Renfrewshire, Scotland');
+      expect(asset.locationData?.display_name).toBe('Paisley, Renfrewshire, Scotland');
+    });
+
+    it('enriches single-asset CLI output with resolved Nominatim place name when online', async () => {
+      const originalFetch = globalThis.fetch;
+      const { clearGeocodeCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+
+      globalThis.fetch = (async () => {
+        return {
+          ok: true,
+          json: async () => ({
+            display_name: 'Luss, Argyll and Bute, Scotland',
+            address: { village: 'Luss' },
+          }),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const result = await runCli(['scenario', 'baseline']);
+        expect(result.success).toBe(true);
+        expect(result.exitCode).toBe(0);
+        expect(result.outputText).toContain('Luss, Argyll and Bute, Scotland');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+      }
+    });
+
+    it('falls back gracefully to coordinates when Nominatim is offline during single run', async () => {
+      const originalFetch = globalThis.fetch;
+      const { clearGeocodeCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+
+      globalThis.fetch = (async () => {
+        throw new Error('Offline');
+      }) as typeof fetch;
+
+      try {
+        const result = await runCli(['scenario', 'baseline']);
+        expect(result.success).toBe(true);
+        expect(result.exitCode).toBe(0);
+        expect(result.outputText).toContain('55.86449');
+        expect(result.outputText).toContain('-4.42989');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+      }
+    });
+  });
+
+  // ==========================================
+  // BP-PARITY-004: End-to-End Single-Asset Web Parity
+  // ==========================================
+  describe('BP-PARITY-004: End-to-End Single-Asset Web Parity', () => {
+    it('outputs complete file info, 7 narratives, and 8 raw categories for missing-gps in id markdown mode', async () => {
+      const result = await runCli([
+        'scenario',
+        'missing-gps',
+        '--locale',
+        'id',
+        '--format',
+        'markdown',
+      ]);
+
+      expect(result.success).toBe(true);
+      expect(result.exitCode).toBe(0);
+      expect(result.outputText).toContain('# ExifSense Forensic Analysis');
+      expect(result.outputText).toContain('**Sistem File (Terakhir Dimodifikasi)**');
+      expect(result.outputText).toContain('### Analisis Integritas');
+      expect(result.outputText).toContain('### Analisis Geospasial');
+      expect(result.outputText).toContain('### Analisis Perangkat Keras');
+      expect(result.outputText).toContain('### Analisis Eksposur');
+      expect(result.outputText).toContain('### Analisis Optik');
+      expect(result.outputText).toContain('### Analisis Kualitas');
+      expect(result.outputText).toContain('### Analisis Kronologi');
+      expect(result.outputText).toContain('Tidak ada data lokasi (GPS)');
+      expect(result.outputText).toContain('## Categorized EXIF Metadata');
+      expect(result.outputText).toContain('### Perangkat Keras');
+      expect(result.outputText).toContain('### Pengaturan Eksposur');
+      expect(result.outputText).toContain('### Optik & Lensa');
+      expect(result.outputText).toContain('### Kualitas Gambar');
+      expect(result.outputText).toContain('### Kronologi & Waktu');
+      expect(result.outputText).toContain('### Geospasial');
+      expect(result.outputText).toContain('### Standar & Info');
+      expect(result.outputText).toContain('### Lain-lain');
+      expect(result.outputText).toContain('G P S Latitude Ref');
+    });
+
+    it('outputs complete single-asset JPEG analysis with Nominatim place name and 8 raw categories', async () => {
+      const originalFetch = globalThis.fetch;
+      const { clearGeocodeCache } = await import('../../src/services/mapHelpers');
+      clearGeocodeCache();
+
+      globalThis.fetch = (async () => {
+        return {
+          ok: true,
+          json: async () => ({
+            display_name: 'Glasgow, Scotland, United Kingdom',
+            address: { city: 'Glasgow' },
+          }),
+        } as unknown as Response;
+      }) as typeof fetch;
+
+      try {
+        const result = await runCli(['single', sampleJpegPath, '--locale', 'en']);
+        expect(result.success).toBe(true);
+        expect(result.exitCode).toBe(0);
+        expect(result.outputText).toContain('File System (Last Modified)');
+        expect(result.outputText).toContain('Glasgow, Scotland, United Kingdom');
+        expect(result.outputText).toContain('[Integrity Analysis]');
+        expect(result.outputText).toContain('[Geospatial Analysis]');
+        expect(result.outputText).toContain('[Hardware Analysis]');
+        expect(result.outputText).toContain('[Exposure Analysis]');
+        expect(result.outputText).toContain('[Optics Analysis]');
+        expect(result.outputText).toContain('[Quality Analysis]');
+        expect(result.outputText).toContain('[Timeline Analysis]');
+        expect(result.outputText).toContain('--- Categorized EXIF Metadata ---');
+        expect(result.outputText).toContain('[Device Hardware]');
+        expect(result.outputText).toContain('[Exposure Settings]');
+        expect(result.outputText).toContain('[Optics & Lens]');
+        expect(result.outputText).toContain('[Image Quality]');
+        expect(result.outputText).toContain('[Timeline & Date]');
+        expect(result.outputText).toContain('[Geospatial]');
+        expect(result.outputText).toContain('[Standards & Info]');
+        expect(result.outputText).toContain('[Miscellaneous]');
+        expect(result.outputText).toContain('Google');
+        expect(result.outputText).toContain('Pixel 6');
+        expect(result.outputText).toContain('No standard data tags were found in this category.');
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearGeocodeCache();
+      }
+    });
+  });
 });

@@ -7,7 +7,12 @@ import { formatSingleOutput, formatBatchOutput, formatHashOutput } from './forma
 import { evaluateCollectiveIntelligence } from '../core/forensics/collective';
 import { generateChronologicalBatchStory } from '../core/narratives/chronological';
 import { parseExifDate } from '../core/forensics/metadata';
-import { fetchOsrmRouteDetails, type OsrmRouteDetails } from '../services/mapHelpers';
+import {
+  fetchOsrmRouteDetails,
+  isValidCoordinate,
+  resolveLocationWithPacing,
+  type OsrmRouteDetails,
+} from '../services/mapHelpers';
 import type { ForensicAsset } from '../core/forensics/types';
 
 export interface CliExecutionResult {
@@ -50,6 +55,29 @@ export async function runCli(argv: string[]): Promise<CliExecutionResult> {
   }
 }
 
+async function enrichSingleAssetLocation(asset: ForensicAsset): Promise<ForensicAsset> {
+  if (asset.locationName || typeof asset.locationData?.display_name === 'string') {
+    return asset;
+  }
+
+  const lat = asset.exifData?.latitude ?? asset.exifData?.GPSLatitude;
+  const lng = asset.exifData?.longitude ?? asset.exifData?.GPSLongitude;
+  if (!isValidCoordinate(lat, lng)) {
+    return asset;
+  }
+
+  const locData = await resolveLocationWithPacing(Number(lat), Number(lng));
+  if (!locData?.display_name) {
+    return asset;
+  }
+
+  return {
+    ...asset,
+    locationData: locData,
+    locationName: locData.display_name,
+  };
+}
+
 async function executeCommand(command: CliParsedCommand): Promise<CliExecutionResult> {
   if (command.command === 'help') {
     process.stdout.write(`${HELP_TEXT}\n`);
@@ -63,7 +91,8 @@ async function executeCommand(command: CliParsedCommand): Promise<CliExecutionRe
 
   if (command.command === 'single') {
     const asset = await loadAssetSource(command.targetPath);
-    const outputText = formatSingleOutput(asset, command.options);
+    const enriched = await enrichSingleAssetLocation(asset);
+    const outputText = formatSingleOutput(enriched, command.options);
     await deliverOutput(outputText, command.options.out);
     return { success: true, exitCode: 0, outputText };
   }
@@ -90,7 +119,8 @@ async function executeCommand(command: CliParsedCommand): Promise<CliExecutionRe
     if (Array.isArray(result)) {
       outputText = await processBatchAssets(result, command.options);
     } else {
-      outputText = formatSingleOutput(result, command.options);
+      const enriched = await enrichSingleAssetLocation(result);
+      outputText = formatSingleOutput(enriched, command.options);
     }
     await deliverOutput(outputText, command.options.out);
     return { success: true, exitCode: 0, outputText };

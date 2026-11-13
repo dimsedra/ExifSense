@@ -1,7 +1,13 @@
-import type { ForensicAsset, CollectiveIntelligenceResult } from '../core/forensics/types';
+import type {
+  ForensicAsset,
+  CollectiveIntelligenceResult,
+  ExifCategory,
+} from '../core/forensics/types';
 import type { ChronologicalBatchStory } from '../core/narratives/types';
 import type { OsrmRouteDetails } from '../services/mapHelpers';
 import type { FileHashResult } from './hasher';
+import { isValidCoordinate } from '../services/mapHelpers';
+import { formatExifValue, formatLabel } from '../core/forensics/metadata';
 import {
   generateHardwareNarrative,
   generateIntegrityNarrative,
@@ -11,93 +17,192 @@ import {
   generateTimelineNarrative,
   generateGeospatialNarrative,
   generateCollectiveNarratives,
+  translate,
 } from '../core/narratives/narratives';
-import type { CliOptions } from './args';
+import type { CliOptions, SupportedFormat } from './args';
+
+const RAW_METADATA_CATEGORIES: Array<{ id: ExifCategory; catKey: string }> = [
+  { id: 'Device Hardware', catKey: 'cat_hardware' },
+  { id: 'Exposure Settings', catKey: 'cat_exposure' },
+  { id: 'Optics & Lens', catKey: 'cat_optics' },
+  { id: 'Image Quality', catKey: 'cat_quality' },
+  { id: 'Timeline & Date', catKey: 'cat_timeline' },
+  { id: 'Geospatial', catKey: 'cat_geospatial' },
+  { id: 'Standards & Info', catKey: 'cat_standards' },
+  { id: 'Miscellaneous', catKey: 'cat_misc' },
+];
+
+function escapeMarkdownCell(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/[\r\n]+/g, ' ');
+}
+
+function formatCategoryEntries(
+  entries: Array<[string, unknown]>,
+  format: SupportedFormat,
+  locale: string
+): string[] {
+  if (entries.length === 0) {
+    return [translate('no_metadata_tags', {}, locale, 'narratives')];
+  }
+
+  const formattedRows = entries.map(([key, val]) => ({
+    label: formatLabel(key),
+    value: formatExifValue(key, val, locale),
+  }));
+
+  if (format === 'markdown') {
+    const propHeader = translate('property', {}, locale, 'ui');
+    const valHeader = translate('value', {}, locale, 'ui');
+    const tableLines = [`| ${propHeader} | ${valHeader} |`, '| --- | --- |'];
+    for (const row of formattedRows) {
+      tableLines.push(`| ${escapeMarkdownCell(row.label)} | ${escapeMarkdownCell(row.value)} |`);
+    }
+    return tableLines;
+  }
+
+  const maxKeyWidth = Math.max(...formattedRows.map((row) => row.label.length));
+  return formattedRows.map((row) => `  ${row.label.padEnd(maxKeyWidth)} : ${row.value}`);
+}
+
+function formatReadableFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+}
+
+const DATE_LOCALE_MAP: Record<string, string> = {
+  id: 'id-ID',
+  ar: 'ar-SA',
+};
+
+function formatFileModifiedDate(fileDate: number | undefined, locale: string): string {
+  if (fileDate == null || !Number.isFinite(fileDate) || fileDate <= 0) {
+    return translate('unknown', {}, locale, 'reports');
+  }
+  const parsedDate = new Date(fileDate);
+  if (Number.isNaN(parsedDate.getTime())) {
+    return translate('unknown', {}, locale, 'reports');
+  }
+  const localeCode = DATE_LOCALE_MAP[locale] ?? 'en-US';
+  return parsedDate.toLocaleString(localeCode);
+}
 
 export function formatSingleOutput(asset: ForensicAsset, options?: CliOptions): string {
   const locale = options?.locale || 'en';
-  const isMarkdown = options?.format === 'markdown';
-
+  const format: SupportedFormat = options?.format === 'markdown' ? 'markdown' : 'plain';
+  const isMarkdown = format === 'markdown';
   const lines: string[] = [];
+
+  const fileNameLabel = translate('file_name', {}, locale, 'ui');
+  const fileTypeLabel = translate('file_type', {}, locale, 'ui');
+  const fileSizeLabel = translate('file_size', {}, locale, 'ui');
+  const fileDateLabel = translate('file_date', {}, locale, 'ui');
+  const unknownText = translate('unknown', {}, locale, 'reports');
+  const formattedSize = `${formatReadableFileSize(asset.fileSize)} (${asset.fileSize} bytes)`;
+  const formattedDate = formatFileModifiedDate(asset.fileDate, locale);
+  const dimensions = `${asset.actualWidth ?? unknownText} x ${asset.actualHeight ?? unknownText}`;
+
+  const headerRows: Array<[string, string]> = [
+    [fileNameLabel, asset.fileName],
+    [fileTypeLabel, asset.fileType || unknownText],
+    [fileSizeLabel, formattedSize],
+    [fileDateLabel, formattedDate],
+    ['Dimensions', dimensions],
+    ['SHA-256', asset.sha256],
+    ['SHA-1', asset.sha1],
+  ];
 
   if (isMarkdown) {
     lines.push('# ExifSense Forensic Analysis');
-    lines.push(`- **File Name**: ${asset.fileName}`);
-    lines.push(`- **File Size**: ${asset.fileSize} bytes`);
-    lines.push(`- **Format**: ${asset.fileType}`);
-    lines.push(`- **Dimensions**: ${asset.actualWidth ?? 'Unknown'} x ${asset.actualHeight ?? 'Unknown'}`);
-    lines.push(`- **SHA-256**: \`${asset.sha256}\``);
-    lines.push(`- **SHA-1**: \`${asset.sha1}\``);
+    for (const [label, value] of headerRows) {
+      const safeVal = value.replace(/[\r\n]+/g, ' ');
+      const formattedVal = label === 'SHA-256' || label === 'SHA-1' ? `\`${safeVal}\`` : safeVal;
+      lines.push(`- **${label}**: ${formattedVal}`);
+    }
     lines.push('');
   } else {
     lines.push('=== ExifSense Forensic Analysis ===');
-    lines.push(`File Name  : ${asset.fileName}`);
-    lines.push(`File Size  : ${asset.fileSize} bytes`);
-    lines.push(`Format     : ${asset.fileType}`);
-    lines.push(`Dimensions : ${asset.actualWidth ?? 'Unknown'} x ${asset.actualHeight ?? 'Unknown'}`);
-    lines.push(`SHA-256    : ${asset.sha256}`);
-    lines.push(`SHA-1      : ${asset.sha1}`);
+    const maxLabelWidth = Math.max(...headerRows.map(([label]) => label.length));
+    for (const [label, value] of headerRows) {
+      lines.push(`${label.padEnd(maxLabelWidth)} : ${value}`);
+    }
     lines.push('');
   }
 
   // Integrity alerts
   const alertCount = asset.integrityAlerts.length;
-  if (isMarkdown) {
-    lines.push(`## Integrity Alerts (${alertCount})`);
-  } else {
-    lines.push(`--- Integrity Alerts (${alertCount}) ---`);
-  }
+  lines.push(
+    isMarkdown ? `## Integrity Alerts (${alertCount})` : `--- Integrity Alerts (${alertCount}) ---`
+  );
 
   if (alertCount === 0) {
     lines.push('No integrity anomalies detected.');
   } else {
     for (const alert of asset.integrityAlerts) {
-      const severityTag = `[${alert.severity.toUpperCase()}]`;
-      lines.push(`${severityTag} ${alert.defaultMessage}`);
+      lines.push(`[${alert.severity.toUpperCase()}] ${alert.defaultMessage}`);
     }
   }
   lines.push('');
 
-  // Forensic narratives
-  if (isMarkdown) {
-    lines.push('## Forensic Narrative');
-  } else {
-    lines.push('--- Forensic Narrative ---');
-  }
+  // Forensic narratives (7 sections matching Web ExpertAnalysisTabs order)
+  lines.push(isMarkdown ? '## Forensic Narrative' : '--- Forensic Narrative ---');
 
-  const hw = asset.categorizedExif?.['Device Hardware'] || asset.exifData || {};
-  const exp = asset.categorizedExif?.['Exposure Settings'] || asset.exifData || {};
-  const optics = asset.categorizedExif?.['Optics & Lens'] || asset.exifData || {};
-  const quality = asset.categorizedExif?.['Image Quality'] || asset.exifData || {};
-  const timeline = asset.categorizedExif?.['Timeline & Date'] || asset.exifData || {};
-
-  const lat = typeof asset.exifData?.latitude === 'number' ? asset.exifData.latitude : null;
-  const lon = typeof asset.exifData?.longitude === 'number' ? asset.exifData.longitude : null;
-  const geoText = (lat !== null && lon !== null)
-    ? generateGeospatialNarrative(lat, lon, asset.locationName ?? null, locale)
-    : '';
+  const exif = (asset.exifData || {}) as Record<string, unknown>;
+  const rawLat = exif.latitude ?? exif.GPSLatitude;
+  const rawLng = exif.longitude ?? exif.GPSLongitude;
+  const hasGps = isValidCoordinate(rawLat, rawLng);
+  const latNum = hasGps ? Number(rawLat) : NaN;
+  const lngNum = hasGps ? Number(rawLng) : NaN;
+  const locName = (asset.locationData?.display_name as string) || asset.locationName || null;
 
   const narrativeSections = [
-    { title: 'Hardware', text: generateHardwareNarrative(hw, locale) },
-    { title: 'Integrity', text: generateIntegrityNarrative(asset, locale) },
-    { title: 'Exposure', text: generateExposureNarrative(exp, locale) },
-    { title: 'Optics', text: generateOpticsNarrative(optics, locale) },
-    { title: 'Quality', text: generateQualityNarrative(quality, locale) },
-    { title: 'Timeline', text: generateTimelineNarrative(timeline, locale) },
-    { title: 'Geospatial', text: geoText },
+    {
+      title: translate('analysis_integrity', {}, locale, 'ui'),
+      text: generateIntegrityNarrative(asset, locale),
+    },
+    {
+      title: translate('analysis_geospatial', {}, locale, 'ui'),
+      text: generateGeospatialNarrative(latNum, lngNum, locName, locale),
+    },
+    {
+      title: translate('analysis_hardware', {}, locale, 'ui'),
+      text: generateHardwareNarrative(exif, locale),
+    },
+    {
+      title: translate('analysis_exposure', {}, locale, 'ui'),
+      text: generateExposureNarrative(exif, locale),
+    },
+    {
+      title: translate('analysis_optics', {}, locale, 'ui'),
+      text: generateOpticsNarrative(exif, locale),
+    },
+    {
+      title: translate('analysis_quality', {}, locale, 'ui'),
+      text: generateQualityNarrative(exif, locale),
+    },
+    {
+      title: translate('analysis_timeline', {}, locale, 'ui'),
+      text: generateTimelineNarrative(exif, locale),
+    },
   ];
 
   for (const sec of narrativeSections) {
-    if (!sec.text) continue;
-    if (isMarkdown) {
-      lines.push(`### ${sec.title}`);
-      lines.push(sec.text);
-      lines.push('');
-    } else {
-      lines.push(`[${sec.title}]`);
-      lines.push(sec.text);
-      lines.push('');
-    }
+    lines.push(isMarkdown ? `### ${sec.title}` : `[${sec.title}]`);
+    lines.push(sec.text);
+    lines.push('');
+  }
+
+  // Categorized EXIF metadata (8 groups matching Web ExpertAnalysisTabs order)
+  lines.push(isMarkdown ? '## Categorized EXIF Metadata' : '--- Categorized EXIF Metadata ---');
+
+  for (const cat of RAW_METADATA_CATEGORIES) {
+    const catTitle = translate(cat.catKey, {}, locale, 'ui');
+    const rawData = asset.categorizedExif?.[cat.id] || {};
+    const entries = Object.entries(rawData);
+
+    lines.push(isMarkdown ? `### ${catTitle}` : `[${catTitle}]`);
+    lines.push(...formatCategoryEntries(entries, format, locale));
+    lines.push('');
   }
 
   return lines.join('\n').trim();

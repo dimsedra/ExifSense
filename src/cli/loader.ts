@@ -73,8 +73,12 @@ function mapRawObjectToAsset(
     ? (raw.exifData as Record<string, unknown>)
     : raw;
 
-  const actualWidth = typeof raw.actualWidth === 'number' ? raw.actualWidth : null;
-  const actualHeight = typeof raw.actualHeight === 'number' ? raw.actualHeight : null;
+  const fallbackWidth = exifData.ImageWidth ?? exifData.PixelXDimension ?? exifData.ExifImageWidth;
+  const fallbackHeight = exifData.ImageHeight ?? exifData.PixelYDimension ?? exifData.ExifImageHeight;
+  const resolvedWidth = typeof raw.actualWidth === 'number' ? raw.actualWidth : fallbackWidth;
+  const resolvedHeight = typeof raw.actualHeight === 'number' ? raw.actualHeight : fallbackHeight;
+  const actualWidth = typeof resolvedWidth === 'number' ? resolvedWidth : null;
+  const actualHeight = typeof resolvedHeight === 'number' ? resolvedHeight : null;
   const sha256 = typeof raw.sha256 === 'string' ? raw.sha256 : (fallbackSha256 ?? '0000000000000000000000000000000000000000000000000000000000000000');
   const sha1 = typeof raw.sha1 === 'string' ? raw.sha1 : (fallbackSha1 ?? '0000000000000000000000000000000000000000');
   const id = typeof raw.id === 'string' ? raw.id : generateForensicId();
@@ -90,6 +94,13 @@ function mapRawObjectToAsset(
   };
   const integrityAlerts = evaluateSingleAssetIntegrity(singleInput);
 
+  const locationName =
+    typeof raw.locationName === 'string' && raw.locationName ? raw.locationName : undefined;
+  const locationData =
+    raw.locationData && typeof raw.locationData === 'object' && !Array.isArray(raw.locationData)
+      ? (raw.locationData as Record<string, unknown>)
+      : undefined;
+
   return {
     id,
     fileName,
@@ -103,6 +114,8 @@ function mapRawObjectToAsset(
     exifData,
     categorizedExif,
     integrityAlerts,
+    locationName,
+    locationData,
   };
 }
 
