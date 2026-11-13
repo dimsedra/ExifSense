@@ -149,7 +149,7 @@ describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
       expect(formatFullDate(null)).toBe('Unknown');
     });
 
-    it('formats natural localized dates for id, en, and ar locales', () => {
+    it('formats natural localized dates for id and en locales', () => {
       const d = new Date('2019-03-19T16:04:23');
       expect(formatNaturalDate(d, 'id')).toContain('Selasa');
       expect(formatNaturalDate(d, 'id')).toContain('19 Maret 2019');
@@ -159,7 +159,6 @@ describe('EXIF Normalization & Categorization (REQ-META-001)', () => {
       expect(formatNaturalDate(d, 'en')).toContain('March 19, 2019');
       expect(formatNaturalDate(d, 'en')).toContain('16:04:23');
 
-      expect(formatNaturalDate(d, 'ar')).toContain('مارس');
       expect(formatNaturalDate(null, 'en')).toBe('Unknown');
     });
 

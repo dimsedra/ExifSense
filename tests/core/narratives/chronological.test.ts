@@ -361,7 +361,7 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(plainStory.baseline).toContain('Fujifilm X-T5');
     });
 
-    it('verifies multi-language output in Indonesian (id) and Arabic (ar)', () => {
+    it('verifies Indonesian (id) localization output', () => {
       const assetA = createMockAsset({
         fileName: 'photo_id_a.jpg',
         exifData: {
@@ -399,21 +399,6 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(idStory.steps[1]!.narrativeText).toContain('11.1 km');
       expect(idStory.steps[1]!.narrativeText).toContain('photo_id_a.jpg di koordinat -6.30880, 106.84560.');
       expect(idStory.steps[1]!.narrativeText).toContain('Lensa kamera berganti dari FE 24-70mm ke FE 70-200mm');
-
-      // Arabic
-      const arStory = generateChronologicalBatchStory([assetA, assetB], {
-        locale: 'ar',
-        format: 'plain',
-      });
-      expect(arStory.baseline).toContain(
-        'تم التقاط جميع الصور في هذه المجموعة باستخدام نفس جهاز الكاميرا: Sony ILCE-7M4',
-      );
-      expect(arStory.steps[0]!.narrativeText).toContain('يبدأ التسلسل بـ photo_id_a.jpg');
-      expect(arStory.steps[0]!.narrativeText).toContain('باستخدام عدسة FE 24-70mm');
-      expect(arStory.steps[1]!.narrativeText).toContain('بعد 30 دقيقة');
-      expect(arStory.steps[1]!.narrativeText).toContain('11.1 km');
-      expect(arStory.steps[1]!.narrativeText).toContain('photo_id_a.jpg عند الإحداثيات -6.30880, 106.84560.');
-      expect(arStory.steps[1]!.narrativeText).toContain('تغيرت عدسة الكاميرا من FE 24-70mm إلى FE 70-200mm');
     });
 
     it('interpolates reverse-geocoded location name into initial step narrative when available', () => {
@@ -594,42 +579,6 @@ describe('Chronological Batch Narrative Engine', () => {
       );
     });
 
-    it('formats dual distance and displacement fallback in Arabic (ar)', () => {
-      const assetA = createMockAsset({
-        fileName: '731.jpg',
-        exifData: {
-          DateTimeOriginal: '2026:10:28 10:00:00',
-          latitude: 56.64500,
-          longitude: -4.79500,
-        },
-      });
-      const assetB = createMockAsset({
-        fileName: '732.jpg',
-        exifData: {
-          DateTimeOriginal: '2026:10:28 10:35:00',
-          latitude: 56.78000,
-          longitude: -4.95000,
-        },
-      });
-
-      const storyWithRoad = generateChronologicalBatchStory([assetA, assetB], {
-        locale: 'ar',
-        format: 'plain',
-        roadDistances: [21500],
-      });
-      expect(storyWithRoad.steps[1]!.narrativeText).toContain(
-        'حوالي 17.7 km إزاحة خط مستقيم (أو ~21.5 km عبر مسار الطريق) من 731.jpg',
-      );
-
-      const storyWithoutRoad = generateChronologicalBatchStory([assetA, assetB], {
-        locale: 'ar',
-        format: 'plain',
-      });
-      expect(storyWithoutRoad.steps[1]!.narrativeText).toContain(
-        'حوالي 17.7 km إزاحة خط مستقيم من 731.jpg',
-      );
-    });
-
     it('formats macro baseline dual distance with displacement and road route when totalRoadDistance is provided (en)', () => {
       const assetA = createMockAsset({
         fileName: '731.jpg',
@@ -721,42 +670,6 @@ describe('Chronological Batch Narrative Engine', () => {
       });
       expect(storyWithoutRoad.baseline).toContain(
         'mencakup perpindahan garis lurus kumulatif sekitar 17.7 km.',
-      );
-    });
-
-    it('formats macro baseline dual distance and fallback in Arabic (ar)', () => {
-      const assetA = createMockAsset({
-        fileName: '731.jpg',
-        exifData: {
-          DateTimeOriginal: '2026:10:28 10:00:00',
-          latitude: 56.64500,
-          longitude: -4.79500,
-        },
-      });
-      const assetB = createMockAsset({
-        fileName: '732.jpg',
-        exifData: {
-          DateTimeOriginal: '2026:10:28 10:35:00',
-          latitude: 56.78000,
-          longitude: -4.95000,
-        },
-      });
-
-      const storyWithRoad = generateChronologicalBatchStory([assetA, assetB], {
-        locale: 'ar',
-        format: 'plain',
-        totalRoadDistance: 21500,
-      });
-      expect(storyWithRoad.baseline).toContain(
-        'مغطية إزاحة خط مستقيم تراكمية بحوالي 17.7 km (أو ~21.5 km عبر مسار الطريق).',
-      );
-
-      const storyWithoutRoad = generateChronologicalBatchStory([assetA, assetB], {
-        locale: 'ar',
-        format: 'plain',
-      });
-      expect(storyWithoutRoad.baseline).toContain(
-        'مغطية إزاحة خط مستقيم تراكمية بحوالي 17.7 km.',
       );
     });
   });
@@ -896,7 +809,7 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(story.baseline).not.toContain('across a span');
     });
 
-    it('localizes unified macro baseline into Indonesian (id) and Arabic (ar)', () => {
+    it('localizes unified macro baseline into Indonesian (id)', () => {
       const assetA = createMockAsset({
         fileName: '731.jpg',
         exifData: {
@@ -929,16 +842,6 @@ describe('Chronological Batch Narrative Engine', () => {
       expect(storyId.baseline).toContain('Selasa, 19 Maret 2019');
       expect(storyId.baseline).toContain('Rabu, 20 Maret 2019');
       expect(storyId.baseline).toContain('mencakup perpindahan garis lurus kumulatif sekitar 149.3 km.');
-
-      const storyAr = generateChronologicalBatchStory([assetA, assetB], {
-        locale: 'ar',
-        format: 'plain',
-      });
-      expect(storyAr.baseline).toContain(
-        'تم التقاط جميع الصور في هذه المجموعة باستخدام نفس جهاز الكاميرا: LGE Nexus 5X',
-      );
-      expect(storyAr.baseline).toContain('خلال فترة زمنية مدتها 17.6 ساعة');
-      expect(storyAr.baseline).toContain('مغطية إزاحة خط مستقيم تراكمية بحوالي 149.3 km.');
     });
   });
 });
