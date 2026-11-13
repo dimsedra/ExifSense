@@ -12,6 +12,7 @@ Catalog of technical documentation and design references for ExifSense.
 - [Intent: CLI File Hash Inspection for Forensic Integrity](./intent/20261105_cli_file_hash_inspection.md) — Dedicated lightweight CLI hashing command to record baseline pre-analysis hashes and verify post-analysis file immutability without external tools.
 - [Intent: CLI Single-Asset Web Parity](./intent/20261114_cli_single_analysis_web_parity.md) — Aligning `exifsense single` output 1:1 with the Web single-asset dashboard across all 7 narratives, live Nominatim place name resolution, file info, and all 8 categorized raw EXIF groups.
 - [Intent: Drop Arabic Locale and RTL Support](./intent/20261114_drop_arabic_locale_and_rtl.md) — Restricting localization strictly to English (`en`) and Bahasa Indonesia (`id`) and removing all Arabic translations and RTL layout scaffolding.
+- [Intent: CLI Batch Analysis Web Parity](./intent/20261114_cli_batch_analysis_web_parity.md) — Aligning `exifsense batch` and batch `scenario` output 1:1 with the Web batch dashboard across live Nominatim reverse geocoding, Chronological Story, Combined Analysis evidence tables, localization, and an opt-in `--detailed` flag.
 
 ## Blueprint
 
@@ -22,6 +23,7 @@ Catalog of technical documentation and design references for ExifSense.
 - [Blueprint: CLI File Hash Inspection](./blueprint/20261105_cli_file_hash_inspection.md) — Technical architecture, contracts, and TDD verification strategy for the dedicated `exifsense hash <path...>` CLI command.
 - [Blueprint: CLI Single-Asset Web Parity](./blueprint/20261114_cli_single_analysis_web_parity.md) — Module boundaries, contracts, and verification plan for 1:1 parity between `exifsense single` and the Web single-asset dashboard.
 - [Blueprint: Drop Arabic Locale and RTL Support](./blueprint/20261114_drop_arabic_locale_and_rtl.md) — Contracts, verification methods, and atomic commit plan for removing `ar` translations, RTL layout support, and CLI `--locale ar` handling.
+- [Blueprint: CLI Batch Analysis Web Parity](./blueprint/20261114_cli_batch_analysis_web_parity.md) — Module boundaries, contracts, and verification plan for 1:1 parity between `exifsense batch`, Web batch views, Nominatim enrichment, and `--detailed`.
 
 ## Design
 
