@@ -9,7 +9,7 @@
 <img src="./assets/screenshots/hero.png" alt="ExifSense Hero Screenshot" width="100%" />
 
 <p>
-  ExifSense translates raw image EXIF metadata, camera settings, and geolocation tags into clear, human-readable insights, running 100% locally on your device without sending a single byte to the cloud.
+  ExifSense translates raw image EXIF metadata, camera settings, and geolocation tags into clear, human-readable insights, processing your photos and metadata locally on your device with no image uploads required.
 </p>
 
 </div>
@@ -57,8 +57,8 @@ npx skills add dimsedra/ExifSense
 ### Human-Readable Insights (Cognitive Reducer)
 Raw EXIF data often consists of obscure technical parameters such as aperture, exposure bias, and focal length. ExifSense automatically analyzes these attributes and presents them in plain, accessible language, explaining lighting conditions, lens choices, and capture history without requiring deep technical knowledge.
 
-### Complete Local Privacy (Zero-Server Architecture)
-Your photos and metadata remain entirely on your device. Extraction, narrative generation, mapping, and metadata removal are performed 100% locally in your browser to guarantee complete data confidentiality.
+### Local-First Privacy (No Image Uploads)
+Your photo files, camera details, hashes, narratives, and metadata removal are processed directly on your device without uploading images to an ExifSense server. When you are online and inspecting GPS-tagged photos, only coordinates are sent to third-party services (OpenStreetMap and Nominatim for map tiles and street addresses, and OSRM for road-route estimates), falling back cleanly to numeric coordinates and straight-line distances when offline.
 
 ### Geospatial and Travel Route Visualization
 Visualize photo capture locations on interactive maps. For collections taken across multiple locations, ExifSense reconstructs plausible road-following movement paths to help you trace travel journeys.
