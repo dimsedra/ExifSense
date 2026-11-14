@@ -8,9 +8,11 @@
 
 <img src="./assets/screenshots/hero.png" alt="ExifSense Hero Screenshot" width="100%" />
 
-</div>
+<p>
+  ExifSense translates raw image EXIF metadata, camera settings, and geolocation tags into clear, human-readable insights, running 100% locally on your device without sending a single byte to the cloud.
+</p>
 
-ExifSense translates raw image EXIF metadata, camera settings, and geolocation tags into clear, human-readable insights—100% locally on your device without sending a single byte to the cloud.
+</div>
 
 ---
 
@@ -53,7 +55,7 @@ npx skills add dimsedra/ExifSense
 ## Key Benefits
 
 ### Human-Readable Insights (Cognitive Reducer)
-Raw EXIF data often consists of obscure technical parameters such as aperture, exposure bias, and focal length. ExifSense automatically analyzes these attributes and presents them in plain, accessible language—explaining lighting conditions, lens choices, and capture history without requiring deep technical knowledge.
+Raw EXIF data often consists of obscure technical parameters such as aperture, exposure bias, and focal length. ExifSense automatically analyzes these attributes and presents them in plain, accessible language, explaining lighting conditions, lens choices, and capture history without requiring deep technical knowledge.
 
 ### Complete Local Privacy (Zero-Server Architecture)
 Your photos and metadata remain entirely on your device. Extraction, narrative generation, mapping, and metadata removal are performed 100% locally in your browser to guarantee complete data confidentiality.
