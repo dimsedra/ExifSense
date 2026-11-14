@@ -2,6 +2,7 @@
   "name": "exifsense",
   "version": "1.0.0",
   "type": "module",
+  "license": "MIT",
   "bin": {
     "exifsense": "./bin/exifsense.js"
   },
