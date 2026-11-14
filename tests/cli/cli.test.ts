@@ -301,11 +301,17 @@ describe('CLI Analysis and Simulation Harness', () => {
       expect(result.errorText).toContain("Unsupported locale 'ar'. Supported: en, id.");
     });
 
-    it('Given version flag, When executed, Then returns success with version text', async () => {
+    it('Given version flag, When executed, Then returns success with package version text', async () => {
+      const cliPkg = JSON.parse(
+        await fs.promises.readFile(
+          path.resolve(process.cwd(), 'packages/exifsense-cli/package.json'),
+          'utf8'
+        )
+      ) as { version: string };
       const result = await runCli(['--version']);
       expect(result.success).toBe(true);
       expect(result.exitCode).toBe(0);
-      expect(result.outputText).toContain('ExifSense CLI v');
+      expect(result.outputText).toBe(`ExifSense CLI v${cliPkg.version}`);
     });
 
     it('Given single command on a valid JPEG, When executed, Then outputs forensic sections', async () => {

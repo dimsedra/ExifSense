@@ -2,9 +2,9 @@
 import { createRequire } from "node:module";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import os from "node:os";
-import { fileURLToPath } from "node:url";
 // \0rolldown/runtime.js
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -6101,7 +6101,26 @@ Options:
   --format <plain|markdown> Output formatting (default: plain)
   --detailed                Include full per-asset details in batch output
   --out <path>              Write output text to file instead of stdout`;
-const VERSION_TEXT = "ExifSense CLI v1.0.0";
+function readPackageManifest(manifestPath) {
+	if (!fs.existsSync(manifestPath)) return null;
+	const parsed = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+	return {
+		name: typeof parsed.name === "string" ? parsed.name : void 0,
+		version: typeof parsed.version === "string" ? parsed.version : void 0
+	};
+}
+function resolveCliVersionText() {
+	const currentDir = path.dirname(fileURLToPath(import.meta.url));
+	const adjacentPkg = readPackageManifest(path.resolve(currentDir, "../package.json"));
+	if (adjacentPkg?.name === "exifsense-cli" && adjacentPkg.version) return `ExifSense CLI v${adjacentPkg.version}`;
+	const repoCliCandidates = [path.resolve(currentDir, "../packages/exifsense-cli/package.json"), path.resolve(currentDir, "../../packages/exifsense-cli/package.json")];
+	for (const candidate of repoCliCandidates) {
+		const pkg = readPackageManifest(candidate);
+		if (pkg?.version) return `ExifSense CLI v${pkg.version}`;
+	}
+	if (adjacentPkg?.version) return `ExifSense CLI v${adjacentPkg.version}`;
+	throw new Error("Unable to resolve ExifSense CLI version from package.json.");
+}
 async function runCli(argv) {
 	try {
 		return await executeCommand(parseCliArgs(argv));
@@ -6137,11 +6156,12 @@ async function executeCommand(command) {
 		};
 	}
 	if (command.command === "version") {
-		process.stdout.write(`${VERSION_TEXT}\n`);
+		const versionText = resolveCliVersionText();
+		process.stdout.write(`${versionText}\n`);
 		return {
 			success: true,
 			exitCode: 0,
-			outputText: VERSION_TEXT
+			outputText: versionText
 		};
 	}
 	if (command.command === "single") {

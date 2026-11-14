@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { parseCliArgs, type CliOptions, type CliParsedCommand } from './args';
 import { loadAssetSource, resolveScenario, extractBaseline } from './loader';
 import { computeFileHashes } from './hasher';
@@ -37,7 +38,45 @@ Options:
   --detailed                Include full per-asset details in batch output
   --out <path>              Write output text to file instead of stdout`;
 
-const VERSION_TEXT = 'ExifSense CLI v1.0.0';
+function readPackageManifest(manifestPath: string): { name?: string; version?: string } | null {
+  if (!fs.existsSync(manifestPath)) {
+    return null;
+  }
+  const parsed = JSON.parse(fs.readFileSync(manifestPath, 'utf8')) as {
+    name?: unknown;
+    version?: unknown;
+  };
+  return {
+    name: typeof parsed.name === 'string' ? parsed.name : undefined,
+    version: typeof parsed.version === 'string' ? parsed.version : undefined,
+  };
+}
+
+function resolveCliVersionText(): string {
+  const currentDir = path.dirname(fileURLToPath(import.meta.url));
+  const adjacentManifest = path.resolve(currentDir, '../package.json');
+  const adjacentPkg = readPackageManifest(adjacentManifest);
+  if (adjacentPkg?.name === 'exifsense-cli' && adjacentPkg.version) {
+    return `ExifSense CLI v${adjacentPkg.version}`;
+  }
+
+  const repoCliCandidates = [
+    path.resolve(currentDir, '../packages/exifsense-cli/package.json'),
+    path.resolve(currentDir, '../../packages/exifsense-cli/package.json'),
+  ];
+  for (const candidate of repoCliCandidates) {
+    const pkg = readPackageManifest(candidate);
+    if (pkg?.version) {
+      return `ExifSense CLI v${pkg.version}`;
+    }
+  }
+
+  if (adjacentPkg?.version) {
+    return `ExifSense CLI v${adjacentPkg.version}`;
+  }
+
+  throw new Error('Unable to resolve ExifSense CLI version from package.json.');
+}
 
 export async function runCli(argv: string[]): Promise<CliExecutionResult> {
   try {
@@ -83,8 +122,9 @@ async function executeCommand(command: CliParsedCommand): Promise<CliExecutionRe
   }
 
   if (command.command === 'version') {
-    process.stdout.write(`${VERSION_TEXT}\n`);
-    return { success: true, exitCode: 0, outputText: VERSION_TEXT };
+    const versionText = resolveCliVersionText();
+    process.stdout.write(`${versionText}\n`);
+    return { success: true, exitCode: 0, outputText: versionText };
   }
 
   if (command.command === 'single') {

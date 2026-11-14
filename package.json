@@ -8,7 +8,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build && npm run build:cli",
-    "build:cli": "rolldown src/cli/entry.ts --file bin/exifsense.js --platform node --banner \"#!/usr/bin/env node\"",
+    "build:cli": "rolldown src/cli/entry.ts --file bin/exifsense.js --platform node --banner \"#!/usr/bin/env node\" && node -e \"const fs=require('node:fs'); fs.mkdirSync('packages/exifsense-cli/bin',{recursive:true}); fs.copyFileSync('bin/exifsense.js','packages/exifsense-cli/bin/exifsense.js'); fs.chmodSync('packages/exifsense-cli/bin/exifsense.js',0o755);\"",
     "test": "vitest run",
     "typecheck": "tsc --noEmit"
   },

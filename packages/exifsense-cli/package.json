@@ -1,0 +1,31 @@
+{
+  "name": "exifsense-cli",
+  "version": "0.0.1",
+  "description": "Terminal-native photo metadata forensics and chronological narrative CLI for ExifSense",
+  "type": "module",
+  "license": "MIT",
+  "bin": {
+    "exifsense": "./bin/exifsense.js"
+  },
+  "files": [
+    "bin/exifsense.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dimsedra/ExifSense.git",
+    "directory": "packages/exifsense-cli"
+  },
+  "keywords": [
+    "exif",
+    "metadata",
+    "forensics",
+    "cli",
+    "gps",
+    "photo",
+    "image"
+  ]
+}
