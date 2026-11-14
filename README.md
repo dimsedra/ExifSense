@@ -72,6 +72,12 @@ Or run it directly without installing globally:
 npx --package=exifsense-cli exifsense --help
 ```
 
+Or add the agent skill so AI coding agents know how to use `exifsense-cli`:
+
+```bash
+npx skills add dimsedra/ExifSense
+```
+
 Or build and link from source:
 
 ```bash
