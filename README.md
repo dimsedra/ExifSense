@@ -1,22 +1,52 @@
-# ExifSense
+<div align="center">
 
-## EXIF Image Metadata, Made Easy for Everyone
+<h1>
+  <img src="./public/favicon.svg" alt="ExifSense Logo" width="32" height="32" />&nbsp;ExifSense
+</h1>
 
-ExifSense is a browser-native tool that translates raw image metadata, camera settings, and geolocation tags into clear, human-readable insights. Designed to reduce technical complexity and lower the barrier of understanding, ExifSense helps photographers, privacy-conscious users, and curious individuals understand the data behind their photos—without sending a single byte to the cloud.
+<h3>EXIF Image Metadata, Made Easy for Everyone</h3>
 
-> "Standard EXIF viewers provide raw data lists. ExifSense provides clarity and context."
+<img src="./assets/screenshots/hero.png" alt="ExifSense Hero Screenshot" width="100%" />
 
-![Hero Screenshot](./assets/screenshots/hero.png)
+</div>
+
+ExifSense translates raw image EXIF metadata, camera settings, and geolocation tags into clear, human-readable insights—100% locally on your device without sending a single byte to the cloud.
 
 ---
 
 ## Quick Start
 
-No installation, account creation, or server deployment is required.
+### Web App (Local Development)
 
-1. **Clone or Download** this repository.
-2. **Open** `index.html` in any modern web browser.
-3. **Drag & Drop** your images to view detailed metadata and insights immediately.
+Requires Node.js 20 or newer.
+
+1. **Clone** this repository and install dependencies:
+   ```bash
+   git clone https://github.com/dimsedra/ExifSense.git
+   cd ExifSense
+   npm install
+   ```
+2. **Start** the Vite dev server and open the local URL shown in your terminal:
+   ```bash
+   npm run dev
+   ```
+3. **Drag & Drop** your images to view detailed metadata, maps, and privacy sanitization locally.
+
+### Standalone CLI & Agent Skill
+
+If you only want terminal analysis without cloning the web application:
+
+```bash
+npm install -g exifsense-cli
+# or run without installing globally:
+npx --package=exifsense-cli exifsense --help
+```
+
+To equip AI coding agents with ExifSense CLI analysis instructions:
+
+```bash
+npx skills add dimsedra/ExifSense
+```
 
 ---
 
@@ -126,23 +156,17 @@ exifsense batch photo1.jpg photo2.jpg --locale id --format markdown --detailed -
 
 ---
 
-## Target Use Cases
-
-* **Photographers & Enthusiasts**: Review camera settings, lens performance, and exposure metrics across shooting sessions.
-* **Privacy-Conscious Individuals**: Strip sensitive location and device identifiers before publishing photos to public channels.
-* **Travelers**: Map past journeys and visualize geographic movements through geotagged photos.
-* **Content Creators**: Verify photo authenticity, check for post-processing edits, and inspect source metadata.
-
----
-
 ## Architecture & Technology
 
-ExifSense is built with a lightweight, modular vanilla JavaScript architecture designed for high performance and long-term maintainability without framework overhead.
+ExifSense is built with React 19, TypeScript, and Vite for the browser dashboard, sharing its core forensic, narrative, and geospatial modules with a standalone Node.js CLI bundled via Rolldown.
 
-* **EXIF Engine**: [Exifr](https://github.com/MikeKroz/exifr) for multi-format metadata parsing (JPEG, TIFF, HEIC, DNG, RAW).
+* **Web Stack**: React 19, TypeScript, Vite, and Zustand for client-side state.
+* **CLI Bundle**: Rolldown-bundled Node.js 20+ executable (`exifsense-cli`) sharing the core analysis engine with zero external runtime dependencies.
+* **EXIF Engine & Sanitization**: [Exifr](https://github.com/MikeKovarik/exifr) for multi-format metadata parsing (JPEG, TIFF, HEIC, DNG, RAW), plus `piexifjs` and Canvas re-encoding for client-side metadata removal.
 * **Geospatial Mapping**: [Leaflet.js](https://leafletjs.com/) with OSRM road-routing and Nominatim reverse geocoding.
-* **Document Generation**: [jsPDF](https://github.com/parallax/jsPDF) with `jspdf-autotable` for structured reporting.
-* **Storage & State**: Browser-native `localStorage` for session history and zero-server state persistence.
+* **Document Generation**: [jsPDF](https://github.com/parallax/jsPDF) with `jspdf-autotable` for structured PDF reporting.
+* **Storage & Persistence**: Browser-native `localStorage` for session history and language preferences, plus `IndexedDB` for local image preview caching.
+* **Testing**: Vitest with `happy-dom`.
 
 ---
 
