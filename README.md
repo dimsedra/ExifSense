@@ -60,7 +60,19 @@ ExifSense includes a standalone, terminal-native CLI executable (`exifsense`) th
 
 ### Setup
 
-To build and register the command globally:
+Install the standalone CLI package globally without the web application:
+
+```bash
+npm install -g exifsense-cli
+```
+
+Or run it directly without installing globally:
+
+```bash
+npx --package=exifsense-cli exifsense --help
+```
+
+Or build and link from source:
 
 ```bash
 npm install
