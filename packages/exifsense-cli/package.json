@@ -5,7 +5,7 @@
   "type": "module",
   "license": "MIT",
   "bin": {
-    "exifsense": "./bin/exifsense.js"
+    "exifsense": "bin/exifsense.js"
   },
   "files": [
     "bin/exifsense.js",
