@@ -32,6 +32,7 @@ Catalog of technical documentation and design references for ExifSense.
 ## Decisions
 
 - [ADR-001: Restrict Localization Strictly to English and Indonesian Without RTL](./decisions/adr_001_drop_arabic_locale_and_rtl.md) — Rationale, alternatives, and consequences for dropping Arabic (`ar`) localization and RTL layout infrastructure.
+- [ADR-002: Exclude Metadata Sanitization From ExifSense CLI and Use Standalone ExifTool for Research Datasets](./decisions/adr_002_exclude_metadata_sanitization_from_cli.md) — Decision to keep ExifSense CLI read-only and zero-dependency while using host-installed `exiftool` for selective multi-format research dataset sanitization.
 
 ## Lesson
 
