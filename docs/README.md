@@ -43,3 +43,4 @@ Catalog of technical documentation and design references for ExifSense.
 ## Report
 
 - [Report: Peta Audit dan Depresiasi Narasi ExifSense](./report/20261119_narrative_deprecation_mapping.html) — Comprehensive audit mapping of 26 dead narrative keys, legacy manipulation heuristic alerts, and neutrality/parity alignments between the original proposal and the current thesis reframing.
+- [Report: Telaah Paper Padilha dkk. (2022)](./report/20261119_padilha_et_al_2022_temporal_metadata.html) — ELI5 summary, quantitative experiment benchmarks, and thesis relevance analysis of *Content-Aware Detection of Temporal Metadata Manipulation* (IEEE TIFS, 2022).

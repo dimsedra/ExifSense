@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Telaah ELI5 Paper Padilha dkk. (2022): Deteksi Manipulasi Metadata Waktu Berbasis Isi Gambar</title>
+
+  <!-- JetBrains Mono Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="report.css">
+
+  <!-- Mermaid.js for model pipeline diagram -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+  <!-- Chart.js for paper quantitative benchmarks -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .grid-4 .card {
+      margin-bottom: 0;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+    .stat-value {
+      font-size: 1.85rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.25rem;
+    }
+    .stat-note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .badge-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .chart-wrap {
+      height: 280px;
+      position: relative;
+    }
+  </style>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#0c0c0e',
+        primaryColor: '#141417',
+        primaryTextColor: '#f0f0f2',
+        primaryBorderColor: '#222227',
+        lineColor: '#8e8e99',
+        secondaryColor: '#0c0c0e',
+        tertiaryColor: '#050505',
+        fontFamily: '"JetBrains Mono", ui-monospace, monospace'
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <div class="header-top">
+        <div class="badge-group">
+          <span class="badge badge-info">IEEE TIFS 2022</span>
+          <span class="badge badge-success">ELI5 SUMMARY</span>
+          <span class="badge badge-warning">RELEVANSI EXIFSENSE</span>
+        </div>
+        <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()">[ LIGHT ]</button>
+      </div>
+      <h1>Telaah Paper: Deteksi Manipulasi Metadata Waktu Berbasis Isi Gambar (Padilha dkk., 2022)</h1>
+      <div class="meta-bar">
+        <span><strong>TANGGAL:</strong> 2026-11-19</span>
+        <span><strong>PENULIS PAPER:</strong> Rafael Padilha, Tawfiq Salem, Scott Workman, Fernanda A. Andaló, Anderson Rocha, Nathan Jacobs</span>
+        <span><strong>KONTEKS:</strong> Tinjauan Literatur Skripsi ExifSense (Bab I &amp; Bab II)</span>
+      </div>
+    </header>
+
+    <main>
+
+      <section>
+        <h2>1. Gambaran Besar &amp; Angka Kunci</h2>
+        <p>
+          Artikel berjudul <em>Content-Aware Detection of Temporal Metadata Manipulation</em> yang terbit di jurnal forensik informasi IEEE (<em>IEEE Transactions on Information Forensics and Security</em>, Vol. 17, 2022, hal. 1316-1327) memecahkan satu persoalan penting: bagaimana mengecek apakah jam dan bulan yang tertulis di catatan waktu foto luar ruangan (<code>timestamp</code>) cocok dengan apa yang benar-benar terlihat di dalam gambarnya.
+        </p>
+
+        <div class="grid-4">
+          <div class="card">
+            <div class="stat-label">Akurasi Terbaik</div>
+            <div class="stat-value" style="color: var(--success);">81.1%</div>
+            <div class="stat-note">DenseNet-121 lengkap vs 59.0% metode pembanding (AUC 0.885)</div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Geseran Kecil (&plusmn;1 Jam/Bulan)</div>
+            <div class="stat-value" style="color: var(--danger);">&lt; 20%</div>
+            <div class="stat-note">Sangat sulit terdeteksi sebelum pelatihan khusus kedekatan waktu</div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Uji Kamera Terpisah</div>
+            <div class="stat-value" style="color: var(--warning);">67.9%</div>
+            <div class="stat-note">Turun dari 81.1% saat kamera latih &amp; uji dipisah (AUC 0.749)</div>
+          </div>
+          <div class="card">
+            <div class="stat-label">Skala Dataset Uji</div>
+            <div class="stat-value" style="color: var(--info);">300k+</div>
+            <div class="stat-note">98k kamera statis AMOS + 206k ponsel pintar YFCC100M</div>
+          </div>
+        </div>
+
+        <div class="callout callout-info">
+          <strong>Inti Masalah Dunia Nyata:</strong> Penyesatan informasi di internet sering memakai foto asli yang tidak diedit pikselnya sama sekali, melainkan hanya diganti tanggal dan jamnya menggunakan editor metadata gratis (<code>EXIF Date Changer Lite</code> atau <code>Metadata++</code>) agar foto lama tampak seolah-olah terjadi hari ini, seperti kasus kampanye disinformasi teror lama (<em>"Fishwrap"</em>, 2019).
+        </div>
+      </section>
+
+      <section>
+        <h2>2. Mengapa Cara Lama Gagal &amp; Apa Solusi Penulis</h2>
+        <p>
+          Metode pemeriksaan waktu sebelumnya mengandalkan petunjuk sempit, misalnya menghitung sudut arah matahari dari bayangan tiang tegak lurus di foto atau mencocokkan suhu dan cuaca foto terhadap arsip stasiun cuaca historis. Cara tersebut mudah buntu pada foto media sosial karena langit sering tertutup, kamera jarang tegak sempurna, tiang berbayangan belum tentu ada di gambar, dan catatan cuaca masa lalu tidak tersedia di banyak wilayah dunia.
+        </p>
+        <p>
+          Sebagai gantinya, penulis merancang model jaringan saraf pembaca gambar berbasis konvolusi (<code>convolutional neural network</code> atau <code>CNN</code>) yang tidak mencari satu objek spesifik saja, melainkan memadukan tampilan keseluruhan foto luar ruangan dengan konteks geografisnya untuk menilai kesesuaian bulan dan jam pemotretan.
+        </p>
+
+        <div class="diagram-container">
+          <div class="mermaid">
+flowchart LR
+    G["Foto Tanah (G)<br/>Backbone DenseNet/ResNet"] --> FE["Ekstraktor Fitur<br/>(Vektor fG 128-dim)"]
+    T["Klaim Waktu (t)<br/>Bulan & Jam UTC [-1, 1]"] --> FT["Encoder Waktu<br/>(Vektor ft 128-dim)"]
+    L["Koordinat Bumi (l)<br/>Koordinat ECEF [-1, 1]"] --> FL["Encoder Lokasi<br/>(Vektor fl 128-dim)"]
+    S["Foto Satelit Basemap (S)<br/>Peta Jalan Bing Maps 0.6 m/px"] --> FS["Encoder Satelit<br/>(Vektor fS 128-dim)"]
+
+    FE --> CONC["Gabung Semua Modalitas<br/>{fG, fS, fl, ft}"]
+    FT --> CONC
+    FL --> CONC
+    FS --> CONC
+
+    CONC --> Y["Cabang Utama<br/>Peluang Konsistensi y (Cocok vs Palsu)"]
+    FE --> AG["Cabang Penjelas 1<br/>40 Sifat Visual Nyata (aG)"]
+
+    FS --> CONC2["Gabung Konteks<br/>{fS, fl, ft}"]
+    FL --> CONC2
+    FT --> CONC2
+    CONC2 --> AS["Cabang Penjelas 2<br/>40 Sifat Visual Ekspektasi (aS)"]
+          </div>
+        </div>
+
+        <p>
+          Keempat masukan tersebut bekerja saling melengkapi karena alasan sebab-akibat yang jelas. Foto peta tampak atas dari satelit (<code>basemap-style satellite imagery</code> atau <code>S</code> dari Bing Maps berukuran 800x800 piksel) bukanlah foto satelit pada detik kejadian, melainkan peta struktur jalan, gedung, atau pantai statis di koordinat tersebut agar model mengenali karakter tempatnya tanpa bergantung pada cuaca hari itu.
+        </p>
+        <p>
+          Untuk menjaga keterjelasan keputusan (<code>explainability</code>), model dilatih secara serentak memprediksi daftar 40 sifat visual sementara seperti cerah, berkabut, bersalju, siang, malam, atau musim panas (<code>transient attributes</code> bernilai 0 sampai 1). Satu daftar dibaca murni dari foto tanah (<code>aG</code>), sementara daftar pembandingnya ditebak dari peta lokasi plus klaim waktunya (<code>aS</code>). Ketika klaim jam atau bulan dipalsukan (misal foto jam 2 pagi bulan Desember diubah menjadi jam 7 pagi bulan Agustus), keduanya langsung memperlihatkan pertentangan nilai secara terang-terangan.
+        </p>
+      </section>
+
+      <section>
+        <h2>3. Poin-Poin Eksperimen Paling Menarik</h2>
+
+        <div class="grid-2">
+          <div class="card">
+            <h3>Pengaruh Masukan Konteks Geografi (Tabel I)</h3>
+            <p>
+              Tanpa koordinat lokasi maupun peta satelit (<code>G, t</code>), model sering keliru membedakan musim karena bulan Desember bisa bersalju di belahan bumi utara tetapi panas di belahan selatan. Penambahan koordinat lokasi saja (<code>G, t, l</code>) melonjakkan akurasi dari 67.5% ke 78.7%, sementara kombinasi lengkap bersama foto satelit dan cabang sifat visual (<code>G, t, l, S (TA)</code>) mencapai 81.1%.
+            </p>
+            <div class="chart-wrap">
+              <canvas id="ablationChart"></canvas>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Kerapuhan Terhadap Koordinat GPS Meleset (Tabel II)</h3>
+            <p>
+              Model utama sangat bergantung pada keakuratan koordinat. Pergeseran koordinat GPS sekecil 1 derajat saja menjatuhkan akurasi dari 81.1% ke 66.3%, bertahan rata di 65.9% hingga geseran 15 derajat (setara selisih zona waktu matahari satu jam), lalu merosot ke 60.5% pada 75 derajat karena model mengira foto kota yang dipasangkan dengan peta pantai adalah manipulasi waktu. Pelatihan ulang dengan mengacak sedikit koordinat latih (<code>Location Augmentation</code>) menstabilkannya di kisaran 75.9% hingga 71.7%.
+            </p>
+            <div class="chart-wrap">
+              <canvas id="noiseChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <ol>
+          <li>Manipulasi berjarak waktu sempit (&plusmn;1 jam atau &plusmn;1 bulan) hanya terdeteksi di bawah 20% kasus pada pelatihan acak karena perubahan cahaya alam lambat dan kamera modern memakai penyesuai kecerahan otomatis (<code>automatic exposure adjustment</code>) yang meratakan terang-gelap dalam selang satu jam; sebaliknya geseran besar lintas musim (&ge;3 bulan) atau lintas fase hari (&ge;6 jam) terdeteksi di atas 75% kasus.</li>
+          <li>Melatih ulang model terbaik selama 10 putaran tambahan menggunakan contoh manipulasi yang berdekatan waktu (&plusmn;1 sampai &plusmn;2 jam/bulan) berhasil menaikkan deteksi manipulasi halus di area kiri-bawah kurva uji dengan akurasi acak 77.78% dan area kurva ketepatan (<code>AUC</code>) sedikit naik menjadi 0.888.</li>
+          <li>Uji pemisahan kamera penuh (<code>cross-camera evaluation</code> pada Bagian V) mengungkap bahwa akurasi 81.1% pada pembagian standar sebagian terbantu karena foto dari 50 kamera web statis yang sama muncul baik di data latih maupun uji. Ketika kamera latih dan uji dipisah total agar tidak ada kebocoran ciri tempat/sensor, akurasi turun ke 67.9% (<code>AUC</code> 0.749).</li>
+          <li>Saat catatan waktu foto hilang total, model dapat dibalik penggunaannya untuk menebak kemungkinan bulan dan jam pemotretan dengan menghitung skor konsistensi pada seluruh 288 pasangan bulan-jam dan menampilkannya sebagai peta panas sebaran peluang (<code>consistency probability heatmap</code>), meski jam malam (21.00 sampai 04.00) cenderung tampak seragam karena gelapnya mirip.</li>
+        </ol>
+      </section>
+
+      <section>
+        <h2>4. Peta Relevansi untuk Skripsi ExifSense</h2>
+        <p>
+          Paper ini memberi fondasi kuat sekaligus rambu pembatas yang jelas mengapa ExifSense mengambil pendekatan deskriptif yang jujur alih-alih melontarkan vonis manipulasi waktu secara serampangan.
+        </p>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Aspek Kajian</th>
+              <th>Pendekatan Padilha dkk. (2022)</th>
+              <th>Implikasi &amp; Batas untuk ExifSense</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Tujuan Utama</strong></td>
+              <td>Mendeteksi apakah klaim jam &amp; bulan di metadata konsisten dengan tampilan isi piksel foto luar ruangan.</td>
+              <td>Memvalidasi latar belakang Bab I bahwa metadata waktu sangat mudah diubah editor gratis dan dipakai untuk disinformasi kontekstual.</td>
+            </tr>
+            <tr>
+              <td><strong>Kebutuhan Masukan</strong></td>
+              <td>Butuh model jaringan saraf berat (<code>DenseNet-121</code>), foto wajib luar ruangan, peta satelit, serta koordinat GPS akurat.</td>
+              <td>Membuktikan verifikasi waktu fisik tidak bisa dicapai hanya dari perbandingan teks tag (<code>ModifyDate</code> vs <code>DateTimeOriginal</code>); memperkuat pembersihan tebak-tebakan anomali lama di ExifSense.</td>
+            </tr>
+            <tr>
+              <td><strong>Keterjelasan (<em>Explainability</em>)</strong></td>
+              <td>Memakai 40 sifat visual sementara (<code>aG</code> vs <code>aS</code>) dan peta penutupan piksel (<code>occlusion maps</code>) untuk peneliti teknis.</td>
+              <td>Relevan sebagai pembanding Bab II bersama paper Yang dkk. (2026): mereka menjelaskan sinyal kompleks ke peneliti, sedangkan ExifSense menerjemahkan fakta metadata lewat templat aturan tetap untuk pengguna non-spesialis.</td>
+            </tr>
+            <tr>
+              <td><strong>Celah &amp; Keterbatasan Lapangan</strong></td>
+              <td>Lemah pada geseran 1 jam, jam malam seragam (21.00-04.00), koordinat GPS yang meleset jauh, serta foto dalam ruangan.</td>
+              <td>Memastikan posisi ExifSense tetap netral dan kokoh: melaporkan nilai tag yang tercatat serta kekosongannya secara apa adanya jauh lebih aman dan jujur daripada memproduksi peringatan palsu.</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <details>
+          <summary>Rangkuman Detail Metode Pembentukan Data Manipulasi &amp; Atribut Visual (Bagian III &amp; IV)</summary>
+          <p>
+            Agar evaluasi lebih realistis ketimbang memilih tanggal acak sepanjang 24 jam, penulis membentuk pasangan palsu di dataset pelatihan dan pengujian dengan menukar catatan waktu suatu foto dengan catatan waktu milik foto lain yang diambil secara acak dari kumpulan data media sosial (<code>Cross-View Time</code>). Karena foto media sosial paling banyak diambil antara jam 10 pagi hingga 8 malam, proses pertukaran ini membuat banyak contoh manipulasi tetap berada di siang hari sehingga lebih sulit dibedakan dan lebih mendekati skenario pemalsuan nyata di lapangan.
+          </p>
+          <p>
+            Pada analisis informasi timbal-balik (<code>mutual information</code>) di Gambar 8 paper, sifat visual yang paling kuat membedakan waktu asli vs waktu palsu adalah atribut siklus siang-malam dan pencahayaan (seperti <code>Night</code>, <code>Dark</code>, dan <code>Daylight</code>) serta tingkat kehijauan vegetasi musiman (<code>Lush</code>). Sebaliknya, atribut seperti kesibukan (<code>Busy</code>), kesan subjektif (<code>Sentimental</code>), hujan (<code>Rain</code>), dan badai (<code>Storm</code>) kurang membantu karena kemunculannya jarang atau tidak konsisten mengikuti jam dan bulan.
+          </p>
+        </details>
+      </section>
+
+    </main>
+
+    <footer>
+      <span>EXIFSENSE THESIS LITERATURE REPORT</span>
+      <span>DOCS/REPORT/20261119_PADILHA_ET_AL_2022_TEMPORAL_METADATA.HTML</span>
+    </footer>
+
+  </div>
+
+  <script>
+    let ablationChartInstance = null;
+    let noiseChartInstance = null;
+
+    function getChartColors() {
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      return {
+        textColor: isLight ? '#121215' : '#f0f0f2',
+        mutedColor: isLight ? '#666672' : '#8e8e99',
+        gridColor: isLight ? 'rgba(18, 18, 21, 0.1)' : 'rgba(142, 142, 153, 0.15)',
+        successBg: isLight ? 'rgba(26, 127, 55, 0.78)' : 'rgba(63, 185, 80, 0.75)',
+        successBorder: isLight ? '#1a7f37' : '#3fb950',
+        infoBg: isLight ? 'rgba(9, 105, 218, 0.78)' : 'rgba(88, 166, 255, 0.75)',
+        infoBorder: isLight ? '#0969da' : '#58a6ff',
+        warningBg: isLight ? 'rgba(154, 103, 0, 0.78)' : 'rgba(227, 179, 65, 0.75)',
+        warningBorder: isLight ? '#9a6700' : '#e3b341',
+        mutedBg: isLight ? 'rgba(102, 102, 114, 0.45)' : 'rgba(142, 142, 153, 0.55)',
+        dangerBorder: isLight ? '#cf222e' : '#f85149'
+      };
+    }
+
+    function renderCharts() {
+      if (typeof Chart === 'undefined') return;
+      const c = getChartColors();
+
+      const ablationCtx = document.getElementById('ablationChart');
+      if (ablationCtx) {
+        if (ablationChartInstance) ablationChartInstance.destroy();
+        ablationChartInstance = new Chart(ablationCtx, {
+          type: 'bar',
+          data: {
+            labels: [
+              'Volokitin dkk. [24]',
+              'Salem dkk. [9]',
+              'G, t (Tanpa Lokasi)',
+              'Cross-Camera (TA)',
+              'G, t, S (Satelit)',
+              'G, t, l (Koordinat)',
+              'G, t, l, S (Lengkap)',
+              'G, t, l, S + TA'
+            ],
+            datasets: [{
+              label: 'Akurasi (%)',
+              data: [51.7, 59.0, 67.5, 67.9, 77.0, 78.7, 80.5, 81.1],
+              backgroundColor: [
+                c.mutedBg,
+                c.mutedBg,
+                c.warningBg,
+                c.warningBg,
+                c.infoBg,
+                c.infoBg,
+                c.successBg,
+                c.successBg
+              ],
+              borderColor: [
+                c.mutedColor,
+                c.mutedColor,
+                c.warningBorder,
+                c.warningBorder,
+                c.infoBorder,
+                c.infoBorder,
+                c.successBorder,
+                c.successBorder
+              ],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: {
+                min: 40,
+                max: 90,
+                grid: { color: c.gridColor },
+                ticks: { color: c.mutedColor, font: { family: 'JetBrains Mono', size: 10 } }
+              },
+              y: {
+                grid: { display: false },
+                ticks: { color: c.textColor, font: { family: 'JetBrains Mono', size: 10 } }
+              }
+            }
+          }
+        });
+      }
+
+      const noiseCtx = document.getElementById('noiseChart');
+      if (noiseCtx) {
+        if (noiseChartInstance) noiseChartInstance.destroy();
+        noiseChartInstance = new Chart(noiseCtx, {
+          type: 'line',
+          data: {
+            labels: ['0 deg', '1 deg', '5 deg', '15 deg', '30 deg', '45 deg', '60 deg', '75 deg'],
+            datasets: [
+              {
+                label: 'Location Augmentation',
+                data: [75.9, 75.9, 76.0, 75.8, 74.8, 73.5, 72.5, 71.7],
+                borderColor: c.successBorder,
+                backgroundColor: c.successBg,
+                tension: 0.2,
+                pointRadius: 3
+              },
+              {
+                label: 'Model Standar (DenseNet)',
+                data: [81.1, 66.3, 66.3, 65.9, 64.3, 62.2, 61.1, 60.5],
+                borderColor: c.infoBorder,
+                backgroundColor: c.infoBg,
+                tension: 0.2,
+                pointRadius: 3
+              },
+              {
+                label: 'Salem dkk. [9]',
+                data: [59.0, 52.2, 52.1, 51.9, 51.6, 51.6, 51.6, 51.6],
+                borderColor: c.dangerBorder,
+                backgroundColor: c.mutedBg,
+                tension: 0.2,
+                pointRadius: 3
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                labels: { color: c.textColor, font: { family: 'JetBrains Mono', size: 10 } }
+              }
+            },
+            scales: {
+              x: {
+                grid: { color: c.gridColor },
+                ticks: { color: c.mutedColor, font: { family: 'JetBrains Mono', size: 10 } }
+              },
+              y: {
+                min: 45,
+                max: 85,
+                grid: { color: c.gridColor },
+                ticks: { color: c.mutedColor, font: { family: 'JetBrains Mono', size: 10 } }
+              }
+            }
+          }
+        });
+      }
+    }
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('report-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+      updateToggleText(theme);
+      renderCharts();
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('report-theme', newTheme);
+      updateToggleText(newTheme);
+      renderCharts();
+    }
+
+    function updateToggleText(theme) {
+      const btn = document.getElementById('theme-toggle');
+      if (btn) {
+        btn.textContent = theme === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+      }
+    }
+
+    initTheme();
+  </script>
+</body>
+</html>
