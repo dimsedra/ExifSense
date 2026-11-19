@@ -14,6 +14,7 @@ import {
   extractGpsCoordinates,
 } from '../core/forensics/metadata';
 import {
+  formatIntegrityAlertMessage,
   generateHardwareNarrative,
   generateIntegrityNarrative,
   generateExposureNarrative,
@@ -130,15 +131,16 @@ export function formatSingleOutput(asset: ForensicAsset, options?: CliOptions): 
 
   // Integrity alerts
   const alertCount = asset.integrityAlerts.length;
+  const alertsHeader = translate('batch_asset_alerts', {}, locale, 'ui');
   lines.push(
-    isMarkdown ? `## Integrity Alerts (${alertCount})` : `--- Integrity Alerts (${alertCount}) ---`
+    isMarkdown ? `## ${alertsHeader} (${alertCount})` : `--- ${alertsHeader} (${alertCount}) ---`
   );
 
   if (alertCount === 0) {
-    lines.push('No integrity anomalies detected.');
+    lines.push(translate('no_integrity_anomalies', {}, locale, 'ui'));
   } else {
     for (const alert of asset.integrityAlerts) {
-      lines.push(`[${alert.severity.toUpperCase()}] ${alert.defaultMessage}`);
+      lines.push(`[${alert.severity.toUpperCase()}] ${formatIntegrityAlertMessage(alert, locale)}`);
     }
   }
   lines.push('');
@@ -321,7 +323,7 @@ function appendBatchAlerts(
       assetAlerts.push({
         fileName: asset.fileName,
         severity: alert.severity,
-        message: alert.defaultMessage,
+        message: formatIntegrityAlertMessage(alert, locale),
       });
     }
   }
@@ -501,7 +503,6 @@ function appendTimelineEvidenceSection(
     )
   );
 
-  const anomalyTag = translate('time_anomaly_tag', {}, locale, 'ui');
   for (const jump of jumps) {
     const delta = formatLocalizedDuration(
       jump.deltaDays,
@@ -510,11 +511,7 @@ function appendTimelineEvidenceSection(
       jump.deltaSeconds,
       locale
     );
-    let prefix = '';
-    if (jump.deltaDays > 0) {
-      prefix = format === 'markdown' ? `**[${anomalyTag}]** ` : `[${anomalyTag}] `;
-    }
-    const lineBody = `${prefix}${jump.fromFileName} -> (+${delta}) ${jump.toFileName}`;
+    const lineBody = `${jump.fromFileName} -> (+${delta}) ${jump.toFileName}`;
     lines.push(format === 'markdown' ? `  - ${lineBody}` : `  ${lineBody}`);
   }
 
@@ -541,7 +538,7 @@ function appendGeospatialEvidenceSection(
   const title = translate('analysis_geospatial', {}, locale, 'ui');
   lines.push(format === 'markdown' ? `### ${title}` : `[${title}]`);
 
-  const { maxSpreadKm, totalPathDistanceKm, spreadCategory, jumps, velocityAlert } =
+  const { maxSpreadKm, totalPathDistanceKm, spreadCategory, jumps } =
     collective.geospatial;
   const hasRoadRoute = Boolean(roadRouteDetails && roadRouteDetails.totalDistanceMeters > 0);
   const rows: Array<[string, string]> = [
@@ -579,25 +576,6 @@ function appendGeospatialEvidenceSection(
       'narratives'
     )
   );
-
-  if (velocityAlert?.hasAnomaly) {
-    const alertLabel = translate('velocity_anomaly_label', {}, locale, 'ui');
-    const alertDesc = translate(
-      'velocity_anomaly_desc',
-      {
-        from: velocityAlert.fromFileName || '-',
-        to: velocityAlert.toFileName || '-',
-        speed: velocityAlert.maxSpeedKmh,
-      },
-      locale,
-      'ui'
-    );
-    lines.push(
-      format === 'markdown'
-        ? `- **[${alertLabel}]**: ${alertDesc}`
-        : `[${alertLabel}] ${alertDesc}`
-    );
-  }
 
   if (jumps.length > 0) {
     const jumpsLabel = stripTrailingColon(

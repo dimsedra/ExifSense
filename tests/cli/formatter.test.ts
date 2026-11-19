@@ -149,7 +149,33 @@ describe('BP-PARITY-002: formatSingleOutput Header and 7-Section Narrative Parit
 
     const output = formatSingleOutput(noGpsAsset, { format: 'plain', locale: 'id' });
     expect(output).toContain('[Analisis Geospasial]');
-    expect(output).toContain('Tidak ada data lokasi (GPS)');
+    expect(output).toContain('Koordinat lokasi GPS tidak tercatat pada berkas ini.');
+    expect(output).toContain('Tidak ada catatan kekurangan metadata inti maupun tag perangkat lunak penyunting.');
+  });
+
+  it('Given asset with integrityAlerts and locale id, When formatted, Then renders localized integrity alert messages instead of raw English defaultMessage', async () => {
+    const { formatSingleOutput } = await import('../../src/cli/formatter');
+    const partialAsset = {
+      ...fullAsset,
+      integrityAlerts: [
+        {
+          type: 'missing_gps' as const,
+          severity: 'info' as const,
+          defaultMessage: 'GPS coordinates are not recorded in this file.',
+        },
+        {
+          type: 'editing_software' as const,
+          severity: 'info' as const,
+          messageParam: { software: 'Adobe Photoshop 2024' },
+          defaultMessage: 'Software tag records "Adobe Photoshop 2024".',
+        },
+      ],
+    };
+
+    const output = formatSingleOutput(partialAsset, { format: 'plain', locale: 'id' });
+    expect(output).toContain('Koordinat lokasi GPS tidak tercatat pada berkas ini.');
+    expect(output).toContain('Tag Software mencatat Adobe Photoshop 2024.');
+    expect(output).not.toContain('GPS coordinates are not recorded');
   });
 
   it('Given full exifData differs from categorizedExif slice, When formatted, Then narratives use full exifData just like Web UI', async () => {
@@ -436,12 +462,12 @@ describe('BP-BATCH-PARITY-003 & BP-BATCH-PARITY-004: formatBatchOutput Web Parit
     expect(output).toContain('SN-BODY-001');
     expect(output).toContain('SN-LENS-999');
 
-    // Timeline bounds, duration units, time anomaly, missing assets
+    // Timeline bounds, duration units, missing assets (no legacy TIME ANOMALY marker)
     expect(output).toContain('[Timeline Analysis]');
     expect(output).toContain('May 10, 2025');
     expect(output).toContain('May 12, 2025');
     expect(output).toContain('2 Days 1 Hours 15 Minutes 30 Seconds');
-    expect(output).toContain('[TIME ANOMALY]');
+    expect(output).not.toContain('[TIME ANOMALY]');
     expect(output).toContain('Photos Lacking Time Data (2)');
     expect(output).toContain('partial_hw_only.jpg');
     expect(output).toContain('stripped_social.jpg');
@@ -492,7 +518,7 @@ describe('BP-BATCH-PARITY-003 & BP-BATCH-PARITY-004: formatBatchOutput Web Parit
     expect(output).toContain('### Analisis Kronologi');
     expect(output).toContain('Mei 2025');
     expect(output).toContain('2 Hari 1 Jam 15 Menit 30 Detik');
-    expect(output).toContain('**[ANOMALI WAKTU]**');
+    expect(output).not.toContain('[ANOMALI WAKTU]');
     expect(output).toContain('**Foto Tanpa Data Waktu (2)**');
 
     expect(output).toContain('### Analisis Geospasial');
@@ -554,7 +580,7 @@ describe('BP-BATCH-PARITY-003 & BP-BATCH-PARITY-004: formatBatchOutput Web Parit
       locale: 'en',
       format: 'plain',
     });
-    expect(teleOut).toContain('CRITICAL Velocity Anomaly');
+    expect(teleOut).not.toContain('CRITICAL Velocity Anomaly');
     expect(teleOut).toContain('tele_a.jpg -> (+');
     expect(teleOut).toContain('km) tele_b.jpg');
   });

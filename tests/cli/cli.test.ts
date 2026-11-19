@@ -767,7 +767,7 @@ describe('CLI Analysis and Simulation Harness', () => {
       expect(result.outputText).toContain('### Analisis Optik');
       expect(result.outputText).toContain('### Analisis Kualitas');
       expect(result.outputText).toContain('### Analisis Kronologi');
-      expect(result.outputText).toContain('Tidak ada data lokasi (GPS)');
+      expect(result.outputText).toContain('Koordinat lokasi GPS tidak tercatat pada berkas ini.');
       expect(result.outputText).toContain('## Categorized EXIF Metadata');
       expect(result.outputText).toContain('### Perangkat Keras');
       expect(result.outputText).toContain('### Pengaturan Eksposur');
@@ -921,7 +921,7 @@ describe('CLI Analysis and Simulation Harness', () => {
         const timeRes = await runCli(['scenario', 'time-jump-anomaly']);
         expect(timeRes.success).toBe(true);
         expect(timeRes.exitCode).toBe(0);
-        expect(timeRes.outputText).toContain('[TIME ANOMALY]');
+        expect(timeRes.outputText).not.toContain('[TIME ANOMALY]');
         expect(timeRes.outputText).toContain('--- Chronological Story ---');
         expect(timeRes.outputText).toContain('--- Combined Analysis ---');
 
