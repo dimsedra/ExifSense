@@ -1,4 +1,5 @@
-import { ForensicAsset, CollectiveIntelligenceResult } from '../forensics/types';
+import { ForensicAsset, CollectiveIntelligenceResult, IntegrityAlert } from '../forensics/types';
+import { isEditingSoftware } from '../forensics/integrity';
 import { parseExifDate, formatFullDate } from '../forensics/metadata';
 import { SupportedLocale, NarrativeSection } from './types';
 import enLocale from '../../locales/en.json';
@@ -7,6 +8,14 @@ import idLocale from '../../locales/id.json';
 const LOCALES: Record<SupportedLocale, Record<string, Record<string, string>>> = {
   en: enLocale as unknown as Record<string, Record<string, string>>,
   id: idLocale as unknown as Record<string, Record<string, string>>,
+};
+
+const ALERT_LOCALE_KEYS: Record<IntegrityAlert['type'], string> = {
+  fully_stripped: 'integrity_fully_stripped',
+  missing_gps: 'integrity_missing_gps',
+  missing_datetime: 'integrity_missing_datetime',
+  missing_device: 'integrity_missing_device',
+  editing_software: 'integrity_edit_software',
 };
 
 /**
@@ -37,7 +46,6 @@ export function translate(
     template = template.replace(new RegExp(`\\{${k}\\}`, 'g'), () => String(v ?? ''));
   }
 
-  // Strip HTML tags for clean plain text output
   return template
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/div>/gi, '\n')
@@ -45,73 +53,75 @@ export function translate(
     .trim();
 }
 
-const EDIT_SOFTWARE = [
-  'adobe',
-  'photoshop',
-  'lightroom',
-  'gimp',
-  'canva',
-  'snapseed',
-  'pixlr',
-  'corel',
-  'affinity',
-  'picsart'
-];
+/**
+ * Translates a single IntegrityAlert into a localized plain-text message.
+ */
+export function formatIntegrityAlertMessage(
+  alert: IntegrityAlert,
+  locale: string = 'en'
+): string {
+  const key = ALERT_LOCALE_KEYS[alert.type];
+  if (!key) {
+    return alert.defaultMessage;
+  }
+  const params = alert.type === 'editing_software'
+    ? { software: String(alert.messageParam?.software ?? '') }
+    : {};
+  return translate(key, params, locale);
+}
 
 /**
- * Generates plain-text hardware profile and software tampering narrative.
+ * Generates plain-text hardware and Software tag narrative from observed EXIF tags.
  */
 export function generateHardwareNarrative(
   props: Record<string, unknown>,
   locale: string = 'en'
 ): string {
-  const make = String(props.Make || 'an unknown manufacturer');
-  const model = String(props.Model || 'an unspecified device');
-  const lensModel = props.LensModel ? String(props.LensModel) : '';
+  const make = typeof props.Make === 'string' || typeof props.Make === 'number'
+    ? String(props.Make).trim()
+    : '';
+  const model = typeof props.Model === 'string' || typeof props.Model === 'number'
+    ? String(props.Model).trim()
+    : '';
+  const device = [make, model].filter(Boolean).join(' ');
+  const lensModel = props.LensModel ? String(props.LensModel).trim() : '';
   const lens = lensModel ? ` ${translate('with_lens', { lens: lensModel }, locale)}` : '';
-  const softwareName = props.Software ? String(props.Software) : '';
+  const softwareName = props.Software ? String(props.Software).trim() : '';
 
-  const isModified =
-    softwareName && EDIT_SOFTWARE.some((s) => softwareName.toLowerCase().includes(s));
-
-  if (isModified) {
-    return translate('hardware_mod', { make, model, lens, software: softwareName }, locale);
+  if (!device && !lensModel && !softwareName) {
+    return translate('no_hardware_narrative', {}, locale);
   }
 
-  let narrative = translate('hardware', { make, model, lens }, locale);
-  if (softwareName) {
-    narrative += ` ${translate('hardware_software', { software: softwareName }, locale)}`;
-  }
-  narrative += ` ${translate('hardware_analysis', {}, locale)}`;
+  const isEditor = softwareName ? isEditingSoftware(softwareName) : false;
 
-  return narrative.trim();
+  if (!device) {
+    if (isEditor) {
+      return translate('hardware_mod_no_device', { lens, software: softwareName }, locale);
+    }
+    const base = translate('hardware_no_device', { lens }, locale);
+    return softwareName
+      ? `${base} ${translate('hardware_software', { software: softwareName }, locale)}`.trim()
+      : base;
+  }
+
+  if (isEditor) {
+    return translate('hardware_mod', { device, lens, software: softwareName }, locale);
+  }
+
+  const base = translate('hardware', { device, lens }, locale);
+  return softwareName
+    ? `${base} ${translate('hardware_software', { software: softwareName }, locale)}`.trim()
+    : base;
 }
 
 /**
- * Generates plain-text digital integrity narrative for a single forensic asset.
+ * Generates localized plain-text metadata completeness and Software observation narrative.
  */
 export function generateIntegrityNarrative(asset: ForensicAsset, locale: string = 'en'): string {
   if (asset.integrityAlerts && asset.integrityAlerts.length > 0) {
-    return asset.integrityAlerts.map((a) => a.defaultMessage).join(' | ');
-  }
-
-  const hasGps =
-    asset.exifData.latitude !== undefined && asset.exifData.longitude !== undefined;
-  const hasDate = Boolean(
-    asset.exifData.DateTimeOriginal ||
-      asset.exifData.DateTimeDigitized ||
-      asset.exifData.DateTime
-  );
-  const hasDevice = Boolean(asset.exifData.Make || asset.exifData.Model);
-
-  if (!hasGps && hasDate && hasDevice) {
-    return translate('integrity_clean_no_gps', {}, locale);
-  }
-  if (!hasDate && hasGps && hasDevice) {
-    return translate('integrity_clean_no_datetime', {}, locale);
-  }
-  if (!hasDevice && hasGps && hasDate) {
-    return translate('integrity_clean_no_device', {}, locale);
+    return asset.integrityAlerts
+      .map((alert) => formatIntegrityAlertMessage(alert, locale))
+      .join(' | ');
   }
 
   return translate('integrity_clean', {}, locale);
@@ -132,12 +142,19 @@ function formatExposureTime(value: unknown): string {
 }
 
 /**
- * Generates plain-text narrative summarizing exposure and ambient lighting conditions.
+ * Generates plain-text narrative summarizing recorded exposure settings.
  */
 export function generateExposureNarrative(
   props: Record<string, unknown>,
   locale: string = 'en'
 ): string {
+  const hasAnyExposure = Boolean(
+    props.FNumber || props.ApertureValue || props.ExposureTime || props.ISO
+  );
+  if (!hasAnyExposure) {
+    return translate('no_exposure_narrative', {}, locale);
+  }
+
   const aperture = props.FNumber
     ? `f/${props.FNumber}`
     : props.ApertureValue
@@ -157,7 +174,7 @@ export function generateExposureNarrative(
   const isoVal = parseInt(String(props.ISO || '0'), 10);
   const shutterVal = parseFloat(String(props.ExposureTime || '0'));
 
-  let lightingKey = 'exp_standard';
+  let lightingKey = '';
   if (fVal > 0 && fVal < 2.8) {
     lightingKey = 'exp_shallow_depth';
   } else if (isoVal >= 800) {
@@ -167,8 +184,10 @@ export function generateExposureNarrative(
   }
 
   const baseText = translate('exposure', { aperture, shutter, iso, program }, locale);
-  const conditionText = translate(lightingKey, {}, locale);
-  return `${baseText} ${conditionText}`.trim();
+  if (!lightingKey) {
+    return baseText;
+  }
+  return `${baseText} ${translate(lightingKey, {}, locale)}`.trim();
 }
 
 /**
@@ -193,28 +212,50 @@ export function generateOpticsNarrative(
   return translate('optics', { focal, focal35, zoom }, locale);
 }
 
+function readOptionalTag(props: Record<string, unknown>, key: string): string | null {
+  const val = props[key];
+  if (val === undefined || val === null) return null;
+  const str = String(val).trim();
+  return str === '' ? null : str;
+}
+
+const QUALITY_TAG_SPECS: Array<{ key: string; localeKey: string; paramName: string }> = [
+  { key: 'Contrast', localeKey: 'quality_contrast', paramName: 'contrast' },
+  { key: 'Sharpness', localeKey: 'quality_sharpness', paramName: 'sharpness' },
+  { key: 'ColorSpace', localeKey: 'quality_color_space', paramName: 'colorSpace' },
+];
+
 /**
- * Generates plain-text narrative summarizing image resolution, contrast, sharpness, and color space.
+ * Generates plain-text narrative strictly from present image dimensions and color/processing tags.
  */
 export function generateQualityNarrative(
   props: Record<string, unknown>,
   locale: string = 'en'
 ): string {
-  const width = String(props.ImageWidth || props.PixelXDimension || 'unknown');
-  const height = String(props.ImageHeight || props.PixelYDimension || 'unknown');
-  const contrast = String(props.Contrast || 'Standard');
-  const sharpness = String(props.Sharpness || 'Standard');
-  const colorSpace = String(props.ColorSpace || 'sRGB');
+  const width = readOptionalTag(props, 'ImageWidth') ?? readOptionalTag(props, 'PixelXDimension');
+  const height = readOptionalTag(props, 'ImageHeight') ?? readOptionalTag(props, 'PixelYDimension');
 
-  return translate(
-    'quality',
-    { width, height, contrast, sharpness, colorSpace },
-    locale
-  );
+  const parts: string[] = [];
+  if (width !== null && height !== null) {
+    parts.push(translate('quality_resolution', { width, height }, locale));
+  }
+
+  for (const spec of QUALITY_TAG_SPECS) {
+    const value = readOptionalTag(props, spec.key);
+    if (value !== null) {
+      parts.push(translate(spec.localeKey, { [spec.paramName]: value }, locale));
+    }
+  }
+
+  if (parts.length === 0) {
+    return translate('no_quality_narrative', {}, locale);
+  }
+
+  return parts.join(' ');
 }
 
 /**
- * Generates plain-text narrative summarizing chronology, UTC conversion, and modification divergence.
+ * Generates plain-text narrative summarizing recorded capture timestamp and UTC representation.
  */
 export function generateTimelineNarrative(
   props: Record<string, unknown>,
@@ -230,19 +271,13 @@ export function generateTimelineNarrative(
   const dateStr = dateObj ? formatFullDate(dateObj) : rawStr;
   const gmtStr = dateObj ? dateObj.toUTCString() : rawStr;
 
-  let narrative = translate('timeline_capture', { dateStr }, locale);
-  narrative += `\n${translate('timeline_format', { rawStr }, locale)}`;
-  narrative += `\n${translate('timeline_gmt', { gmtStr }, locale)}`;
+  const lines = [
+    translate('timeline_capture', { dateStr }, locale),
+    translate('timeline_format', { rawStr }, locale),
+    translate('timeline_gmt', { gmtStr }, locale),
+  ];
 
-  const parsedMod = props.ModifyDate ? parseExifDate(props.ModifyDate) : null;
-  if (parsedMod && dateObj && parsedMod.getTime() !== dateObj.getTime()) {
-    const modStr = formatFullDate(parsedMod);
-    narrative += `\n${translate('timeline_mod_note', { modStr }, locale)}`;
-  } else {
-    narrative += `\n${translate('timeline_integrity', {}, locale)}`;
-  }
-
-  return narrative.trim();
+  return lines.join('\n').trim();
 }
 
 /**
@@ -270,8 +305,15 @@ export function generateGeospatialNarrative(
   return translate('geospatial', { locationName: locName, lat, lng }, locale);
 }
 
+function formatAdaptiveKmDistance(distanceKm: number): string {
+  if (distanceKm < 1) {
+    return `${Math.round(distanceKm * 1000)} m`;
+  }
+  return `${distanceKm.toFixed(1).replace('.0', '')} km`;
+}
+
 /**
- * Generates natural language multi-asset collective narratives for PDF, Markdown, and UI displays.
+ * Generates natural language multi-asset collective narratives for UI and report exports.
  */
 export function generateCollectiveNarratives(
   collective: CollectiveIntelligenceResult,
@@ -280,7 +322,7 @@ export function generateCollectiveNarratives(
 ): NarrativeSection[] {
   const sections: NarrativeSection[] = [];
 
-  // 1. Digital Integrity
+  // 1. Metadata Completeness
   let integrityText = '';
   if (collective.integrity.fullyStrippedCount === totalAssets) {
     integrityText = translate(
@@ -297,14 +339,14 @@ export function generateCollectiveNarratives(
         total: totalAssets,
         fully: collective.integrity.fullyStrippedCount,
         partially: collective.integrity.partiallyStrippedCount,
-        clean: collective.integrity.cleanCount
+        clean: collective.integrity.cleanCount,
       },
       locale
     );
   }
   sections.push({
     title: translate('analysis_integrity', {}, locale, 'ui'),
-    narrative: integrityText
+    narrative: integrityText,
   });
 
   // 2. Device Hardware
@@ -349,7 +391,7 @@ export function generateCollectiveNarratives(
   }
   sections.push({
     title: translate('analysis_hardware', {}, locale, 'ui'),
-    narrative: hwText
+    narrative: hwText,
   });
 
   // 3. Timeline
@@ -359,10 +401,7 @@ export function generateCollectiveNarratives(
     collective.timeline.startTime &&
     collective.timeline.endTime
   ) {
-    const diffHours = (
-      collective.timeline.totalDurationMs /
-      (1000 * 60 * 60)
-    )
+    const diffHours = (collective.timeline.totalDurationMs / (1000 * 60 * 60))
       .toFixed(1)
       .replace('.0', '');
     timelineText = translate(
@@ -370,7 +409,7 @@ export function generateCollectiveNarratives(
       {
         diffHours,
         start: formatFullDate(collective.timeline.startTime),
-        end: formatFullDate(collective.timeline.endTime)
+        end: formatFullDate(collective.timeline.endTime),
       },
       locale
     );
@@ -383,28 +422,38 @@ export function generateCollectiveNarratives(
   }
   sections.push({
     title: translate('analysis_timeline', {}, locale, 'ui'),
-    narrative: timelineText
+    narrative: timelineText,
   });
 
   // 4. Geospatial
   let geoText = '';
-  const dist = collective.geospatial.totalPathDistanceKm;
+  const pathKm = collective.geospatial.totalPathDistanceKm;
+  const maxSpreadKm = collective.geospatial.maxSpreadKm;
+
   if (collective.geospatial.spreadCategory === 'concentrated') {
     geoText = translate('combined_geo_concentrated', {}, locale);
-  } else if (collective.geospatial.spreadCategory === 'localized') {
-    geoText = translate('combined_geo_localized', { dist: Math.round(dist * 1000) }, locale);
-  } else if (collective.geospatial.spreadCategory === 'trail') {
-    geoText = translate('combined_geo_trail', { dist: dist.toFixed(1) }, locale);
+  } else if (
+    collective.geospatial.spreadCategory === 'localized' ||
+    collective.geospatial.spreadCategory === 'trail'
+  ) {
+    if (pathKm > 0) {
+      const key =
+        collective.geospatial.spreadCategory === 'localized'
+          ? 'combined_geo_localized'
+          : 'combined_geo_trail';
+      geoText = translate(key, { dist: formatAdaptiveKmDistance(pathKm) }, locale);
+    } else if (maxSpreadKm > 0) {
+      geoText = translate(
+        'combined_geo_spread_only',
+        { spread: formatAdaptiveKmDistance(maxSpreadKm) },
+        locale
+      );
+    }
   }
 
-  if (collective.geospatial.velocityAlert?.hasAnomaly) {
-    const speed = collective.geospatial.velocityAlert.maxSpeedKmh;
-    const velNote = translate('velocity_warning', { speed }, locale);
-    geoText = geoText ? `${geoText}\n\n${velNote}` : velNote;
-  }
   sections.push({
     title: translate('analysis_geospatial', {}, locale, 'ui'),
-    narrative: geoText
+    narrative: geoText,
   });
 
   return sections;
