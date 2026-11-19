@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { generateCollectiveNarratives } from '../../../src/core/narratives/narratives';
 import { CollectiveIntelligenceResult } from '../../../src/core/forensics/types';
 
-describe('Multi-Asset Collective Intelligence Narratives (Scenario 3.4)', () => {
+describe('Multi-Asset Collective Narratives (BP-NARRATIVE-002)', () => {
   const baseCollective: CollectiveIntelligenceResult = {
     integrity: {
       cleanCount: 2,
@@ -19,7 +19,7 @@ describe('Multi-Asset Collective Intelligence Narratives (Scenario 3.4)', () => 
       details: []
     },
     timeline: {
-      totalDurationMs: 7200000, // 2 hours
+      totalDurationMs: 7200000,
       startTime: new Date('2026-10-28T10:00:00Z'),
       endTime: new Date('2026-10-28T12:00:00Z'),
       missingAssets: [],
@@ -30,50 +30,50 @@ describe('Multi-Asset Collective Intelligence Narratives (Scenario 3.4)', () => 
       maxSpreadKm: 15.5,
       spreadCategory: 'trail',
       missingCoordinatesCount: 0,
-      jumps: [],
-      velocityAlert: null
+      jumps: []
     }
   };
 
-  it('generates consistent hardware and physical serial match narrative (Normal Path)', () => {
+  it('generates factual hardware consistency without photographer-identity assumptions', () => {
     const sections = generateCollectiveNarratives(baseCollective, 2, 'en');
 
     const hwSection = sections.find((s) => s.title.toLowerCase().includes('hardware'));
     expect(hwSection).toBeDefined();
     expect(hwSection?.narrative).toContain('same camera model: Sony ILCE-7M4');
-    expect(hwSection?.narrative).toContain('Physical Camera Verified: All photos in this batch were taken using the exact same physical camera unit');
+    expect(hwSection?.narrative).not.toContain('same person');
+    expect(hwSection?.narrative).toContain('Physical Camera Verified');
     expect(hwSection?.narrative).not.toContain('<strong>');
   });
 
-  it('generates timeline duration and trail route geospatial spread narrative', () => {
+  it('generates timeline duration and straight-line geospatial narrative without vehicle assumptions', () => {
     const sections = generateCollectiveNarratives(baseCollective, 2, 'en');
 
     const timelineSection = sections.find((s) => s.title.toLowerCase().includes('timeline'));
-    expect(timelineSection).toBeDefined();
-    expect(timelineSection?.narrative).toContain('within a span of 2 hours');
+    expect(timelineSection?.narrative).toContain('2 hours');
+    expect(timelineSection?.narrative).not.toContain('no chronological overlap');
 
     const geoSection = sections.find((s) => s.title.toLowerCase().includes('geospatial') || s.title.toLowerCase().includes('location'));
-    expect(geoSection).toBeDefined();
-    expect(geoSection?.narrative).toContain('traveled about 15.5 km');
+    expect(geoSection?.narrative).toContain('straight-line');
+    expect(geoSection?.narrative).toContain('15.5 km');
+    expect(geoSection?.narrative).not.toContain('likely using a vehicle');
   });
 
-  it('includes velocity warning anomaly when velocity alert is triggered (Boundary & Error Path)', () => {
-    const anomalousCollective: CollectiveIntelligenceResult = {
+  it('reports max spread when geotagged photos lack EXIF timestamps (totalPathDistanceKm === 0)', () => {
+    const untimedGeo: CollectiveIntelligenceResult = {
       ...baseCollective,
       geospatial: {
-        ...baseCollective.geospatial,
-        velocityAlert: {
-          hasAnomaly: true,
-          maxSpeedKmh: 1450,
-          fromFileName: 'photo1.jpg',
-          toFileName: 'photo2.jpg'
-        }
+        totalPathDistanceKm: 0,
+        maxSpreadKm: 2.4,
+        spreadCategory: 'trail',
+        missingCoordinatesCount: 0,
+        jumps: []
       }
     };
 
-    const sections = generateCollectiveNarratives(anomalousCollective, 2, 'en');
+    const sections = generateCollectiveNarratives(untimedGeo, 2, 'en');
     const geoSection = sections.find((s) => s.title.toLowerCase().includes('geospatial') || s.title.toLowerCase().includes('location'));
-    expect(geoSection?.narrative).toContain('Travel Alert: The distance between locations indicates a very high speed of (1450 km/h)');
+    expect(geoSection?.narrative).toContain('2.4 km');
+    expect(geoSection?.narrative).not.toContain('0 km');
   });
 
   it('reports mixed metadata completeness when assets have partial metadata', () => {

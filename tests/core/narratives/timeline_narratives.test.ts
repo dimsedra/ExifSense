@@ -4,28 +4,19 @@ import {
   generateGeospatialNarrative
 } from '../../../src/core/narratives/narratives';
 
-describe('Timeline & Geospatial Narratives (Scenario 3.3)', () => {
-  it('generates chronological timeline narrative with capture and UTC timestamps (Normal Path)', () => {
+describe('Timeline & Geospatial Narratives (BP-NARRATIVE-002)', () => {
+  it('generates chronological timeline narrative with capture and UTC timestamps without consistency verdicts', () => {
     const props = {
-      DateTimeOriginal: '2026:10:28 14:30:00'
+      DateTimeOriginal: '2026:10:28 14:30:00',
+      ModifyDate: '2026:10:28 16:00:00'
     };
 
     const narrative = generateTimelineNarrative(props, 'en');
     expect(narrative).toContain('Taken on:');
     expect(narrative).toContain('2026:10:28 14:30:00');
     expect(narrative).toContain('Coordinated Universal Time (GMT/UTC):');
-    expect(narrative).toContain('timeline of photo capture appears natural and consistent');
-    expect(narrative).not.toContain('<strong>');
-  });
-
-  it('detects and warns when file modification date differs from capture date (Boundary Path)', () => {
-    const props = {
-      DateTimeOriginal: '2026:10:28 10:00:00',
-      ModifyDate: '2026:10:28 16:00:00'
-    };
-
-    const narrative = generateTimelineNarrative(props, 'en');
-    expect(narrative).toContain('subsequent file modification time was detected');
+    expect(narrative).not.toContain('natural and consistent');
+    expect(narrative).not.toContain('subsequent file modification time');
     expect(narrative).not.toContain('<strong>');
   });
 
@@ -34,11 +25,20 @@ describe('Timeline & Geospatial Narratives (Scenario 3.3)', () => {
     expect(narrative).toBe('No capture date or time could be found in this file.');
   });
 
-  it('generates geospatial narrative with coordinates and location name (Normal Path)', () => {
+  it('generates factual geospatial narrative without authenticity claims', () => {
     const narrative = generateGeospatialNarrative(37.77492, -122.41941, 'San Francisco, CA', 'en');
     expect(narrative).toContain('San Francisco, CA');
     expect(narrative).toContain('37.77492, -122.41941');
+    expect(narrative).not.toContain('appears natural and genuine');
     expect(narrative).not.toContain('<strong>');
+  });
+
+  it('reports missing GPS factually without guessing disabled GPS or intentional removal', () => {
+    const enMissing = generateGeospatialNarrative(NaN, NaN, null, 'en');
+    const idMissing = generateGeospatialNarrative(NaN, NaN, null, 'id');
+
+    expect(enMissing).toBe('No GPS coordinates were recorded in this file.');
+    expect(idMissing).toBe('Koordinat lokasi GPS tidak tercatat pada berkas ini.');
   });
 
   it('falls back to remote location descriptor when location name is omitted', () => {
