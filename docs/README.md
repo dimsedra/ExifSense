@@ -13,6 +13,7 @@ Catalog of technical documentation and design references for ExifSense.
 - [Intent: CLI Single-Asset Web Parity](./intent/20261114_cli_single_analysis_web_parity.md) — Aligning `exifsense single` output 1:1 with the Web single-asset dashboard across all 7 narratives, live Nominatim place name resolution, file info, and all 8 categorized raw EXIF groups.
 - [Intent: Drop Arabic Locale and RTL Support](./intent/20261114_drop_arabic_locale_and_rtl.md) — Restricting localization strictly to English (`en`) and Bahasa Indonesia (`id`) and removing all Arabic translations and RTL layout scaffolding.
 - [Intent: CLI Batch Analysis Web Parity](./intent/20261114_cli_batch_analysis_web_parity.md) — Aligning `exifsense batch` and batch `scenario` output 1:1 with the Web batch dashboard across live Nominatim reverse geocoding, Chronological Story, Combined Analysis evidence tables, localization, and an opt-in `--detailed` flag.
+- [Intent: Factual Narrative Cleanup and Dual-Distance Export Parity](./intent/20261119_factual_narrative_cleanup_and_dual_distance_parity.md) — Removing dead keys and legacy manipulation heuristics, making missing-metadata and template narratives strictly factual across `en`/`id`, and surfacing OSRM dual-distance inside `combined_geo_*` across Web and exports.
 
 ## Blueprint
 
@@ -24,6 +25,7 @@ Catalog of technical documentation and design references for ExifSense.
 - [Blueprint: CLI Single-Asset Web Parity](./blueprint/20261114_cli_single_analysis_web_parity.md) — Module boundaries, contracts, and verification plan for 1:1 parity between `exifsense single` and the Web single-asset dashboard.
 - [Blueprint: Drop Arabic Locale and RTL Support](./blueprint/20261114_drop_arabic_locale_and_rtl.md) — Contracts, verification methods, and atomic commit plan for removing `ar` translations, RTL layout support, and CLI `--locale ar` handling.
 - [Blueprint: CLI Batch Analysis Web Parity](./blueprint/20261114_cli_batch_analysis_web_parity.md) — Module boundaries, contracts, and verification plan for 1:1 parity between `exifsense batch`, Web batch views, Nominatim enrichment, and `--detailed`.
+- [Blueprint: Factual Narrative Cleanup and Dual-Distance Export Parity](./blueprint/20261119_factual_narrative_cleanup_and_dual_distance_parity.md) — Contracts and verification plan for removing legacy manipulation heuristics and dead keys, localizing uniform missing-metadata alerts, and surfacing OSRM dual-distance in `combined_geo_*` across Web and exports.
 
 ## Design
 
@@ -37,3 +39,7 @@ Catalog of technical documentation and design references for ExifSense.
 ## Lesson
 
 - [Lesson: Haversine Algorithm and OSRM Road Routing](./lesson/haversine_and_osrm/haversine_and_osrm.md) — Intuitive mental models and mathematical mechanics of great-circle displacement versus road network routing in batch analysis.
+
+## Report
+
+- [Report: Peta Audit dan Depresiasi Narasi ExifSense](./report/20261119_narrative_deprecation_mapping.html) — Comprehensive audit mapping of 26 dead narrative keys, legacy manipulation heuristic alerts, and neutrality/parity alignments between the original proposal and the current thesis reframing.
