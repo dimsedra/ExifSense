@@ -167,7 +167,7 @@ export function generateExposureNarrative(
 
   const iso = props.ISO ? `ISO ${props.ISO}` : translate('unspecified_iso', {}, locale);
   const program = props.ExposureProgram
-    ? translate('using_program', { program: props.ExposureProgram }, locale)
+    ? ` ${translate('using_program', { program: props.ExposureProgram }, locale)}`
     : '';
 
   const fVal = parseFloat(String(props.FNumber || props.ApertureValue || '0'));
@@ -202,7 +202,7 @@ export function generateOpticsNarrative(
     : translate('unknown_focal', {}, locale);
 
   const focal35 = props.FocalLengthIn35mmFormat
-    ? translate('equivalent_35mm', { mm: props.FocalLengthIn35mmFormat }, locale)
+    ? ` ${translate('equivalent_35mm', { mm: props.FocalLengthIn35mmFormat }, locale)}`
     : '';
 
   const zoomRatio = Number(props.DigitalZoomRatio || 0);

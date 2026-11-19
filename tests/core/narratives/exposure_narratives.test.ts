@@ -16,10 +16,12 @@ describe('Exposure, Optics & Quality Narratives (BP-NARRATIVE-002)', () => {
 
     const narrative = generateExposureNarrative(props, 'en');
     expect(narrative).toContain('f/1.8');
-    expect(narrative).toContain('ISO 100');
-    expect(narrative).toContain('Aperture priority');
+    expect(narrative).toContain('ISO 100 using Aperture priority mode.');
     expect(narrative).toContain('bokeh effect');
     expect(narrative).not.toContain('<strong>');
+
+    const idNarrative = generateExposureNarrative(props, 'id');
+    expect(idNarrative).toContain('ISO 100 menggunakan mode Aperture priority.');
   });
 
   it('generates low light exposure narrative when ISO >= 800', () => {
@@ -61,8 +63,7 @@ describe('Exposure, Optics & Quality Narratives (BP-NARRATIVE-002)', () => {
     };
 
     const narrative = generateOpticsNarrative(props, 'en');
-    expect(narrative).toContain('35mm');
-    expect(narrative).toContain('equivalent to 52mm');
+    expect(narrative).toContain('35mm (equivalent to 52mm');
     expect(narrative).toContain('Digital zoom of 2x was used');
     expect(narrative).not.toContain('<strong>');
   });

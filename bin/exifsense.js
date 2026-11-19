@@ -4254,7 +4254,7 @@ var en_default = {
 		"hardware_no_device": "Device manufacturer and model were not recorded{lens}.",
 		"hardware_mod_no_device": "Device manufacturer and model were not recorded{lens}; the Software tag records <strong>{software}</strong>.",
 		"no_hardware_narrative": "No device manufacturer, model, lens, or software tags were found in this file.",
-		"with_lens": " with a {lens} lens",
+		"with_lens": "with a {lens} lens",
 		"exposure": "Captured with an aperture of <strong>{aperture}</strong>, shutter speed of <strong>{shutter}</strong>, and sensor sensitivity of <strong>{iso}</strong>{program}.",
 		"no_exposure_narrative": "No camera exposure settings (aperture, shutter speed, or ISO) were found in this file.",
 		"exp_low_light": "The high sensor sensitivity (ISO) suggests this photo was taken in a dark place or indoors.",
@@ -4263,10 +4263,10 @@ var en_default = {
 		"unknown_aperture": "unknown aperture",
 		"unknown_shutter": "unspecified shutter speed",
 		"unspecified_iso": "unspecified ISO",
-		"using_program": " using {program} mode",
+		"using_program": "using {program} mode",
 		"optics": "The lens was set to a focal length of <strong>{focal}</strong>{focal35}{zoom}. This indicates the level of zoom used when taking the photo.",
 		"unknown_focal": "unknown focal length",
-		"equivalent_35mm": " (equivalent to {mm}mm on a standard 35mm film camera)",
+		"equivalent_35mm": "(equivalent to {mm}mm on a standard 35mm film camera)",
 		"digital_zoom": "Digital zoom of {zoom}x was used",
 		"quality_resolution": "Recorded image dimensions are <strong>{width}x{height}</strong> pixels.",
 		"quality_contrast": "Contrast is recorded as <strong>{contrast}</strong>.",
@@ -4696,7 +4696,7 @@ var id_default = {
 		"hardware_no_device": "Produsen dan model perangkat tidak tercatat{lens}.",
 		"hardware_mod_no_device": "Produsen dan model perangkat tidak tercatat{lens}; tag Software mencatat <strong>{software}</strong>.",
 		"no_hardware_narrative": "Tidak ditemukan tag produsen, model perangkat, lensa, maupun Software pada berkas ini.",
-		"with_lens": " dengan lensa {lens}",
+		"with_lens": "dengan lensa {lens}",
 		"exposure": "Diambil dengan aperture <strong>{aperture}</strong>, kecepatan rana <strong>{shutter}</strong>, dan sensitivitas sensor (ISO) <strong>{iso}</strong>{program}.",
 		"no_exposure_narrative": "Tidak ditemukan pengaturan eksposur kamera (aperture, kecepatan rana, atau ISO) pada berkas ini.",
 		"exp_low_light": "Sensitivitas ISO tinggi menunjukkan foto ini diambil di tempat gelap atau dalam ruangan.",
@@ -4705,10 +4705,10 @@ var id_default = {
 		"unknown_aperture": "aperture tidak diketahui",
 		"unknown_shutter": "kecepatan rana tidak ditentukan",
 		"unspecified_iso": "ISO tidak ditentukan",
-		"using_program": " menggunakan mode {program}",
+		"using_program": "menggunakan mode {program}",
 		"optics": "Lensa diatur pada panjang fokus <strong>{focal}</strong>{focal35}{zoom}. Ini menunjukkan tingkat zoom yang digunakan saat pemotretan.",
 		"unknown_focal": "panjang fokus tidak diketahui",
-		"equivalent_35mm": " (setara {mm}mm pada kamera film 35mm standar)",
+		"equivalent_35mm": "(setara {mm}mm pada kamera film 35mm standar)",
 		"digital_zoom": "Zoom digital sebesar {zoom}x digunakan",
 		"quality_resolution": "Dimensi gambar tercatat sebesar <strong>{width}x{height}</strong> piksel.",
 		"quality_contrast": "Tingkat kontras tercatat sebagai <strong>{contrast}</strong>.",
@@ -4896,7 +4896,7 @@ function generateExposureNarrative(props, locale = "en") {
 	const aperture = props.FNumber ? `f/${props.FNumber}` : props.ApertureValue ? `f/${props.ApertureValue}` : translate("unknown_aperture", {}, locale);
 	const shutter = props.ExposureTime ? formatExposureTime(props.ExposureTime) : translate("unknown_shutter", {}, locale);
 	const iso = props.ISO ? `ISO ${props.ISO}` : translate("unspecified_iso", {}, locale);
-	const program = props.ExposureProgram ? translate("using_program", { program: props.ExposureProgram }, locale) : "";
+	const program = props.ExposureProgram ? ` ${translate("using_program", { program: props.ExposureProgram }, locale)}` : "";
 	const fVal = parseFloat(String(props.FNumber || props.ApertureValue || "0"));
 	const isoVal = parseInt(String(props.ISO || "0"), 10);
 	const shutterVal = parseFloat(String(props.ExposureTime || "0"));
@@ -4918,7 +4918,7 @@ function generateExposureNarrative(props, locale = "en") {
 */
 function generateOpticsNarrative(props, locale = "en") {
 	const focal = props.FocalLength ? `${props.FocalLength}mm` : translate("unknown_focal", {}, locale);
-	const focal35 = props.FocalLengthIn35mmFormat ? translate("equivalent_35mm", { mm: props.FocalLengthIn35mmFormat }, locale) : "";
+	const focal35 = props.FocalLengthIn35mmFormat ? ` ${translate("equivalent_35mm", { mm: props.FocalLengthIn35mmFormat }, locale)}` : "";
 	const zoomRatio = Number(props.DigitalZoomRatio || 0);
 	return translate("optics", {
 		focal,
