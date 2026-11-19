@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peta Audit dan Depresiasi Narasi ExifSense</title>
+
+  <!-- JetBrains Mono Font -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,300..700;1,300..700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="report.css">
+
+  <!-- Mermaid.js for architecture & transition diagrams -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+
+  <!-- Chart.js for audit breakdown chart -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 1.25rem;
+      margin-bottom: 1.25rem;
+    }
+    .grid-4 .card {
+      margin-bottom: 0;
+    }
+    .stat-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.35rem;
+    }
+    .stat-value {
+      font-size: 1.85rem;
+      font-weight: 700;
+      line-height: 1.2;
+      margin-bottom: 0.25rem;
+    }
+    .stat-note {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+    .badge-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+    .key-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+    }
+    .chart-wrap {
+      height: 220px;
+      position: relative;
+    }
+  </style>
+
+  <script>
+    mermaid.initialize({
+      startOnLoad: true,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#0c0c0e',
+        primaryColor: '#141417',
+        primaryTextColor: '#f0f0f2',
+        primaryBorderColor: '#222227',
+        lineColor: '#8e8e99',
+        secondaryColor: '#0c0c0e',
+        tertiaryColor: '#050505',
+        fontFamily: '"JetBrains Mono", ui-monospace, monospace'
+      }
+    });
+  </script>
+</head>
+<body>
+  <div class="container">
+
+    <header>
+      <div class="header-top">
+        <div class="badge-group">
+          <span class="badge badge-info">KODE &amp; KAMUS AUDIT</span>
+          <span class="badge badge-warning">THESIS REFRAMING</span>
+        </div>
+        <button id="theme-toggle" class="theme-toggle" onclick="toggleTheme()">[ LIGHT ]</button>
+      </div>
+      <h1>Peta Audit dan Depresiasi Narasi ExifSense</h1>
+      <div class="meta-bar">
+        <span><strong>TANGGAL:</strong> 2026-11-19</span>
+        <span><strong>KONTEKS:</strong> Penyelarasan Proposal Lama ke Kontrak Skripsi Terbaru</span>
+        <span><strong>CAKUPAN:</strong> src/core, src/locales, src/cli, src/views, tests/core</span>
+      </div>
+    </header>
+
+    <main>
+      <p>
+        Laporan ini memetakan seluruh artefak narasi, aturan peringatan integritas, dan label antarmuka di dalam kode ExifSense terhadap perubahan arah penelitian antara naskah awal pada proposal lama (deteksi manipulasi berbasis aturan heuristik) dan kontrak skripsi terbaru (pembangkitan teks bahasa alami berbasis templat aturan tetap atau <em>template-based NLG</em> dan rekonstruksi lini masa ruang-waktu). Tujuan pemetaan ini adalah memberi daftar rujukan yang pasti sebelum pembersihan kode dijalankan.
+      </p>
+
+      <section class="grid-4" aria-label="Ringkasan Kuantitatif Audit">
+        <div class="card">
+          <div class="stat-label">Total Kunci Narratives</div>
+          <div class="stat-value">126</div>
+          <div class="stat-note">Identik di <code>en.json</code> dan <code>id.json</code></div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Kunci Mati (Dead Keys)</div>
+          <div class="stat-value" style="color: var(--text-muted);">26</div>
+          <div class="stat-note">Tidak dipanggil oleh berkas mana pun di <code>src/</code></div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Heuristik Lama Aktif</div>
+          <div class="stat-value" style="color: var(--danger);">7</div>
+          <div class="stat-note">6 aturan <code>integrity.ts</code> + 1 <code>velocityAlert</code></div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Perlu Dinetralkan</div>
+          <div class="stat-value" style="color: var(--warning);">10</div>
+          <div class="stat-note">Kunci narasi aktif + paritas <code>en</code>/<code>id</code></div>
+        </div>
+      </section>
+
+      <section class="grid-2">
+        <div class="chart-container">
+          <h3>Proporsi Status 126 Kunci Bagian <code>narratives</code></h3>
+          <div class="chart-wrap">
+            <canvas id="narrativeAuditChart"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Pergeseran Posisi Ilmiah</h3>
+          <p>
+            Pada proposal awal (<code>thesis/original/</code>), ExifSense diposisikan sebagai sistem pakar deteksi manipulasi dengan lima aturan kontradiksi dan pengujian matriks kebingungan (<em>Confusion Matrix</em>). Akibatnya, kode inti dan kamus masih menyimpan pesan bertema kecurangan lokasi (<em>spoofing</em>) dan rekayasa waktu.
+          </p>
+          <p>
+            Pada kontrak acuan dan proposal terbaru (<code>master_scope_contract.md</code> dan <code>proposal_penelitian.md</code>), cakupan penelitian dibatasi ketat pada penerjemahan deskriptif-netral tanpa vonis keaslian, pengungkapan bagian metadata yang hilang, pelaporan netral tag <code>Software</code> penyunting, dan kronologi spasio-temporal berjarak ganda.
+          </p>
+        </div>
+      </section>
+
+      <section class="diagram-container">
+        <div class="mermaid">
+flowchart LR
+    A["126 Kunci narratives di en.json & id.json"] --> B["89 Kunci Selaras (Dipertahankan)"]
+    A --> C["26 Kunci Mati (Hapus Langsung)"]
+    A --> D["1 Kunci Aktif Warisan: velocity_warning (Deprecate)"]
+    A --> E["10 Kunci Aktif (Netralkan & Setarakan en/id)"]
+    F["6 Aturan integrity.ts + 3 Label CLI"] --> G["Evaluasi Hapus / Ubah ke Deskriptif-Netral"]
+        </div>
+      </section>
+
+      <div class="callout callout-warning">
+        <strong>Risiko Bila Dibiarkan Saat Pengujian Skripsi:</strong> Pesan bawaan berbahasa Inggris pada <code>integrity.ts</code> dan templat <code>velocity_warning</code> masih memuat frasa seperti <code>chronologically impossible</code>, <code>possible timestamp manipulation</code>, <code>Geospatial Spoofing</code>, dan <code>Impossible speed detected</code>. Jika tercetak ke berkas hasil ekspor atau keluaran baris perintah saat pengujian kebenaran narasi (Subbab 3.4.3) dan uji pemahaman pengguna (Subbab 3.4.4), keluaran sistem akan bertentangan langsung dengan klaim deskriptif-netral di Bab I dan Bab III proposal.
+      </div>
+
+      <h2>1. Aturan dan Narasi Heuristik Lama (Kandidat Depresiasi)</h2>
+      <p>
+        Kelompok ini masih aktif dieksekusi di kode produksi pada <code>src/core/forensics/integrity.ts</code>, <code>src/core/forensics/collective.ts</code>, <code>src/core/narratives/narratives.ts</code>, dan <code>src/cli/formatter.ts</code>. Seluruh item di bawah merupakan warisan langsung dari lima aturan deteksi manipulasi pada proposal lama.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Simbol / Kunci</th>
+            <th>Lokasi Kode</th>
+            <th>Perilaku &amp; Kalimat Saat Ini</th>
+            <th>Rekomendasi</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>future_capture_date</code></td>
+            <td><code>src/core/forensics/integrity.ts:104</code><br><code>src/core/forensics/types.ts:27</code></td>
+            <td>Membandingkan waktu pemotretan terhadap waktu lokal sistem dengan batas toleransi 5 menit; kalimat menyebut <em>"possible timestamp manipulation"</em>.</td>
+            <td><span class="badge badge-danger">DEPRECATE / NETRALKAN</span></td>
+          </tr>
+          <tr>
+            <td><code>capture_after_file_modification</code></td>
+            <td><code>src/core/forensics/integrity.ts:114</code><br><code>src/core/forensics/types.ts:28</code></td>
+            <td>Membandingkan <code>DateTimeOriginal</code> dengan waktu ubah berkas sistem (+5 detik); kalimat menyebut <em>"This is chronologically impossible"</em>.</td>
+            <td><span class="badge badge-danger">DEPRECATE / NETRALKAN</span></td>
+          </tr>
+          <tr>
+            <td><code>missing_original_metadata</code></td>
+            <td><code>src/core/forensics/integrity.ts:127</code><br><code>src/core/forensics/types.ts:29</code></td>
+            <td>Terpicu ketika waktu asli kosong tetapi terdapat <code>ModifyDate</code> atau <code>Software</code>; melabeli <em>"Stripped Capture Metadata"</em>.</td>
+            <td><span class="badge badge-warning">GABUNG KE MISSING_DATETIME</span></td>
+          </tr>
+          <tr>
+            <td><code>dimension_mismatch</code></td>
+            <td><code>src/core/forensics/integrity.ts:162</code><br><code>src/core/forensics/types.ts:30</code></td>
+            <td>Membandingkan dimensi EXIF dengan piksel aktual. Pada jalur unggah Web (<code>src/services/ingestionCoordinator.ts:81-82</code>), <code>actualWidth</code> dan <code>actualHeight</code> selalu <code>null</code> sehingga aturan ini tidak pernah aktif di Web.</td>
+            <td><span class="badge badge-danger">DEPRECATE</span></td>
+          </tr>
+          <tr>
+            <td><code>null_island</code></td>
+            <td><code>src/core/forensics/integrity.ts:183</code><br><code>src/core/forensics/types.ts:31</code></td>
+            <td>Mendeteksi koordinat tepat di (0, 0); kalimat menyebut <em>"Geospatial Spoofing... invalid or spoofed GPS data"</em>.</td>
+            <td><span class="badge badge-danger">DEPRECATE</span></td>
+          </tr>
+          <tr>
+            <td><code>integer_coordinate_precision</code></td>
+            <td><code>src/core/forensics/integrity.ts:190</code><br><code>src/core/forensics/types.ts:32</code></td>
+            <td>Mendeteksi lintang atau bujur bilangan bulat; kalimat menyebut <em>"Synthetic Coordinates... manual or synthetic coordinate entry"</em>.</td>
+            <td><span class="badge badge-danger">DEPRECATE</span></td>
+          </tr>
+          <tr>
+            <td><code>velocityAlert</code> &amp; <code>velocity_warning</code></td>
+            <td><code>src/core/forensics/collective.ts:249-326</code><br><code>src/core/narratives/narratives.ts:400-404</code></td>
+            <td>Menghitung kecepatan antar-titik di atas 1.200 km/jam; versi Inggris menyebut dugaan perubahan manual waktu atau lokasi pasca-pemotretan.</td>
+            <td><span class="badge badge-danger">DEPRECATE</span></td>
+          </tr>
+          <tr>
+            <td><code>velocity_anomaly_label</code>, <code>velocity_anomaly_desc</code>, <code>time_anomaly_tag</code></td>
+            <td><code>src/cli/formatter.ts:504,583-599</code><br><code>src/locales/en.json &amp; id.json:315-317</code></td>
+            <td>Menampilkan penanda <code>TIME ANOMALY</code> untuk jeda lebih dari satu hari dan pesan <code>Impossible speed detected</code> di CLI, padahal di antarmuka Web (<code>CombinedIntelligenceCard.tsx</code>) tidak pernah ditampilkan.</td>
+            <td><span class="badge badge-danger">DEPRECATE</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>2. Dua Puluh Enam Kunci Mati (<em>Dead Keys</em>) di Kamus Bahasa</h2>
+      <p>
+        Audit menyeluruh terhadap seluruh 126 kunci di bawah objek <code>narratives</code> pada <code>src/locales/en.json</code> dan <code>src/locales/id.json</code> membuktikan adanya 26 kunci yang tidak lagi dipanggil di berkas produksi <code>src/</code> mana pun. Sementara itu, 9 kunci <code>chrono_macro_*</code> tetap aktif dipanggil secara dinamis di <code>src/core/narratives/chronological.ts:284-288</code> sehingga tidak termasuk kunci mati.
+      </p>
+
+      <details open>
+        <summary>Kelompok A — Sisa Peringatan Integritas Lama (9 Kunci, Baris 324–332)</summary>
+        <p>Kunci-kunci ini terputus sejak <code>integrity.ts</code> menulis <code>defaultMessage</code> berbahasa Inggris langsung di kode. Sebagian (misalnya <code>integrity_dimension_mismatch</code>) masih memuat dugaan penyuntingan manual.</p>
+        <div class="key-list">
+          <code>integrity_edit_software</code>
+          <code>integrity_future_date</code>
+          <code>integrity_capture_after_file</code>
+          <code>integrity_missing_original</code>
+          <code>integrity_dimension_mismatch</code>
+          <code>integrity_fully_stripped</code>
+          <code>integrity_missing_gps</code>
+          <code>integrity_missing_datetime</code>
+          <code>integrity_missing_device</code>
+        </div>
+      </details>
+
+      <details open>
+        <summary>Kelompok B — Peringatan Spoofing dan Sanitasi Yatim (3 Kunci, Baris 368–370)</summary>
+        <p>Tidak dipanggil di <code>narratives.ts</code>; versi bahasa Inggrisnya memuat kecurigaan terhadap alat pemalsu lokasi (<em>location-mocking tools</em>).</p>
+        <div class="key-list">
+          <code>sanitization_alert</code>
+          <code>null_island_warn</code>
+          <code>precision_warn</code>
+        </div>
+      </details>
+
+      <details>
+        <summary>Kelompok C — Ringkasan Gabungan Usang (7 Kunci, Baris 372–381)</summary>
+        <p>Sisa templat analisis gabungan versi terdahulu yang tidak lagi dipakai di <code>generateCollectiveNarratives</code> maupun <code>chronological.ts</code>.</p>
+        <div class="key-list">
+          <code>combined_hw_sparse_single</code>
+          <code>combined_hw_sparse_discrepancy</code>
+          <code>combined_timeline_sparse_note</code>
+          <code>combined_geo_sparse</code>
+          <code>combined_geo_sparse_note</code>
+          <code>combined_integrity_warning</code>
+          <code>combined_integrity_stripped_part</code>
+        </div>
+      </details>
+
+      <details>
+        <summary>Kelompok D — Pesan Kondisi Kosong Antarmuka Lama (7 Kunci, Baris 389–395)</summary>
+        <p>Komponen <code>ExpertAnalysisTabs.tsx</code> kini memakai satu kunci generik <code>no_data_narrative</code> serta keluaran langsung fungsi narasi (<code>no_chrono</code>, <code>no_geo</code>).</p>
+        <div class="key-list">
+          <code>empty_geospatial</code>
+          <code>empty_hardware</code>
+          <code>empty_exposure</code>
+          <code>empty_optics</code>
+          <code>empty_quality</code>
+          <code>empty_timeline</code>
+          <code>empty_all</code>
+        </div>
+      </details>
+
+      <h2>3. Narasi dan Label Aktif yang Perlu Dinetralkan serta Disetarakan</h2>
+      <p>
+        Selain komponen yang perlu dihapus, terdapat sejumlah kunci aktif yang tetap relevan dengan judul skripsi baru tetapi redaksi kalimat, ambang pemicu, atau penyajian lintas bahasanya perlu diperbaiki agar transparan secara mandiri (<em>self-explanatory</em>) dan bebas dari vonis.
+      </p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Target Kode / Kunci</th>
+            <th>Temuan Masalah</th>
+            <th>Arah Perbaikan</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>generateIntegrityNarrative</code><br><code>src/core/narratives/narratives.ts:93-96</code></td>
+            <td>Jika ada <code>integrityAlerts</code>, langsung mencetak <code>defaultMessage</code> berbahasa Inggris dari <code>integrity.ts</code> tanpa terjemahan <code>id.json</code>. Aturan <code>missingPillars.length &gt;= 2</code> di <code>integrity.ts:63</code> juga menyebabkan hilangnya 1 kategori tidak memunculkan peringatan sedangkan 2+ kategori memunculkannya.</td>
+            <td>Salurkan tipe peringatan aktif ke kamus terlokalisasi <code>en.json</code>/<code>id.json</code> dan seragamkan pengungkapan kategori metadata yang kosong.</td>
+          </tr>
+          <tr>
+            <td><code>hardware_analysis</code><br><code>src/core/narratives/narratives.ts:85</code></td>
+            <td>Kalimat menyatakan <em>"profil kamera standar dan wajar"</em>, padahal kode hanya mengecek bahwa tag <code>Software</code> tidak cocok dengan 10 kata kunci penyunting.</td>
+            <td>Ubah menjadi pernyataan objektif bahwa tidak tercatat nama aplikasi penyunting pada tag <code>Software</code>.</td>
+          </tr>
+          <tr>
+            <td><code>exp_standard</code><br><code>src/core/narratives/narratives.ts:160-170</code></td>
+            <td>Merupakan cabang sisa ketika syarat bukaan lebar, ISO tinggi, atau rana cepat tidak terpenuhi, dan tetap terpicu jika seluruh nilai eksposur kosong saat fungsi dipanggil langsung.</td>
+            <td>Pisahkan kondisi seluruh tag eksposur kosong dan nyatakan alasan kategori berdasarkan nilai parameter yang terbaca.</td>
+          </tr>
+          <tr>
+            <td><code>combined_geo_localized</code> &amp; <code>combined_geo_trail</code><br><code>narratives.ts:391-398</code></td>
+            <td>Kategori sebaran di <code>collective.ts:269-275</code> dihitung dari jarak terjauh (<code>maxSpreadKm</code>), tetapi angka yang disisipkan ke narasi adalah total jarak jalur (<code>totalPathDistanceKm</code>). Versi Inggris juga menebak <em>"likely using a vehicle"</em>.</td>
+            <td>Jelaskan jenis jarak yang dilaporkan di kalimat dan hapus asumsi moda transportasi pada <code>en.json</code>.</td>
+          </tr>
+          <tr>
+            <td><code>integrity_clean</code>, <code>geospatial</code>, <code>no_geo</code>, <code>timeline_mod_note</code>, <code>combined_hw_consistent</code>, <code>combined_integrity_stripped_all</code></td>
+            <td>Versi <code>en.json</code> lebih panjang dan memuat spekulasi niat (<em>"appears natural and genuine"</em>, <em>"taken by the same person"</em>, <em>"intentional removal"</em>), sedangkan versi <code>id.json</code> lebih ringkas.</td>
+            <td>Setarakan kandungan fakta operasional antara <code>en.json</code> dan <code>id.json</code> tanpa dugaan niat pengguna.</td>
+          </tr>
+          <tr>
+            <td>Label antarmuka paradigma lama (<code>ui</code>)<br><code>HomeView.tsx:244</code>, <code>GuideView.tsx:30</code></td>
+            <td>Kunci <code>hero_subtitle</code>, <code>dropzone_subtitle_single</code>, <code>feature_integrity_desc</code>, <code>guide_feat_integrity_desc</code>, dan <code>feature_spoof_title</code> masih memuat istilah <em>heuristik manipulasi</em>, <em>tampering</em>, dan <em>spoofing</em>.</td>
+            <td>Perbarui teks antarmuka agar merujuk pada analisis metadata deskriptif, pemeriksaan tanda tangan biner berkas, dan rekonstruksi timeline.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>4. Peta Berkas Terdampak dan Urutan Eksekusi Pembersihan</h2>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Tahapan Eksekusi yang Disarankan</h3>
+          <ol>
+            <li><strong>Pembersihan Mesin Inti &amp; Tipe:</strong> Tetapkan cakupan final <code>IntegrityAlertType</code> di <code>src/core/forensics/types.ts</code> dan <code>integrity.ts</code>, lalu hapus <code>velocityAlert</code> di <code>collective.ts</code> dan <code>narratives.ts</code>.</li>
+            <li><strong>Pembersihan Kamus &amp; Paritas Bahasa:</strong> Hapus 26 kunci mati, alihkan teks peringatan integritas aktif ke kamus terlokalisasi, dan netralkan 10 kunci narasi serta label antarmuka lama di <code>en.json</code> dan <code>id.json</code>.</li>
+            <li><strong>Penyelarasan CLI Formatter:</strong> Hapus penanda <code>time_anomaly_tag</code> dan blok <code>velocity_anomaly_*</code> di <code>src/cli/formatter.ts</code> agar keluaran CLI tetap identik dengan Web.</li>
+            <li><strong>Pembaruan Rangkaian Pengujian:</strong> Sesuaikan skenario pengujian pada <code>tests/core/forensics/integrity.test.ts</code>, <code>collective.test.ts</code>, <code>single_narratives.test.ts</code>, <code>collective_narratives.test.ts</code>, dan <code>tests/cli/formatter.test.ts</code>.</li>
+          </ol>
+        </div>
+        <div class="card">
+          <h3>Catatan Batas Modul Pembersihan Metadata</h3>
+          <p>
+            Modul penghapusan metadata pada <code>src/core/sanitizer/</code> dan tampilan <code>src/views/SanitizerView.tsx</code> memang tidak masuk ke dalam lingkup pengujian empiris skripsi sesuai kontrak penelitian.
+          </p>
+          <p>
+            Namun, merujuk keputusan arsitektur di <code>docs/decisions/adr_002_exclude_metadata_sanitization_from_cli.md</code>, fitur tersebut sengaja dipertahankan sebagai fitur produk pada aplikasi Web (hanya dikecualikan dari CLI), sehingga tidak perlu didepresiasi dari kode Web kecuali kamu memang ingin memangkas cakupan aplikasinya.
+          </p>
+        </div>
+      </div>
+    </main>
+
+    <footer>
+      <span>EXIFSENSE THESIS CODE &amp; NARRATIVE AUDIT</span>
+      <span>DOCS/REPORT/20261119_NARRATIVE_DEPRECATION_MAPPING.HTML</span>
+    </footer>
+
+  </div>
+
+  <script>
+    (function () {
+      const ctx = document.getElementById('narrativeAuditChart');
+      if (ctx && typeof Chart !== 'undefined') {
+        new Chart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Dipertahankan (89)', 'Netralkan / Paritas (10)', 'Depresiasi Aktif (1)', 'Kunci Mati (26)'],
+            datasets: [{
+              label: 'Jumlah Kunci Narratives',
+              data: [89, 10, 1, 26],
+              backgroundColor: [
+                'rgba(63, 185, 80, 0.75)',
+                'rgba(227, 179, 65, 0.75)',
+                'rgba(248, 81, 73, 0.85)',
+                'rgba(142, 142, 153, 0.55)'
+              ],
+              borderColor: ['#3fb950', '#e3b341', '#f85149', '#8e8e99'],
+              borderWidth: 1
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false }
+            },
+            scales: {
+              x: {
+                beginAtZero: true,
+                grid: { color: 'rgba(142, 142, 153, 0.15)' },
+                ticks: { color: '#8e8e99', font: { family: 'JetBrains Mono' } }
+              },
+              y: {
+                grid: { display: false },
+                ticks: { color: '#f0f0f2', font: { family: 'JetBrains Mono', size: 11 } }
+              }
+            }
+          }
+        });
+      }
+    })();
+
+    function initTheme() {
+      const savedTheme = localStorage.getItem('report-theme');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const theme = savedTheme || (prefersDark ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', theme);
+      updateToggleText(theme);
+    }
+
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-theme', newTheme);
+      localStorage.setItem('report-theme', newTheme);
+      updateToggleText(newTheme);
+    }
+
+    function updateToggleText(theme) {
+      const btn = document.getElementById('theme-toggle');
+      if (btn) {
+        btn.textContent = theme === 'dark' ? '[ LIGHT ]' : '[ DARK ]';
+      }
+    }
+
+    initTheme();
+  </script>
+</body>
+</html>
