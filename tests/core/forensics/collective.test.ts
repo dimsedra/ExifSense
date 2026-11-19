@@ -292,11 +292,10 @@ describe('evaluateCollectiveIntelligence - Integrity Matrix (REQ-COL-001)', () =
       expect(result.geospatial.jumps).toHaveLength(1);
       expect(result.geospatial.jumps[0].fromFileName).toBe('monas.jpg');
       expect(result.geospatial.jumps[0].toFileName).toBe('bundaran-hi.jpg');
-      expect(result.geospatial.velocityAlert?.hasAnomaly).toBe(false);
+      expect('velocityAlert' in result.geospatial).toBe(false);
     });
 
-    it('flags velocity anomaly when consecutive points require travel exceeding 1,200 km/h', () => {
-      // Jakarta to Tokyo (~5,800 km) in 30 minutes => speed ~11,600 km/h
+    it('computes distance without emitting velocity alerts even across distant rapid captures', () => {
       const jakartaAsset: SingleAssetInput = {
         fileName: 'jakarta.jpg',
         fileSize: 1000,
@@ -315,7 +314,7 @@ describe('evaluateCollectiveIntelligence - Integrity Matrix (REQ-COL-001)', () =
         fileSize: 1000,
         fileDate: Date.now(),
         exifData: {
-          DateTimeOriginal: '2025-05-10T10:30:00.000Z', // 30 minutes later
+          DateTimeOriginal: '2025-05-10T10:30:00.000Z',
           latitude: 35.6762,
           longitude: 139.6503,
         },
@@ -325,44 +324,8 @@ describe('evaluateCollectiveIntelligence - Integrity Matrix (REQ-COL-001)', () =
 
       const result = evaluateCollectiveIntelligence([jakartaAsset, tokyoAsset]);
 
-      expect(result.geospatial.velocityAlert?.hasAnomaly).toBe(true);
-      expect(result.geospatial.velocityAlert?.maxSpeedKmh).toBeGreaterThan(1200);
-      expect(result.geospatial.velocityAlert?.fromFileName).toBe('jakarta.jpg');
-      expect(result.geospatial.velocityAlert?.toFileName).toBe('tokyo.jpg');
-    });
-
-    it('flags velocity anomaly when two photos have identical timestamps but different locations (impossible teleportation)', () => {
-      const assetA: SingleAssetInput = {
-        fileName: 'place-a.jpg',
-        fileSize: 1000,
-        fileDate: Date.now(),
-        exifData: {
-          DateTimeOriginal: '2025-05-10T10:00:00.000Z',
-          latitude: -6.2088,
-          longitude: 106.8456, // Jakarta
-        },
-        actualWidth: 1920,
-        actualHeight: 1080,
-      };
-
-      const assetB: SingleAssetInput = {
-        fileName: 'place-b.jpg',
-        fileSize: 1000,
-        fileDate: Date.now(),
-        exifData: {
-          DateTimeOriginal: '2025-05-10T10:00:00.000Z', // Exact same second
-          latitude: 51.5074,
-          longitude: -0.1278, // London
-        },
-        actualWidth: 1920,
-        actualHeight: 1080,
-      };
-
-      const result = evaluateCollectiveIntelligence([assetA, assetB]);
-
-      expect(result.geospatial.velocityAlert?.hasAnomaly).toBe(true);
-      expect(result.geospatial.velocityAlert?.fromFileName).toBe('place-a.jpg');
-      expect(result.geospatial.velocityAlert?.toFileName).toBe('place-b.jpg');
+      expect(result.geospatial.totalPathDistanceKm).toBeGreaterThan(5000);
+      expect('velocityAlert' in result.geospatial).toBe(false);
     });
 
     it('falls back to numeric GPSLatitude and GPSLongitude when latitude and longitude are absent', () => {
