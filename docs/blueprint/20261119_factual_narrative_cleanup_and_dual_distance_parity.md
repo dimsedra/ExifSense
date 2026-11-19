@@ -2,7 +2,7 @@
 title: "Blueprint: Factual Narrative Cleanup and Dual-Distance Export Parity"
 type: blueprint
 parent_intent: docs/intent/20261119_factual_narrative_cleanup_and_dual_distance_parity.md
-status: Approved
+status: Completed
 last_updated: 2026-11-19
 ---
 
