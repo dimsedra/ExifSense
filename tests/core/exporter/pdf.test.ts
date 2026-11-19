@@ -72,8 +72,12 @@ describe('Multi-Page Forensic PDF Generation (REQ-EXP-001)', () => {
     expect(header).toBe('%PDF-');
   });
 
-  it('generates multi-page PDF with collective matrix tables when multiple assets provided', async () => {
-    const pdfBlob = await generatePdfReport([asset1, asset2], meta, 'en');
+  it('generates multi-page PDF with collective matrix tables and optional OSRM roadDistanceMeters', async () => {
+    const pdfBlob = await generatePdfReport(
+      [asset1, asset2],
+      { ...meta, roadDistanceMeters: 3100 },
+      'en'
+    );
 
     expect(pdfBlob).toBeInstanceOf(Blob);
     expect(pdfBlob.size).toBeGreaterThan(1000);

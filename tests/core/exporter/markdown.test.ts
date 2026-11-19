@@ -78,6 +78,42 @@ describe('GitHub Flavored Markdown Report Export (REQ-EXP-004)', () => {
     expect(md).toContain('## ASSET 2: street_scene_2.jpg');
   });
 
+  it('includes OSRM dual-distance inside combined geospatial narrative when roadDistanceMeters is provided', () => {
+    const asset2: ForensicAsset = {
+      ...asset1,
+      id: '2',
+      fileName: 'street_scene_2.jpg',
+      exifData: {
+        ...asset1.exifData,
+        DateTimeOriginal: '2026:10:28 12:00:00',
+        latitude: 51.5274,
+        longitude: -0.1078
+      }
+    };
+    const asset1Dated: ForensicAsset = {
+      ...asset1,
+      exifData: {
+        ...asset1.exifData,
+        DateTimeOriginal: '2026:10:28 10:00:00'
+      }
+    };
+
+    const mdOnline = generateMarkdownReport(
+      [asset1Dated, asset2],
+      { ...meta, roadDistanceMeters: 3800 },
+      'en'
+    );
+    expect(mdOnline).toContain('via OSRM road route');
+    expect(mdOnline).toContain('~3.8 km');
+
+    const mdOffline = generateMarkdownReport(
+      [asset1Dated, asset2],
+      { ...meta, roadDistanceMeters: null },
+      'en'
+    );
+    expect(mdOffline).not.toContain('via OSRM road route');
+  });
+
   it('handles empty asset array without asset sections (Boundary & Limits)', () => {
     const md = generateMarkdownReport([], meta, 'en');
     expect(md).toContain('# EXIFSENSE METADATA ANALYSIS REPORT');

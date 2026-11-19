@@ -403,5 +403,69 @@ describe('mapHelpers', () => {
         clearOsrmCache();
       }
     });
+
+    it('extracts chronological waypoints sorted by EXIF capture timestamp with fileDate fallback', async () => {
+      const { extractChronologicalWaypoints } = await import('../../src/services/mapHelpers');
+
+      const later = createMockAsset('2', 'second.jpg', 56.21, -4.72);
+      later.fileDate = 2000;
+      later.exifData.DateTimeOriginal = '2026:10:28 12:00:00';
+
+      const earlier = createMockAsset('1', 'first.jpg', 56.20, -4.71);
+      earlier.fileDate = 9000;
+      earlier.exifData.DateTimeOriginal = '2026:10:28 10:00:00';
+
+      const noGeo = createMockAsset('3', 'nogeo.jpg', null, null);
+      noGeo.exifData.DateTimeOriginal = '2026:10:28 09:00:00';
+
+      const waypoints = extractChronologicalWaypoints([later, noGeo, earlier]);
+      expect(waypoints.map((w) => w.fileName)).toEqual(['first.jpg', 'second.jpg']);
+    });
+
+    it('reads cached OSRM route synchronously via getCachedOsrmRouteDetails and aborts on timeout', async () => {
+      const {
+        fetchOsrmRouteDetails,
+        getCachedOsrmRouteDetails,
+        clearOsrmCache,
+      } = await import('../../src/services/mapHelpers');
+      clearOsrmCache();
+
+      const points = [
+        { lat: 56.20, lng: -4.71 },
+        { lat: 56.21, lng: -4.72 },
+      ];
+
+      expect(getCachedOsrmRouteDetails(points)).toBeNull();
+
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = ((_url: string, init?: RequestInit) =>
+        new Promise((_resolve, reject) => {
+          init?.signal?.addEventListener('abort', () => {
+            reject(new Error('Aborted'));
+          });
+        })) as typeof fetch;
+
+      try {
+        const timedOut = await fetchOsrmRouteDetails(points, { timeoutMs: 25 });
+        expect(timedOut).toBeNull();
+        expect(getCachedOsrmRouteDetails(points)).toBeNull();
+
+        globalThis.fetch = (async () =>
+          ({
+            ok: true,
+            json: async () => ({
+              code: 'Ok',
+              routes: [{ distance: 1850, legs: [{ distance: 1850 }] }],
+            }),
+          }) as unknown as Response) as typeof fetch;
+
+        const fetched = await fetchOsrmRouteDetails(points, { timeoutMs: 1000 });
+        expect(fetched?.totalDistanceMeters).toBe(1850);
+        expect(getCachedOsrmRouteDetails(points)?.totalDistanceMeters).toBe(1850);
+      } finally {
+        globalThis.fetch = originalFetch;
+        clearOsrmCache();
+      }
+    });
   });
 });

@@ -84,4 +84,35 @@ describe('Clipboard Report Formatter & Helper (REQ-EXP-005)', () => {
       'Clipboard permission denied'
     );
   });
+
+  it('includes OSRM dual-distance in combined insights when roadDistanceMeters is provided', () => {
+    const geoAsset1: ForensicAsset = {
+      ...asset1,
+      exifData: {
+        ...asset1.exifData,
+        DateTimeOriginal: '2026:10:28 10:00:00',
+        latitude: 51.5074,
+        longitude: -0.1278
+      }
+    };
+    const geoAsset2: ForensicAsset = {
+      ...asset1,
+      id: '2',
+      fileName: 'target2.jpg',
+      exifData: {
+        ...asset1.exifData,
+        DateTimeOriginal: '2026:10:28 12:00:00',
+        latitude: 51.5274,
+        longitude: -0.1078
+      }
+    };
+
+    const text = generateClipboardReport(
+      [geoAsset1, geoAsset2],
+      { ...meta, roadDistanceMeters: 4200 },
+      'en'
+    );
+    expect(text).toContain('via OSRM road route');
+    expect(text).toContain('~4.2 km');
+  });
 });

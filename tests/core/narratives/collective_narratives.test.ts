@@ -56,6 +56,34 @@ describe('Multi-Asset Collective Narratives (BP-NARRATIVE-002)', () => {
     expect(geoSection?.narrative).toContain('straight-line');
     expect(geoSection?.narrative).toContain('15.5 km');
     expect(geoSection?.narrative).not.toContain('likely using a vehicle');
+    expect(geoSection?.narrative).toMatch(/15\.5 km\.$/);
+  });
+
+  it('includes OSRM road distance inside combined_geo_trail and combined_geo_localized when available', () => {
+    const trailSections = generateCollectiveNarratives(baseCollective, 2, 'en', {
+      roadDistanceMeters: 21400,
+    });
+    const trailGeo = trailSections.find((s) => s.title.toLowerCase().includes('geospatial'));
+    expect(trailGeo?.narrative).toBe(
+      'Cumulative straight-line displacement across chronological GPS points is approximately 15.5 km (or ~21.4 km via OSRM road route).'
+    );
+
+    const localizedCollective: CollectiveIntelligenceResult = {
+      ...baseCollective,
+      geospatial: {
+        ...baseCollective.geospatial,
+        totalPathDistanceKm: 0.45,
+        maxSpreadKm: 0.45,
+        spreadCategory: 'localized',
+      },
+    };
+    const localizedId = generateCollectiveNarratives(localizedCollective, 2, 'id', {
+      roadDistanceMeters: 620,
+    });
+    const locGeoId = localizedId.find((s) => s.title.toLowerCase().includes('geospasial'));
+    expect(locGeoId?.narrative).toBe(
+      'Akumulasi perpindahan garis lurus antar-titik GPS berurutan sekitar 450 m (atau ~620 m melalui rute jalan OSRM).'
+    );
   });
 
   it('reports max spread when geotagged photos lack EXIF timestamps (totalPathDistanceKm === 0)', () => {
