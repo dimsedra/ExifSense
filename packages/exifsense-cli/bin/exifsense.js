@@ -3493,105 +3493,52 @@ const EDITING_SOFTWARE_KEYWORDS = [
 	"paint.net",
 	"illustrator"
 ];
-function evaluateSingleAssetIntegrity(asset, _now = /* @__PURE__ */ new Date()) {
+const MISSING_PILLAR_MESSAGES = {
+	gps: "GPS coordinates are not recorded in this file.",
+	datetime: "Capture date and time are not recorded in this file.",
+	device: "Device manufacturer, model, and camera settings are not recorded in this file."
+};
+/**
+* Checks whether a Software tag string matches known image editing software keywords.
+*/
+function isEditingSoftware(software) {
+	const softwareLower = software.toLowerCase();
+	return EDITING_SOFTWARE_KEYWORDS.some((kw) => softwareLower.includes(kw));
+}
+/**
+* Evaluates metadata completeness and Software tag observations for a single asset.
+*/
+function evaluateSingleAssetIntegrity(asset) {
 	const alerts = [];
 	const exif = asset.exifData || {};
-	const hasGps = exif.latitude != null && exif.longitude != null;
-	const hasDateTime = Boolean(exif.DateTimeOriginal || exif.CreateDate || exif.DateTime || exif.ModifyDate);
-	const hasMake = Boolean(exif.Make || exif.Model);
-	const hasExposure = Boolean(exif.ExposureTime || exif.FNumber || exif.ISO);
+	const hasGps = extractGpsCoordinates(exif) !== null;
+	const hasDateTime = Boolean(exif.DateTimeOriginal || exif.CreateDate || exif.DateTime);
+	const hasDevice = Boolean(exif.Make || exif.Model || exif.ExposureTime || exif.FNumber || exif.ISO);
 	const categorized = categorizeExif(exif);
-	const hasAnyExif = MEANINGFUL_CATEGORIES.some((cat) => Object.keys(categorized[cat]).length > 0);
-	if (!hasAnyExif && !hasGps) {
+	if (!MEANINGFUL_CATEGORIES.some((cat) => Object.keys(categorized[cat]).length > 0) && !hasGps) {
 		alerts.push({
 			type: "fully_stripped",
 			severity: "info",
-			defaultMessage: "No EXIF metadata found in this file."
+			defaultMessage: "No EXIF metadata was found in this file."
 		});
 		return alerts;
 	}
 	const missingPillars = [];
 	if (!hasGps) missingPillars.push("gps");
 	if (!hasDateTime) missingPillars.push("datetime");
-	if (!hasMake && !hasExposure) missingPillars.push("device");
-	if (missingPillars.length >= 2 && hasAnyExif) for (const pillar of missingPillars) alerts.push({
+	if (!hasDevice) missingPillars.push("device");
+	for (const pillar of missingPillars) alerts.push({
 		type: `missing_${pillar}`,
 		severity: "info",
-		defaultMessage: `Selective Metadata Removal: ${pillar.toUpperCase()} data is absent while other metadata is present.`
+		defaultMessage: MISSING_PILLAR_MESSAGES[pillar]
 	});
-	const software = typeof exif.Software === "string" ? exif.Software : "";
-	if (software) {
-		const softwareLower = software.toLowerCase();
-		if (EDITING_SOFTWARE_KEYWORDS.some((kw) => softwareLower.includes(kw))) alerts.push({
-			type: "editing_software",
-			severity: "info",
-			messageParam: { software },
-			defaultMessage: `Editing software signature found: "${software}". This image was likely saved or processed using an image editor.`
-		});
-	}
-	const originalDate = parseExifDate(exif.DateTimeOriginal || exif.CreateDate || exif.DateTime);
-	const modifyDate = parseExifDate(exif.ModifyDate);
-	const fileDate = typeof asset.fileDate === "number" && !Number.isNaN(asset.fileDate) ? new Date(asset.fileDate) : null;
-	if (originalDate) {
-		if (originalDate.getTime() > _now.getTime() + 3e5) alerts.push({
-			type: "future_capture_date",
-			severity: "warning",
-			messageParam: { date: formatFullDate(originalDate) },
-			defaultMessage: `Chronological Anomaly: Capture date (${formatFullDate(originalDate)}) is in the future. This indicates possible timestamp manipulation.`
-		});
-		if (fileDate && originalDate.getTime() > fileDate.getTime() + 5e3) alerts.push({
-			type: "capture_after_file_modification",
-			severity: "warning",
-			messageParam: {
-				date: formatFullDate(originalDate),
-				fileDate: formatFullDate(fileDate)
-			},
-			defaultMessage: `Chronological Mismatch: Capture date (${formatFullDate(originalDate)}) is newer than the file modification date (${formatFullDate(fileDate)}). This is chronologically impossible.`
-		});
-	}
-	if (!originalDate && (modifyDate || software)) alerts.push({
-		type: "missing_original_metadata",
-		severity: "warning",
-		messageParam: { indicator: software || (modifyDate ? "ModifyDate" : "") },
-		defaultMessage: "Stripped Capture Metadata: Original capture timestamp is missing, but post-processing indicators are present."
+	const software = typeof exif.Software === "string" ? exif.Software.trim() : "";
+	if (software && isEditingSoftware(software)) alerts.push({
+		type: "editing_software",
+		severity: "info",
+		messageParam: { software },
+		defaultMessage: `Software tag records "${software}".`
 	});
-	const rawExifWidth = exif.ExifImageWidth ?? exif.PixelXDimension ?? exif.ImageWidth;
-	const rawExifHeight = exif.ExifImageHeight ?? exif.PixelYDimension ?? exif.ImageHeight;
-	const actualWidth = asset.actualWidth;
-	const actualHeight = asset.actualHeight;
-	if (rawExifWidth != null && rawExifHeight != null && actualWidth != null && actualHeight != null) {
-		const exifWidth = Number(rawExifWidth);
-		const exifHeight = Number(rawExifHeight);
-		const numActualWidth = Number(actualWidth);
-		const numActualHeight = Number(actualHeight);
-		if (!Number.isNaN(exifWidth) && !Number.isNaN(exifHeight) && !Number.isNaN(numActualWidth) && !Number.isNaN(numActualHeight) && (exifWidth !== numActualWidth || exifHeight !== numActualHeight)) alerts.push({
-			type: "dimension_mismatch",
-			severity: "warning",
-			messageParam: {
-				exifWidth,
-				exifHeight,
-				actualWidth: numActualWidth,
-				actualHeight: numActualHeight
-			},
-			defaultMessage: `Dimension Mismatch: EXIF metadata reports image dimensions as ${exifWidth}x${exifHeight}, but the actual pixel array size is ${numActualWidth}x${numActualHeight}. This suggests the image was cropped or resized without updating the EXIF metadata.`
-		});
-	}
-	if (exif.latitude != null && exif.longitude != null) {
-		const lat = Number(exif.latitude);
-		const lng = Number(exif.longitude);
-		if (!Number.isNaN(lat) && !Number.isNaN(lng)) {
-			if (Math.abs(lat) < 1e-4 && Math.abs(lng) < 1e-4) alerts.push({
-				type: "null_island",
-				severity: "critical",
-				defaultMessage: "Geospatial Spoofing: Coordinates point to Null Island (0, 0), indicating invalid or spoofed GPS data."
-			});
-			else if (Number.isInteger(lat) || Number.isInteger(lng)) alerts.push({
-				type: "integer_coordinate_precision",
-				severity: "warning",
-				defaultMessage: "Synthetic Coordinates: Latitude or longitude has integer precision, suggesting manual or synthetic coordinate entry."
-			});
-		}
-	}
 	return alerts;
 }
 // src/cli/loader.ts
@@ -3940,18 +3887,25 @@ async function resolveLocationWithPacing(lat, lng, options) {
 }
 const osrmCache = /* @__PURE__ */ new Map();
 const osrmDetailsCache = /* @__PURE__ */ new Map();
+function buildOsrmCacheKey(waypoints) {
+	return waypoints.slice(0, 100).map((p) => `${p.lng},${p.lat}`).join(";");
+}
 /**
 * Fetches real-world road-following driving route details between waypoints via OSRM,
 * including total road distance, individual waypoint-to-waypoint leg distances, and geometry.
 */
-async function fetchOsrmRouteDetails(waypoints) {
+async function fetchOsrmRouteDetails(waypoints, options) {
 	if (!waypoints || waypoints.length < 2) return null;
-	const coordsStr = waypoints.slice(0, 100).map((p) => `${p.lng},${p.lat}`).join(";");
+	const coordsStr = buildOsrmCacheKey(waypoints);
 	if (osrmDetailsCache.has(coordsStr)) return osrmDetailsCache.get(coordsStr) ?? null;
+	const timeoutMs = options?.timeoutMs ?? 3e3;
+	const controller = typeof AbortController !== "undefined" ? new AbortController() : void 0;
+	const timeout = createAbortTimeout(timeoutMs, controller);
 	try {
 		const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
-		const response = await fetch(url);
-		if (!response.ok) return null;
+		const fetchInit = controller ? { signal: controller.signal } : {};
+		const response = await Promise.race([fetch(url, fetchInit), timeout.promise]);
+		if (!response || !response.ok) return null;
 		const data = await response.json();
 		if (data.code === "Ok" && data.routes?.[0]) {
 			const primaryRoute = data.routes[0];
@@ -3966,6 +3920,8 @@ async function fetchOsrmRouteDetails(waypoints) {
 		}
 	} catch (error) {
 		console.error("OSRM route fetch failed:", error);
+	} finally {
+		timeout.clear();
 	}
 	return null;
 }
@@ -4037,10 +3993,10 @@ var en_default = {
 		"clear_history": "Clear All History",
 		"feature_secure_title": "Secure by Design",
 		"feature_secure_desc": "Photos, metadata extraction, and sanitization run locally in your browser with no image uploads. Only GPS coordinates are sent to external map, address (Nominatim), and routing (OSRM) services when online.",
-		"feature_spoof_title": "Spoofing Protection",
+		"feature_spoof_title": "Binary Format Verification",
 		"feature_spoof_desc": "Validates assets at the binary level using Magic Bytes signatures. Detects disguised extensions and rejects malicious files.",
 		"feature_integrity_title": "Integrity Analysis",
-		"feature_integrity_desc": "Automatically computes SHA-256/SHA-1 hashes and analyzes metadata for chronological anomalies, tampering, and edit history.",
+		"feature_integrity_desc": "Automatically computes SHA-256/SHA-1 hashes and inspects metadata completeness, timestamps, and recorded Software tags.",
 		"feature_image_analysis_title": "Automatic Image Analysis",
 		"feature_image_analysis_desc": "Upload any photo and the system automatically extracts and organizes all hidden metadata into a clean, human-readable dashboard. See device details, location, timestamps, camera settings, and more — all presented clearly so anyone can understand the story behind their images.",
 		"feature_sanitize_title": "Metadata Sanitization",
@@ -4198,8 +4154,8 @@ var en_default = {
 		"guide_feat_secure_title": "Secure by Design",
 		"guide_feat_secure_desc": "Local-first processing: your photos never leave your device. Only GPS coordinates are queried externally when online for maps, addresses, and routes.",
 		"guide_feat_integrity_title": "Integrity Analysis",
-		"guide_feat_integrity_desc": "SHA-256 / SHA-1 hashing with anomaly detection to verify image authenticity and detect tampering.",
-		"guide_feat_spoof_title": "Spoofing Protection",
+		"guide_feat_integrity_desc": "SHA-256 / SHA-1 hashing with metadata completeness checks and neutral Software tag reporting.",
+		"guide_feat_spoof_title": "Binary Format Verification",
 		"guide_feat_spoof_desc": "Validates file signatures at the binary level using Magic Bytes, rejecting disguised or malicious files.",
 		"guide_feat_sanitize_overview_title": "Metadata Sanitization",
 		"guide_feat_sanitize_overview_desc": "Strip GPS coordinates, camera details, and personal information with selective controls before sharing.",
@@ -4219,9 +4175,9 @@ var en_default = {
 		"guide_feat_sanitize_desc": "Select Remove Metadata mode to enter the sanitizer studio. Use quick presets or toggle individual categories. Supports batch processing — sanitize multiple files in sequence with one click. Preview which tags are removed before downloading the cleaned file.",
 		"guide_btn_start": "Start Exploring",
 		"guide_btn_history": "Review History",
-		"hero_subtitle": "Client-side image verification, manipulation heuristics, timeline reconstruction, and surgical privacy sanitization.",
+		"hero_subtitle": "Client-side image verification, descriptive metadata narratives, timeline reconstruction, and privacy sanitization.",
 		"dropzone_title_single": "Drop Image for Forensic Inspection",
-		"dropzone_subtitle_single": "Inspect EXIF, detect manipulation, calculate hashes",
+		"dropzone_subtitle_single": "Inspect EXIF, check completeness, calculate hashes",
 		"dropzone_title_batch": "Drop Photos for Collective Analysis",
 		"dropzone_subtitle_batch": "Compare hardware signatures & timeline spread (up to 50)",
 		"dropzone_title_remove": "Drop Image for Instant Sanitization",
@@ -4272,7 +4228,7 @@ var en_default = {
 		"inspect_asset": "Inspect Photo",
 		"batch_total_assets": "Total Assets",
 		"batch_asset_alerts": "Asset Integrity Alerts",
-		"no_integrity_anomalies": "No integrity anomalies detected.",
+		"no_integrity_anomalies": "No missing core metadata or editing software tags noted.",
 		"batch_integrity_clean": "Clean",
 		"batch_integrity_partial": "Partially Stripped",
 		"batch_integrity_stripped": "Fully Stripped",
@@ -4283,35 +4239,27 @@ var en_default = {
 		"spread_concentrated": "Concentrated",
 		"spread_localized": "Localized",
 		"spread_trail": "Trail",
-		"spread_none": "None",
-		"time_anomaly_tag": "TIME ANOMALY",
-		"velocity_anomaly_label": "CRITICAL Velocity Anomaly",
-		"velocity_anomaly_desc": "Impossible speed detected between {from} and {to} ({speed} km/h)."
+		"spread_none": "None"
 	},
 	narratives: {
-		"integrity_clean": "This photo retains its original date and location details. No common indicators of external editing tools were found in the basic metadata.",
-		"integrity_clean_no_gps": "Device and timeline information are intact. No location data was embedded — this is normal if GPS was turned off when the photo was taken.",
-		"integrity_clean_no_datetime": "Device and location data are intact. No capture timestamp was recorded — this can happen with screenshots or certain export tools.",
-		"integrity_clean_no_device": "Timeline and location data are intact. No device information was recorded — common for screenshots or images shared via social media.",
-		"integrity_edit_software": "Recorded Processing Software: The metadata indicates this photo was saved or processed using <strong>{software}</strong>. Some original camera details may have been modified.",
-		"integrity_future_date": "Unusual Capture Time: The recorded capture date (<strong>{date}</strong>) is in the future compared to the current system time. This is commonly caused by an incorrectly set camera clock, <strong>but it also raises the possibility of deliberate date modification.</strong>",
-		"integrity_capture_after_file": "File Time Difference: The recorded photo capture date (<strong>{date}</strong>) is newer than the file modification date (<strong>{fileDate}</strong>). This can be caused by device time zone variations or file transfers between unsynchronized systems, <strong>but it may also occur if the camera capture date was intentionally adjusted backward.</strong>",
-		"integrity_missing_original": "Capture Time Not Found: The original capture time is missing, but processing traces from <strong>{indicator}</strong> are present. While this typically occurs automatically when a photo is exported, <strong>it can also indicate intentional metadata sanitization to remove the original timeline.</strong>",
-		"integrity_dimension_mismatch": "Dimension Mismatch: EXIF metadata reports image dimensions as <strong>{exifWidth}x{exifHeight}</strong>, but the actual pixel array size is <strong>{actualWidth}x{actualHeight}</strong>. This mismatch suggests the image was cropped or resized without updating the EXIF metadata, which is common in manual tampering.",
-		"integrity_fully_stripped": "No Metadata Available: This file contains no EXIF information. This is a common condition and can happen for a variety of reasons — such as when photos are sent via WhatsApp, social media, or other platforms that automatically remove metadata; it also occurs with screenshots, or when someone intentionally removes metadata to protect their privacy. No technical information can be further analyzed from this file.",
-		"integrity_missing_gps": "GPS Location: Not available. The file contains no GPS coordinates.",
-		"integrity_missing_datetime": "Capture Time: Not available. No timestamp was found in the file.",
-		"integrity_missing_device": "Device Information: Not available. No manufacturer, model, or camera settings found.",
-		"hardware": "This photo was taken using an <strong>{make} {model}</strong> camera{lens}.",
-		"hardware_software": "The device was running <strong>{software}</strong> when taking this photo.",
-		"hardware_analysis": "Analysis indicates a standard and expected camera profile for this device type.",
-		"hardware_mod": "This photo was taken with a <strong>{make} {model}</strong>{lens} camera, and subsequently processed or saved via <strong>{software}</strong>.",
+		"integrity_clean": "Core metadata categories (device, capture timestamp, and GPS coordinates) are recorded, and no editing software keywords were found in the Software tag.",
+		"integrity_edit_software": "Software tag records <strong>{software}</strong>.",
+		"integrity_fully_stripped": "No EXIF metadata was found in this file.",
+		"integrity_missing_gps": "GPS coordinates are not recorded in this file.",
+		"integrity_missing_datetime": "Capture date and time are not recorded in this file.",
+		"integrity_missing_device": "Device manufacturer, model, and camera settings are not recorded in this file.",
+		"hardware": "This photo records device <strong>{device}</strong>{lens}.",
+		"hardware_software": "The Software tag records <strong>{software}</strong>.",
+		"hardware_mod": "This photo records device <strong>{device}</strong>{lens}, with Software tag <strong>{software}</strong>.",
+		"hardware_no_device": "Device manufacturer and model were not recorded{lens}.",
+		"hardware_mod_no_device": "Device manufacturer and model were not recorded{lens}; the Software tag records <strong>{software}</strong>.",
+		"no_hardware_narrative": "No device manufacturer, model, lens, or software tags were found in this file.",
 		"with_lens": " with a {lens} lens",
 		"exposure": "Captured with an aperture of <strong>{aperture}</strong>, shutter speed of <strong>{shutter}</strong>, and sensor sensitivity of <strong>{iso}</strong>{program}.",
+		"no_exposure_narrative": "No camera exposure settings (aperture, shutter speed, or ISO) were found in this file.",
 		"exp_low_light": "The high sensor sensitivity (ISO) suggests this photo was taken in a dark place or indoors.",
 		"exp_bright": "The low ISO and fast shutter speed indicate a well-lit environment, likely outdoors during daylight.",
 		"exp_shallow_depth": "The wide aperture creates a blurry background (bokeh effect) to make the main subject stand out.",
-		"exp_standard": "The camera settings indicate a standard, well-balanced lighting environment.",
 		"unknown_aperture": "unknown aperture",
 		"unknown_shutter": "unspecified shutter speed",
 		"unspecified_iso": "unspecified ISO",
@@ -4320,37 +4268,30 @@ var en_default = {
 		"unknown_focal": "unknown focal length",
 		"equivalent_35mm": " (equivalent to {mm}mm on a standard 35mm film camera)",
 		"digital_zoom": "Digital zoom of {zoom}x was used",
-		"quality": "Image resolution is <strong>{width}x{height}</strong> pixels. Camera settings indicate a <strong>{contrast}</strong> contrast level, <strong>{sharpness}</strong> sharpness level, and <strong>{colorSpace}</strong> color space.",
+		"quality_resolution": "Recorded image dimensions are <strong>{width}x{height}</strong> pixels.",
+		"quality_contrast": "Contrast is recorded as <strong>{contrast}</strong>.",
+		"quality_sharpness": "Sharpness is recorded as <strong>{sharpness}</strong>.",
+		"quality_color_space": "Color space is recorded as <strong>{colorSpace}</strong>.",
+		"no_quality_narrative": "No image dimensions or color/processing quality tags were recorded in this file.",
 		"timeline_capture": "Taken on: <strong>{dateStr}</strong><br/>",
 		"timeline_format": "Original Time Format: <code>{rawStr}</code>",
 		"timeline_gmt": "Coordinated Universal Time (GMT/UTC): <code>{gmtStr}</code>",
-		"timeline_mod_note": "Note: A subsequent file modification time was detected ({modStr}). This can occur due to file transfer activity between devices, <strong>but it may also indicate that the file was edited or saved again after the original capture.</strong>",
-		"timeline_integrity": "The timeline of photo capture appears natural and consistent.",
 		"no_chrono": "No capture date or time could be found in this file.",
-		"geospatial": "Location analysis shows this photo was taken near <strong>{locationName}</strong> (Coordinates: <strong>{lat}, {lng}</strong>). The location data appears natural and genuine.",
+		"geospatial": "Location coordinates point near <strong>{locationName}</strong> (Coordinates: <strong>{lat}, {lng}</strong>).",
 		"remote_location": "an unindexed or remote location",
-		"no_geo": "No location data (GPS). This is common if the device's GPS was disabled during capture, <strong>but it can also result from intentional removal of location data before sharing.</strong>",
-		"combined_hw_consistent": "All photos in this group were taken with the same camera model: <strong>{device}</strong>. This suggests they were taken by the same person or with a single camera.",
-		"combined_hw_discrepancy": "Multiple different cameras detected: <strong>{deviceList}</strong>. This pattern is common when photos are gathered from different people or cameras.",
-		"combined_timeline": "All photos were taken within a span of <strong>{diffHours} hours</strong>, starting from {start} to {end}. The timeline is consistent and contains no chronological overlap.",
-		"combined_geo_concentrated": "All photos were taken in a very small area (within a 50-meter radius). This suggests the photographer stood in one spot while taking them.",
-		"combined_geo_localized": "Location spread indicates a <strong>local area</strong> of about {dist} meters, which is typical for walking distances.",
-		"combined_geo_trail": "Location spread shows the photographer traveled about <strong>{dist} km</strong> while taking these photos, likely using a vehicle.",
-		"velocity_warning": "Travel Alert: The distance between locations indicates a very high speed of ({speed} km/h). This can occur naturally if photos were taken out of chronological order, if there was a temporary GPS signal delay, or if photos were combined from multiple sources, <strong>but it may also indicate manual modification of the time or location data after capture.</strong>",
-		"sanitization_alert": "Core Metadata Not Found: This photo lacks both device and location data. While this is very common automatically when sending photos via messaging apps (like WhatsApp/Telegram) for efficiency and privacy, <strong>it can also be the result of intentional metadata sanitization by the user.</strong>",
-		"null_island_warn": "Zero Coordinates (0,0): The location points to the coordinates (0,0). This commonly happens when the camera's GPS sensor has not fully locked a satellite signal before shooting, <strong>but it can also indicate that the location data has been intentionally cleared or removed.</strong>",
-		"precision_warn": "Simplified Coordinate Format: The GPS coordinates are represented by simple rounded numbers without the typical random decimal precision recorded by native GPS sensors. While this can happen due to data simplification by third-party apps or manual entry in a gallery, <strong>it may also indicate the intentional use of location-mocking tools.</strong>",
+		"no_geo": "No GPS coordinates were recorded in this file.",
+		"combined_hw_consistent": "All photos in this batch record the same camera model: <strong>{device}</strong>.",
+		"combined_hw_discrepancy": "Multiple camera models recorded across this batch: <strong>{deviceList}</strong>.",
+		"combined_timeline": "Recorded capture timestamps span <strong>{diffHours} hours</strong>, from {start} to {end}.",
+		"combined_geo_concentrated": "Recorded GPS coordinates sit within a maximum spread under 50 meters.",
+		"combined_geo_localized": "Cumulative straight-line displacement across chronological GPS points is approximately <strong>{dist}</strong>{roadClause}.",
+		"combined_geo_trail": "Cumulative straight-line displacement across chronological GPS points is approximately <strong>{dist}</strong>{roadClause}.",
+		"geo_dual_road_clause": "(or ~{roadDist} via OSRM road route)",
+		"combined_geo_spread_only": "Recorded GPS coordinates span a maximum straight-line spread of approximately <strong>{spread}</strong> (chronological path distance requires capture timestamps).",
 		"combined_serial_match": "Physical Camera Verified: All photos in this batch were taken using the exact same physical camera unit (Serial Number: <strong>{serial}</strong>).",
-		"combined_hw_sparse_single": "Only <strong>{count}</strong> of <strong>{total}</strong> photos contain camera info (<strong>{device}</strong>). The rest do not.",
-		"combined_hw_sparse_consistent": "<strong>{count}</strong> of <strong>{total}</strong> photos share the same camera: <strong>{device}</strong>. The rest lack camera information.",
-		"combined_hw_sparse_discrepancy": "Different camera models detected among photos containing data: <strong>{deviceList}</strong>. The remaining <strong>{missing}</strong> photos lack camera metadata.",
+		"combined_hw_sparse_consistent": "<strong>{count}</strong> of <strong>{total}</strong> photos record the same camera model: <strong>{device}</strong>.",
 		"combined_timeline_sparse": "Time analysis is limited because only <strong>1</strong> of <strong>{total}</strong> photos has a capture timestamp.",
-		"combined_timeline_sparse_note": " Timeline built using the <strong>{count}</strong> photos containing time data.",
-		"combined_geo_sparse": "Location analysis is limited because only <strong>1</strong> of <strong>{total}</strong> photos has GPS coordinates.",
-		"combined_geo_sparse_note": " Distance calculation based on the <strong>{count}</strong> photos containing location data.",
-		"combined_integrity_warning": "Group Consistency Note: The photos in this group have varying levels of metadata completeness.",
-		"combined_integrity_stripped_all": "A total of <strong>{count}</strong> out of <strong>{total}</strong> photos lack camera, time, and location data. This commonly happens automatically to photos downloaded from the internet or social media, <strong>but it may also be caused by intentional data clearing before the files were collected.</strong>",
-		"combined_integrity_stripped_part": "A total of <strong>{count}</strong> out of <strong>{total}</strong> photos are missing certain data categories (like GPS or camera info). This can be caused by differing device permission settings during capture, <strong>but it also raises the possibility of selective data removal.</strong>",
+		"combined_integrity_stripped_all": "All <strong>{total}</strong> files in this batch contain no camera, timestamp, or GPS metadata.",
 		"combined_integrity_mix": "Mixed Completeness Status: Out of <strong>{total}</strong> photos, <strong>{fully}</strong> are without metadata details, <strong>{partially}</strong> are missing some details, and only <strong>{clean}</strong> retain complete information.",
 		"combined_integrity_clean": "Maximum Original Data: All <strong>{total}</strong> photos retain complete metadata (Camera, Time, and Location info).",
 		"no_data_narrative": "Analysis unavailable because this photo lacks the required metadata for this category.",
@@ -4358,13 +4299,6 @@ var en_default = {
 		"filter_all": "All Photos",
 		"filter_complete": "Complete Data",
 		"filter_stripped": "Without Details",
-		"empty_geospatial": "Cannot map location because this photo does not have embedded GPS coordinates.",
-		"empty_hardware": "Camera brand and model cannot be determined because the device manufacturer data (Make/Model tags) was deleted.",
-		"empty_exposure": "Camera exposure details (Aperture, ISO, Shutter speed) were not found on this photo.",
-		"empty_optics": "Lens zoom information cannot be determined because this photo does not have focal length data.",
-		"empty_quality": "Image quality is analyzed using general estimates because the main pixel dimension data is missing.",
-		"empty_timeline": "Time analysis failed because the original capture date and time were not saved.",
-		"empty_all": "Metadata Fully Cleaned: No camera, time, or location info was found in this photo.",
 		"reconstruct_btn": "Show Detailed Timeline",
 		"integrity_reconstruct_btn": "Show Data Completeness Details",
 		"hw_reconstruct_btn": "Compare Camera Details",
@@ -4501,10 +4435,10 @@ var id_default = {
 		"clear_history": "Hapus Semua Riwayat",
 		"feature_secure_title": "Aman secara Desain",
 		"feature_secure_desc": "Foto, ekstraksi metadata, dan pembersihan dijalankan langsung di browser tanpa unggahan gambar ke server ExifSense. Hanya koordinat GPS yang dikirim ke layanan peta, alamat (Nominatim), dan rute (OSRM) saat online.",
-		"feature_spoof_title": "Perlindungan Spoofing",
+		"feature_spoof_title": "Verifikasi Format Biner",
 		"feature_spoof_desc": "Memvalidasi aset pada tingkat biner menggunakan tanda tangan Magic Bytes. Mendeteksi ekstensi yang disamarkan dan menolak file berbahaya.",
 		"feature_integrity_title": "Analisis Integritas",
-		"feature_integrity_desc": "Menghitung hash SHA-256/SHA-1 secara otomatis dan menganalisis metadata untuk mendeteksi anomali kronologis, modifikasi, dan riwayat edit.",
+		"feature_integrity_desc": "Menghitung hash SHA-256/SHA-1 secara otomatis dan memeriksa kelengkapan metadata, cap waktu, serta catatan tag Software.",
 		"feature_image_analysis_title": "Analisis Gambar Otomatis",
 		"feature_image_analysis_desc": "Unggah foto apa pun dan sistem secara otomatis mengekstrak serta menyajikan semua metadata tersembunyi ke dalam dashboard yang bersih dan mudah dibaca. Lihat detail perangkat, lokasi, stempel waktu, pengaturan kamera, dan lainnya — semuanya disajikan dengan jelas sehingga siapa pun bisa memahami cerita di balik gambar mereka.",
 		"feature_sanitize_title": "Pembersihan Metadata (Privasi)",
@@ -4662,8 +4596,8 @@ var id_default = {
 		"guide_feat_secure_title": "Aman secara Desain",
 		"guide_feat_secure_desc": "Pemrosesan lokal-utama: foto Anda tidak pernah meninggalkan perangkat. Hanya koordinat GPS yang dikirim ke layanan luar saat online untuk peta, alamat, dan rute.",
 		"guide_feat_integrity_title": "Analisis Integritas",
-		"guide_feat_integrity_desc": "Hash SHA-256 / SHA-1 dengan deteksi anomali untuk memverifikasi keaslian gambar dan mendeteksi manipulasi.",
-		"guide_feat_spoof_title": "Perlindungan Spoofing",
+		"guide_feat_integrity_desc": "Hash SHA-256 / SHA-1 disertai pemeriksaan kelengkapan metadata dan pelaporan netral tag Software.",
+		"guide_feat_spoof_title": "Verifikasi Format Biner",
 		"guide_feat_spoof_desc": "Memvalidasi tanda tangan file pada tingkat biner menggunakan Magic Bytes, menolak file yang disamarkan atau berbahaya.",
 		"guide_feat_sanitize_overview_title": "Pembersihan Metadata",
 		"guide_feat_sanitize_overview_desc": "Hapus koordinat GPS, detail kamera, dan informasi pribadi dengan kontrol selektif sebelum dibagikan.",
@@ -4683,9 +4617,9 @@ var id_default = {
 		"guide_feat_sanitize_desc": "Pilih mode Hapus Metadata untuk masuk ke studio sanitasi. Gunakan preset cepat atau aktifkan kategori individual. Mendukung pemrosesan batch — bersihkan banyak file berurutan dengan satu klik. Pratinjau tag mana yang akan dihapus sebelum mengunduh file bersih.",
 		"guide_btn_start": "Mulai Jelajahi",
 		"guide_btn_history": "Lihat Riwayat",
-		"hero_subtitle": "Verifikasi citra berbasis peramban lokal, heuristik manipulasi, rekonstruksi linimasa, dan pembersihan privasi bedah.",
+		"hero_subtitle": "Verifikasi citra berbasis peramban lokal, narasi metadata deskriptif, rekonstruksi linimasa, dan sanitasi privasi.",
 		"dropzone_title_single": "Tarik & Letakkan Gambar untuk Inspeksi Forensik",
-		"dropzone_subtitle_single": "Periksa EXIF, deteksi manipulasi, hitung sidik hash",
+		"dropzone_subtitle_single": "Periksa EXIF, cek kelengkapan, hitung sidik hash",
 		"dropzone_title_batch": "Tarik & Letakkan Foto untuk Analisis Kolektif",
 		"dropzone_subtitle_batch": "Bandingkan tanda tangan perangkat keras & sebaran linimasa (hingga 50)",
 		"dropzone_title_remove": "Tarik & Letakkan Gambar untuk Sanitasi Instan",
@@ -4736,7 +4670,7 @@ var id_default = {
 		"inspect_asset": "Periksa Foto",
 		"batch_total_assets": "Total Aset",
 		"batch_asset_alerts": "Peringatan Integritas Aset",
-		"no_integrity_anomalies": "Tidak ada anomali integritas yang terdeteksi.",
+		"no_integrity_anomalies": "Tidak ada catatan kekurangan metadata inti maupun tag perangkat lunak penyunting.",
 		"batch_integrity_clean": "Bersih",
 		"batch_integrity_partial": "Terhapus Sebagian",
 		"batch_integrity_stripped": "Terhapus Total",
@@ -4747,35 +4681,27 @@ var id_default = {
 		"spread_concentrated": "Terkonsentrasi",
 		"spread_localized": "Lokal",
 		"spread_trail": "Jejak Perjalanan",
-		"spread_none": "Tidak ada",
-		"time_anomaly_tag": "ANOMALI WAKTU",
-		"velocity_anomaly_label": "ANOMALI KECEPATAN KRITIS",
-		"velocity_anomaly_desc": "Kecepatan tidak wajar terdeteksi antara {from} dan {to} ({speed} km/jam)."
+		"spread_none": "Tidak ada"
 	},
 	narratives: {
-		"integrity_clean": "Foto ini mempertahankan detail tanggal dan lokasi aslinya. Tidak ditemukan indikator umum penggunaan alat pengeditan eksternal pada metadata dasar.",
-		"integrity_clean_no_gps": "Informasi perangkat dan linimasa utuh. Tidak ada data lokasi tersimpan — ini normal jika GPS dimatikan saat mengambil foto.",
-		"integrity_clean_no_datetime": "Data perangkat dan lokasi utuh. Tidak ada stempel waktu pemotretan — ini bisa terjadi pada tangkapan layar atau alat ekspor tertentu.",
-		"integrity_clean_no_device": "Data linimasa dan lokasi utuh. Tidak ada informasi perangkat tersimpan — umum untuk tangkapan layar atau gambar dari media sosial.",
-		"integrity_edit_software": "Perangkat Lunak Pengolah: Metadata menunjukkan foto ini disimpan atau diproses menggunakan <strong>{software}</strong>. Beberapa detail kamera asli mungkin telah diubah.",
-		"integrity_future_date": "Waktu Pemotretan Tidak Biasa: Tanggal pemotretan terrekam (<strong>{date}</strong>) berada di masa depan dibanding waktu sistem saat ini. Ini biasanya disebabkan oleh jam kamera yang belum diatur.",
-		"integrity_capture_after_file": "Perbedaan Waktu File: Tanggal pemotretan foto (<strong>{date}</strong>) lebih baru daripada tanggal modifikasi file (<strong>{fileDate}</strong>).",
-		"integrity_missing_original": "Waktu Pemotretan Tidak Ditemukan: Waktu pemotretan asli tidak ditemukan, tetapi ada jejak pengolahan dari <strong>{indicator}</strong>.",
-		"integrity_dimension_mismatch": "Ketidaksesuaian Dimensi: Metadata EXIF mencatat dimensi gambar <strong>{exifWidth}x{exifHeight}</strong>, tetapi ukuran piksel aktual adalah <strong>{actualWidth}x{actualHeight}</strong>.",
-		"integrity_fully_stripped": "Metadata Tidak Tersedia: File ini tidak memiliki informasi EXIF. Ini kondisi umum jika foto dikirim via aplikasi pesan (WhatsApp) atau sosial media yang menghapus metadata secara otomatis.",
-		"integrity_missing_gps": "Lokasi GPS: Tidak tersedia. File tidak mengandung koordinat GPS.",
-		"integrity_missing_datetime": "Waktu Pemotretan: Tidak tersedia. Tidak ada stempel waktu pada file.",
-		"integrity_missing_device": "Informasi Perangkat: Tidak tersedia. Tidak ada data merek, model, atau setelan kamera.",
-		"hardware": "Foto ini diambil menggunakan kamera <strong>{make} {model}</strong>{lens}.",
-		"hardware_software": "Perangkat menggunakan sistem <strong>{software}</strong> saat mengambil foto ini.",
-		"hardware_analysis": "Analisis menunjukkan profil kamera standar dan wajar untuk tipe perangkat ini.",
-		"hardware_mod": "Foto ini diambil dengan kamera <strong>{make} {model}</strong>{lens}, lalu diproses atau disimpan ulang via <strong>{software}</strong>.",
+		"integrity_clean": "Kategori metadata inti (perangkat, waktu pemotretan, dan koordinat GPS) tercatat, dan tidak ditemukan kata kunci aplikasi penyunting pada tag Software.",
+		"integrity_edit_software": "Tag Software mencatat <strong>{software}</strong>.",
+		"integrity_fully_stripped": "Tidak ditemukan metadata EXIF pada berkas ini.",
+		"integrity_missing_gps": "Koordinat lokasi GPS tidak tercatat pada berkas ini.",
+		"integrity_missing_datetime": "Tanggal dan waktu pemotretan tidak tercatat pada berkas ini.",
+		"integrity_missing_device": "Informasi produsen, model perangkat, dan setelan kamera tidak tercatat pada berkas ini.",
+		"hardware": "Foto ini mencatat perangkat <strong>{device}</strong>{lens}.",
+		"hardware_software": "Tag Software mencatat <strong>{software}</strong>.",
+		"hardware_mod": "Foto ini mencatat perangkat <strong>{device}</strong>{lens}, dengan tag Software <strong>{software}</strong>.",
+		"hardware_no_device": "Produsen dan model perangkat tidak tercatat{lens}.",
+		"hardware_mod_no_device": "Produsen dan model perangkat tidak tercatat{lens}; tag Software mencatat <strong>{software}</strong>.",
+		"no_hardware_narrative": "Tidak ditemukan tag produsen, model perangkat, lensa, maupun Software pada berkas ini.",
 		"with_lens": " dengan lensa {lens}",
 		"exposure": "Diambil dengan aperture <strong>{aperture}</strong>, kecepatan rana <strong>{shutter}</strong>, dan sensitivitas sensor (ISO) <strong>{iso}</strong>{program}.",
+		"no_exposure_narrative": "Tidak ditemukan pengaturan eksposur kamera (aperture, kecepatan rana, atau ISO) pada berkas ini.",
 		"exp_low_light": "Sensitivitas ISO tinggi menunjukkan foto ini diambil di tempat gelap atau dalam ruangan.",
 		"exp_bright": "ISO rendah dan kecepatan rana cepat menunjukkan lingkungan terang, kemungkinan di luar ruangan siang hari.",
 		"exp_shallow_depth": "Aperture lebar menghasilkan latar belakang buram (efek bokeh) untuk menonjolkan subjek utama.",
-		"exp_standard": "Setelan kamera menunjukkan pencahayaan standar dan seimbang.",
 		"unknown_aperture": "aperture tidak diketahui",
 		"unknown_shutter": "kecepatan rana tidak ditentukan",
 		"unspecified_iso": "ISO tidak ditentukan",
@@ -4784,37 +4710,30 @@ var id_default = {
 		"unknown_focal": "panjang fokus tidak diketahui",
 		"equivalent_35mm": " (setara {mm}mm pada kamera film 35mm standar)",
 		"digital_zoom": "Zoom digital sebesar {zoom}x digunakan",
-		"quality": "Resolusi gambar adalah <strong>{width}x{height}</strong> piksel. Setelan kamera menunjukkan tingkat kontras <strong>{contrast}</strong>, ketajaman <strong>{sharpness}</strong>, dan ruang warna <strong>{colorSpace}</strong>.",
+		"quality_resolution": "Dimensi gambar tercatat sebesar <strong>{width}x{height}</strong> piksel.",
+		"quality_contrast": "Tingkat kontras tercatat sebagai <strong>{contrast}</strong>.",
+		"quality_sharpness": "Tingkat ketajaman tercatat sebagai <strong>{sharpness}</strong>.",
+		"quality_color_space": "Ruang warna tercatat sebagai <strong>{colorSpace}</strong>.",
+		"no_quality_narrative": "Tidak ditemukan tag dimensi gambar maupun kualitas pemrosesan warna pada berkas ini.",
 		"timeline_capture": "Diambil pada: <strong>{dateStr}</strong><br/>",
 		"timeline_format": "Format Waktu Asli: <code>{rawStr}</code>",
 		"timeline_gmt": "Waktu Universal Terkoordinasi (GMT/UTC): <code>{gmtStr}</code>",
-		"timeline_mod_note": "Catatan: Terdeteksi waktu modifikasi file selanjutnya ({modStr}).",
-		"timeline_integrity": "Linimasa pemotretan foto tampak alami dan konsisten.",
 		"no_chrono": "Tanggal atau waktu pemotretan tidak ditemukan dalam file ini.",
-		"geospatial": "Analisis lokasi menunjukkan foto ini diambil di dekat <strong>{locationName}</strong> (Koordinat: <strong>{lat}, {lng}</strong>).",
+		"geospatial": "Koordinat lokasi tercatat di dekat <strong>{locationName}</strong> (Koordinat: <strong>{lat}, {lng}</strong>).",
 		"remote_location": "lokasi terpencil atau tidak terindeks",
-		"no_geo": "Tidak ada data lokasi (GPS). Ini umum jika GPS perangkat dinonaktifkan saat pemotretan.",
-		"combined_hw_consistent": "Semua foto dalam grup ini diambil dengan model kamera yang sama: <strong>{device}</strong>.",
-		"combined_hw_discrepancy": "Terdeteksi beberapa kamera berbeda: <strong>{deviceList}</strong>.",
-		"combined_timeline": "Semua foto diambil dalam rentang waktu <strong>{diffHours} jam</strong>, mulai dari {start} sampai {end}.",
-		"combined_geo_concentrated": "Semua foto diambil di area yang sangat berdekatan (dalam radius 50 meter).",
-		"combined_geo_localized": "Penyebaran lokasi menunjukkan area lokal sekitar {dist} meter (jarak jalan kaki).",
-		"combined_geo_trail": "Penyebaran lokasi menunjukkan pemotret menempuh perjalanan sekitar <strong>{dist} km</strong> saat mengambil foto-foto ini.",
-		"velocity_warning": "Peringatan Perjalanan: Jarak antar lokasi menunjukkan kecepatan sangat tinggi ({speed} km/jam).",
-		"sanitization_alert": "Metadata Utama Tidak Ditemukan: Foto ini tidak memiliki data perangkat maupun lokasi.",
-		"null_island_warn": "Koordinat Nol (0,0): Lokasi menunjuk ke koordinat (0,0). Ini terjadi jika sensor GPS belum mengunci sinyal.",
-		"precision_warn": "Format Koordinat Disederhanakan: Koordinat GPS diwakili angka bulat sederhana.",
+		"no_geo": "Koordinat lokasi GPS tidak tercatat pada berkas ini.",
+		"combined_hw_consistent": "Semua foto dalam kelompok ini mencatat model kamera yang sama: <strong>{device}</strong>.",
+		"combined_hw_discrepancy": "Tercatat beberapa model kamera berbeda dalam kelompok ini: <strong>{deviceList}</strong>.",
+		"combined_timeline": "Stempel waktu pemotretan mencakup rentang <strong>{diffHours} jam</strong>, dari {start} hingga {end}.",
+		"combined_geo_concentrated": "Koordinat GPS yang tercatat berada dalam sebaran jarak maksimum di bawah 50 meter.",
+		"combined_geo_localized": "Akumulasi perpindahan garis lurus antar-titik GPS berurutan sekitar <strong>{dist}</strong>{roadClause}.",
+		"combined_geo_trail": "Akumulasi perpindahan garis lurus antar-titik GPS berurutan sekitar <strong>{dist}</strong>{roadClause}.",
+		"geo_dual_road_clause": "(atau ~{roadDist} melalui rute jalan OSRM)",
+		"combined_geo_spread_only": "Koordinat GPS yang tercatat memiliki sebaran jarak garis lurus maksimum sekitar <strong>{spread}</strong> (akumulasi jarak jalur berurutan memerlukan stempel waktu pemotretan).",
 		"combined_serial_match": "Kamera Fisik Terverifikasi: Semua foto diambil menggunakan unit kamera fisik yang persis sama (Nomor Seri: <strong>{serial}</strong>).",
-		"combined_hw_sparse_single": "Hanya <strong>{count}</strong> dari <strong>{total}</strong> foto yang memiliki info kamera (<strong>{device}</strong>).",
-		"combined_hw_sparse_consistent": "<strong>{count}</strong> dari <strong>{total}</strong> foto menggunakan kamera yang sama: <strong>{device}</strong>.",
-		"combined_hw_sparse_discrepancy": "Terdeteksi model kamera berbeda: <strong>{deviceList}</strong>.",
+		"combined_hw_sparse_consistent": "<strong>{count}</strong> dari <strong>{total}</strong> foto mencatat model kamera yang sama: <strong>{device}</strong>.",
 		"combined_timeline_sparse": "Analisis waktu terbatas karena hanya <strong>1</strong> dari <strong>{total}</strong> foto yang memiliki stempel waktu.",
-		"combined_timeline_sparse_note": " Linimasa dibuat menggunakan <strong>{count}</strong> foto yang memiliki data waktu.",
-		"combined_geo_sparse": "Analisis lokasi terbatas karena hanya <strong>1</strong> dari <strong>{total}</strong> foto yang memiliki koordinat GPS.",
-		"combined_geo_sparse_note": " Perhitungan jarak berdasarkan <strong>{count}</strong> foto yang memiliki data lokasi.",
-		"combined_integrity_warning": "Catatan Kelengkapan Kelompok: Foto dalam kelompok ini memiliki tingkat kelengkapan metadata yang bervariasi.",
-		"combined_integrity_stripped_all": "Sebanyak <strong>{count}</strong> dari <strong>{total}</strong> foto tidak memiliki data kamera, waktu, dan lokasi.",
-		"combined_integrity_stripped_part": "Sebanyak <strong>{count}</strong> dari <strong>{total}</strong> foto tidak memiliki kategori data tertentu.",
+		"combined_integrity_stripped_all": "Seluruh <strong>{total}</strong> berkas dalam kelompok ini tidak memiliki metadata kamera, waktu, maupun GPS.",
 		"combined_integrity_mix": "Status Kelengkapan Campuran: Dari <strong>{total}</strong> foto, <strong>{fully}</strong> tanpa detail, <strong>{partially}</strong> kurang sebagian, dan <strong>{clean}</strong> memiliki informasi lengkap.",
 		"combined_integrity_clean": "Data Asli Lengkap: Semua <strong>{total}</strong> foto memiliki metadata lengkap.",
 		"no_data_narrative": "Analisis tidak tersedia karena foto ini tidak memiliki metadata yang diperlukan.",
@@ -4822,13 +4741,6 @@ var id_default = {
 		"filter_all": "Semua Foto",
 		"filter_complete": "Data Lengkap",
 		"filter_stripped": "Tanpa Detail",
-		"empty_geospatial": "Tidak dapat memetakan lokasi karena foto ini tidak memiliki koordinat GPS.",
-		"empty_hardware": "Merek dan model kamera tidak dapat ditentukan karena data produsen dihapus.",
-		"empty_exposure": "Detail eksposur kamera (Aperture, ISO, Kecepatan rana) tidak ditemukan.",
-		"empty_optics": "Informasi zoom lensa tidak dapat ditentukan karena foto tidak memiliki data panjang fokus.",
-		"empty_quality": "Kualitas gambar dianalisis menggunakan estimasi umum karena data dimensi utama tidak ada.",
-		"empty_timeline": "Analisis waktu gagal karena tanggal dan waktu asli tidak tersimpan.",
-		"empty_all": "Metadata Bersih Total: Tidak ada info kamera, waktu, atau lokasi dalam foto ini.",
 		"reconstruct_btn": "Tampilkan Linimasa Detail",
 		"integrity_reconstruct_btn": "Tampilkan Detail Kelengkapan Data",
 		"hw_reconstruct_btn": "Bandingkan Detail Kamera",
@@ -4902,6 +4814,13 @@ const LOCALES$1 = {
 	en: en_default,
 	id: id_default
 };
+const ALERT_LOCALE_KEYS = {
+	fully_stripped: "integrity_fully_stripped",
+	missing_gps: "integrity_missing_gps",
+	missing_datetime: "integrity_missing_datetime",
+	missing_device: "integrity_missing_device",
+	editing_software: "integrity_edit_software"
+};
 /**
 * Translates a key with parameter substitution and strips HTML tags to produce pure plain text.
 */
@@ -4915,53 +4834,48 @@ function translate(key, params = {}, locale = "en", section = "narratives") {
 	for (const [k, v] of Object.entries(params)) template = template.replace(new RegExp(`\\{${k}\\}`, "g"), () => String(v ?? ""));
 	return template.replace(/<br\s*\/?>/gi, "\n").replace(/<\/div>/gi, "\n").replace(/<[^>]*>/g, "").trim();
 }
-const EDIT_SOFTWARE = [
-	"adobe",
-	"photoshop",
-	"lightroom",
-	"gimp",
-	"canva",
-	"snapseed",
-	"pixlr",
-	"corel",
-	"affinity",
-	"picsart"
-];
 /**
-* Generates plain-text hardware profile and software tampering narrative.
+* Translates a single IntegrityAlert into a localized plain-text message.
+*/
+function formatIntegrityAlertMessage(alert, locale = "en") {
+	const key = ALERT_LOCALE_KEYS[alert.type];
+	if (!key) return alert.defaultMessage;
+	return translate(key, alert.type === "editing_software" ? { software: String(alert.messageParam?.software ?? "") } : {}, locale);
+}
+/**
+* Generates plain-text hardware and Software tag narrative from observed EXIF tags.
 */
 function generateHardwareNarrative(props, locale = "en") {
-	const make = String(props.Make || "an unknown manufacturer");
-	const model = String(props.Model || "an unspecified device");
-	const lensModel = props.LensModel ? String(props.LensModel) : "";
+	const device = [typeof props.Make === "string" || typeof props.Make === "number" ? String(props.Make).trim() : "", typeof props.Model === "string" || typeof props.Model === "number" ? String(props.Model).trim() : ""].filter(Boolean).join(" ");
+	const lensModel = props.LensModel ? String(props.LensModel).trim() : "";
 	const lens = lensModel ? ` ${translate("with_lens", { lens: lensModel }, locale)}` : "";
-	const softwareName = props.Software ? String(props.Software) : "";
-	if (softwareName && EDIT_SOFTWARE.some((s) => softwareName.toLowerCase().includes(s))) return translate("hardware_mod", {
-		make,
-		model,
+	const softwareName = props.Software ? String(props.Software).trim() : "";
+	if (!device && !lensModel && !softwareName) return translate("no_hardware_narrative", {}, locale);
+	const isEditor = softwareName ? isEditingSoftware(softwareName) : false;
+	if (!device) {
+		if (isEditor) return translate("hardware_mod_no_device", {
+			lens,
+			software: softwareName
+		}, locale);
+		const base = translate("hardware_no_device", { lens }, locale);
+		return softwareName ? `${base} ${translate("hardware_software", { software: softwareName }, locale)}`.trim() : base;
+	}
+	if (isEditor) return translate("hardware_mod", {
+		device,
 		lens,
 		software: softwareName
 	}, locale);
-	let narrative = translate("hardware", {
-		make,
-		model,
+	const base = translate("hardware", {
+		device,
 		lens
 	}, locale);
-	if (softwareName) narrative += ` ${translate("hardware_software", { software: softwareName }, locale)}`;
-	narrative += ` ${translate("hardware_analysis", {}, locale)}`;
-	return narrative.trim();
+	return softwareName ? `${base} ${translate("hardware_software", { software: softwareName }, locale)}`.trim() : base;
 }
 /**
-* Generates plain-text digital integrity narrative for a single forensic asset.
+* Generates localized plain-text metadata completeness and Software observation narrative.
 */
 function generateIntegrityNarrative(asset, locale = "en") {
-	if (asset.integrityAlerts && asset.integrityAlerts.length > 0) return asset.integrityAlerts.map((a) => a.defaultMessage).join(" | ");
-	const hasGps = asset.exifData.latitude !== void 0 && asset.exifData.longitude !== void 0;
-	const hasDate = Boolean(asset.exifData.DateTimeOriginal || asset.exifData.DateTimeDigitized || asset.exifData.DateTime);
-	const hasDevice = Boolean(asset.exifData.Make || asset.exifData.Model);
-	if (!hasGps && hasDate && hasDevice) return translate("integrity_clean_no_gps", {}, locale);
-	if (!hasDate && hasGps && hasDevice) return translate("integrity_clean_no_datetime", {}, locale);
-	if (!hasDevice && hasGps && hasDate) return translate("integrity_clean_no_device", {}, locale);
+	if (asset.integrityAlerts && asset.integrityAlerts.length > 0) return asset.integrityAlerts.map((alert) => formatIntegrityAlertMessage(alert, locale)).join(" | ");
 	return translate("integrity_clean", {}, locale);
 }
 /**
@@ -4975,9 +4889,10 @@ function formatExposureTime(value) {
 	return `${num}s`;
 }
 /**
-* Generates plain-text narrative summarizing exposure and ambient lighting conditions.
+* Generates plain-text narrative summarizing recorded exposure settings.
 */
 function generateExposureNarrative(props, locale = "en") {
+	if (!Boolean(props.FNumber || props.ApertureValue || props.ExposureTime || props.ISO)) return translate("no_exposure_narrative", {}, locale);
 	const aperture = props.FNumber ? `f/${props.FNumber}` : props.ApertureValue ? `f/${props.ApertureValue}` : translate("unknown_aperture", {}, locale);
 	const shutter = props.ExposureTime ? formatExposureTime(props.ExposureTime) : translate("unknown_shutter", {}, locale);
 	const iso = props.ISO ? `ISO ${props.ISO}` : translate("unspecified_iso", {}, locale);
@@ -4985,16 +4900,18 @@ function generateExposureNarrative(props, locale = "en") {
 	const fVal = parseFloat(String(props.FNumber || props.ApertureValue || "0"));
 	const isoVal = parseInt(String(props.ISO || "0"), 10);
 	const shutterVal = parseFloat(String(props.ExposureTime || "0"));
-	let lightingKey = "exp_standard";
+	let lightingKey = "";
 	if (fVal > 0 && fVal < 2.8) lightingKey = "exp_shallow_depth";
 	else if (isoVal >= 800) lightingKey = "exp_low_light";
 	else if (isoVal > 0 && isoVal <= 200 && shutterVal > 0 && shutterVal <= .002) lightingKey = "exp_bright";
-	return `${translate("exposure", {
+	const baseText = translate("exposure", {
 		aperture,
 		shutter,
 		iso,
 		program
-	}, locale)} ${translate(lightingKey, {}, locale)}`.trim();
+	}, locale);
+	if (!lightingKey) return baseText;
+	return `${baseText} ${translate(lightingKey, {}, locale)}`.trim();
 }
 /**
 * Generates plain-text narrative summarizing optics, focal length, and digital zoom.
@@ -5009,20 +4926,49 @@ function generateOpticsNarrative(props, locale = "en") {
 		zoom: zoomRatio > 1 ? `. ${translate("digital_zoom", { zoom: zoomRatio }, locale)}` : ""
 	}, locale);
 }
+function readOptionalTag(props, key) {
+	const val = props[key];
+	if (val === void 0 || val === null) return null;
+	const str = String(val).trim();
+	return str === "" ? null : str;
+}
+const QUALITY_TAG_SPECS = [
+	{
+		key: "Contrast",
+		localeKey: "quality_contrast",
+		paramName: "contrast"
+	},
+	{
+		key: "Sharpness",
+		localeKey: "quality_sharpness",
+		paramName: "sharpness"
+	},
+	{
+		key: "ColorSpace",
+		localeKey: "quality_color_space",
+		paramName: "colorSpace"
+	}
+];
 /**
-* Generates plain-text narrative summarizing image resolution, contrast, sharpness, and color space.
+* Generates plain-text narrative strictly from present image dimensions and color/processing tags.
 */
 function generateQualityNarrative(props, locale = "en") {
-	return translate("quality", {
-		width: String(props.ImageWidth || props.PixelXDimension || "unknown"),
-		height: String(props.ImageHeight || props.PixelYDimension || "unknown"),
-		contrast: String(props.Contrast || "Standard"),
-		sharpness: String(props.Sharpness || "Standard"),
-		colorSpace: String(props.ColorSpace || "sRGB")
-	}, locale);
+	const width = readOptionalTag(props, "ImageWidth") ?? readOptionalTag(props, "PixelXDimension");
+	const height = readOptionalTag(props, "ImageHeight") ?? readOptionalTag(props, "PixelYDimension");
+	const parts = [];
+	if (width !== null && height !== null) parts.push(translate("quality_resolution", {
+		width,
+		height
+	}, locale));
+	for (const spec of QUALITY_TAG_SPECS) {
+		const value = readOptionalTag(props, spec.key);
+		if (value !== null) parts.push(translate(spec.localeKey, { [spec.paramName]: value }, locale));
+	}
+	if (parts.length === 0) return translate("no_quality_narrative", {}, locale);
+	return parts.join(" ");
 }
 /**
-* Generates plain-text narrative summarizing chronology, UTC conversion, and modification divergence.
+* Generates plain-text narrative summarizing recorded capture timestamp and UTC representation.
 */
 function generateTimelineNarrative(props, locale = "en") {
 	const rawCapture = props.DateTimeOriginal || props.CreateDate || props.DateTime;
@@ -5031,15 +4977,11 @@ function generateTimelineNarrative(props, locale = "en") {
 	const rawStr = String(rawCapture);
 	const dateStr = dateObj ? formatFullDate(dateObj) : rawStr;
 	const gmtStr = dateObj ? dateObj.toUTCString() : rawStr;
-	let narrative = translate("timeline_capture", { dateStr }, locale);
-	narrative += `\n${translate("timeline_format", { rawStr }, locale)}`;
-	narrative += `\n${translate("timeline_gmt", { gmtStr }, locale)}`;
-	const parsedMod = props.ModifyDate ? parseExifDate(props.ModifyDate) : null;
-	if (parsedMod && dateObj && parsedMod.getTime() !== dateObj.getTime()) {
-		const modStr = formatFullDate(parsedMod);
-		narrative += `\n${translate("timeline_mod_note", { modStr }, locale)}`;
-	} else narrative += `\n${translate("timeline_integrity", {}, locale)}`;
-	return narrative.trim();
+	return [
+		translate("timeline_capture", { dateStr }, locale),
+		translate("timeline_format", { rawStr }, locale),
+		translate("timeline_gmt", { gmtStr }, locale)
+	].join("\n").trim();
 }
 /**
 * Generates plain-text geospatial coordinates and location summary narrative.
@@ -5153,9 +5095,10 @@ function formatSingleOutput(asset, options) {
 		lines.push("");
 	}
 	const alertCount = asset.integrityAlerts.length;
-	lines.push(isMarkdown ? `## Integrity Alerts (${alertCount})` : `--- Integrity Alerts (${alertCount}) ---`);
-	if (alertCount === 0) lines.push("No integrity anomalies detected.");
-	else for (const alert of asset.integrityAlerts) lines.push(`[${alert.severity.toUpperCase()}] ${alert.defaultMessage}`);
+	const alertsHeader = translate("batch_asset_alerts", {}, locale, "ui");
+	lines.push(isMarkdown ? `## ${alertsHeader} (${alertCount})` : `--- ${alertsHeader} (${alertCount}) ---`);
+	if (alertCount === 0) lines.push(translate("no_integrity_anomalies", {}, locale, "ui"));
+	else for (const alert of asset.integrityAlerts) lines.push(`[${alert.severity.toUpperCase()}] ${formatIntegrityAlertMessage(alert, locale)}`);
 	lines.push("");
 	lines.push(isMarkdown ? "## Forensic Narrative" : "--- Forensic Narrative ---");
 	const exif = asset.exifData || {};
@@ -5269,7 +5212,7 @@ function appendBatchAlerts(lines, assets, format, locale) {
 	for (const asset of assets) for (const alert of asset.integrityAlerts) assetAlerts.push({
 		fileName: asset.fileName,
 		severity: alert.severity,
-		message: alert.defaultMessage
+		message: formatIntegrityAlertMessage(alert, locale)
 	});
 	if (assetAlerts.length === 0) return;
 	const title = translate("batch_asset_alerts", {}, locale, "ui");
@@ -5369,12 +5312,9 @@ function appendTimelineEvidenceSection(lines, collective, format, locale) {
 		[translate("reconstruct_total", {}, locale, "narratives"), formatDurationFromMs(totalDurationMs, locale)],
 		[translate("reconstruct_jumps", {}, locale, "narratives"), String(jumps.length)]
 	], format));
-	const anomalyTag = translate("time_anomaly_tag", {}, locale, "ui");
 	for (const jump of jumps) {
 		const delta = formatLocalizedDuration(jump.deltaDays, jump.deltaHours, jump.deltaMinutes, jump.deltaSeconds, locale);
-		let prefix = "";
-		if (jump.deltaDays > 0) prefix = format === "markdown" ? `**[${anomalyTag}]** ` : `[${anomalyTag}] `;
-		const lineBody = `${prefix}${jump.fromFileName} -> (+${delta}) ${jump.toFileName}`;
+		const lineBody = `${jump.fromFileName} -> (+${delta}) ${jump.toFileName}`;
 		lines.push(format === "markdown" ? `  - ${lineBody}` : `  ${lineBody}`);
 	}
 	if (missingAssets.length > 0) {
@@ -5387,22 +5327,13 @@ function appendTimelineEvidenceSection(lines, collective, format, locale) {
 function appendGeospatialEvidenceSection(lines, collective, format, locale, roadRouteDetails) {
 	const title = translate("analysis_geospatial", {}, locale, "ui");
 	lines.push(format === "markdown" ? `### ${title}` : `[${title}]`);
-	const { maxSpreadKm, totalPathDistanceKm, spreadCategory, jumps, velocityAlert } = collective.geospatial;
+	const { maxSpreadKm, totalPathDistanceKm, spreadCategory, jumps } = collective.geospatial;
 	const hasRoadRoute = Boolean(roadRouteDetails && roadRouteDetails.totalDistanceMeters > 0);
 	const rows = [[translate("geo_max_spread", {}, locale, "narratives"), formatGeoDistance(maxSpreadKm, maxSpreadKm * 1e3)], [translate("geo_reconstruct_range", {}, locale, "narratives"), formatGeoDistance(totalPathDistanceKm, totalPathDistanceKm * 1e3)]];
 	if (hasRoadRoute && roadRouteDetails) rows.push([translate("geo_estimated_road_route", {}, locale, "narratives"), formatGeoDistance(roadRouteDetails.totalDistanceMeters / 1e3, roadRouteDetails.totalDistanceMeters)]);
 	rows.push([translate("spread_category", {}, locale, "ui"), translate(`spread_${spreadCategory}`, {}, locale, "ui")]);
 	lines.push(...formatKeyValueRows(rows, format));
 	lines.push(translate(hasRoadRoute ? "geo_reconstruct_note_road" : "geo_reconstruct_note_displacement", {}, locale, "narratives"));
-	if (velocityAlert?.hasAnomaly) {
-		const alertLabel = translate("velocity_anomaly_label", {}, locale, "ui");
-		const alertDesc = translate("velocity_anomaly_desc", {
-			from: velocityAlert.fromFileName || "-",
-			to: velocityAlert.toFileName || "-",
-			speed: velocityAlert.maxSpeedKmh
-		}, locale, "ui");
-		lines.push(format === "markdown" ? `- **[${alertLabel}]**: ${alertDesc}` : `[${alertLabel}] ${alertDesc}`);
-	}
 	if (jumps.length > 0) {
 		const jumpsLabel = stripTrailingColon(translate("geo_reconstruct_jumps", {}, locale, "narratives"));
 		lines.push(format === "markdown" ? `- **${jumpsLabel}**:` : `${jumpsLabel}:`);
@@ -5645,7 +5576,6 @@ function evaluateCollectiveIntelligence(assets) {
 	let totalPathDistanceKm = 0;
 	let spreadCategory = "none";
 	const geoJumps = [];
-	let velocityAlert = null;
 	if (geoAssets.length === 1) spreadCategory = "concentrated";
 	else if (geoAssets.length > 1) {
 		for (let i = 0; i < geoAssets.length; i++) for (let j = i + 1; j < geoAssets.length; j++) {
@@ -5656,45 +5586,18 @@ function evaluateCollectiveIntelligence(assets) {
 		else if (maxSpreadKm < 1) spreadCategory = "localized";
 		else spreadCategory = "trail";
 		const chronoPoints = geoAssets.filter((g) => g.time != null).sort((a, b) => a.time - b.time);
-		let hasVelocityAnomaly = false;
-		let maxSpeed = 0;
-		let anomalyFrom;
-		let anomalyTo;
-		if (chronoPoints.length > 1) {
-			for (let i = 0; i < chronoPoints.length - 1; i++) {
-				const p1 = chronoPoints[i];
-				const p2 = chronoPoints[i + 1];
-				const distKm = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng);
-				const distM = distKm * 1e3;
-				totalPathDistanceKm += distKm;
-				geoJumps.push({
-					fromFileName: p1.fileName,
-					toFileName: p2.fileName,
-					distanceKm: distKm,
-					distanceMeters: distM
-				});
-				const timeDiffHours = (p2.time - p1.time) / 36e5;
-				if (timeDiffHours === 0 && distKm > .05) {
-					hasVelocityAnomaly = true;
-					anomalyFrom = p1.fileName;
-					anomalyTo = p2.fileName;
-					maxSpeed = Math.max(maxSpeed, 999999);
-				} else if (timeDiffHours > 0) {
-					const speed = distKm / timeDiffHours;
-					if (speed > maxSpeed) maxSpeed = speed;
-					if (speed > 1200 && !hasVelocityAnomaly) {
-						hasVelocityAnomaly = true;
-						anomalyFrom = p1.fileName;
-						anomalyTo = p2.fileName;
-					}
-				}
-			}
-			velocityAlert = {
-				hasAnomaly: hasVelocityAnomaly,
-				maxSpeedKmh: Math.round(maxSpeed),
-				fromFileName: anomalyFrom,
-				toFileName: anomalyTo
-			};
+		if (chronoPoints.length > 1) for (let i = 0; i < chronoPoints.length - 1; i++) {
+			const p1 = chronoPoints[i];
+			const p2 = chronoPoints[i + 1];
+			const distKm = calculateDistance(p1.lat, p1.lng, p2.lat, p2.lng);
+			const distM = distKm * 1e3;
+			totalPathDistanceKm += distKm;
+			geoJumps.push({
+				fromFileName: p1.fileName,
+				toFileName: p2.fileName,
+				distanceKm: distKm,
+				distanceMeters: distM
+			});
 		}
 	}
 	return {
@@ -5724,8 +5627,7 @@ function evaluateCollectiveIntelligence(assets) {
 			maxSpreadKm,
 			spreadCategory,
 			missingCoordinatesCount,
-			jumps: geoJumps,
-			velocityAlert
+			jumps: geoJumps
 		}
 	};
 }
