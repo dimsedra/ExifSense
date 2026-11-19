@@ -1,4 +1,5 @@
 import type { ForensicAsset } from '../core/forensics/types';
+import { extractGpsCoordinates, parseExifDate } from '../core/forensics/metadata';
 
 export interface MapWaypoint {
   assetId: string;
@@ -60,6 +61,44 @@ export function extractAssetCoordinates(assets: ForensicAsset[]): MapWaypoint[] 
   }
 
   return waypoints;
+}
+
+/**
+ * Extracts valid GPS waypoints sorted chronologically by EXIF capture timestamp with fileDate fallback.
+ */
+export function extractChronologicalWaypoints(assets: ForensicAsset[]): MapWaypoint[] {
+  if (!assets || assets.length === 0) return [];
+
+  const entries: Array<{ waypoint: MapWaypoint; time: number; index: number }> = [];
+
+  for (let index = 0; index < assets.length; index++) {
+    const asset = assets[index]!;
+    const coords = extractGpsCoordinates(asset.exifData);
+    if (!coords) {
+      continue;
+    }
+
+    const rawDate =
+      asset.exifData?.DateTimeOriginal ||
+      asset.exifData?.CreateDate ||
+      asset.exifData?.DateTime;
+    const parsedDate = parseExifDate(rawDate);
+    const time = parsedDate ? parsedDate.getTime() : asset.fileDate || 0;
+
+    entries.push({
+      waypoint: {
+        assetId: asset.id,
+        fileName: asset.fileName,
+        lat: coords.lat,
+        lng: coords.lng,
+      },
+      time,
+      index,
+    });
+  }
+
+  entries.sort((a, b) => a.time - b.time || a.index - b.index);
+  return entries.map((entry) => entry.waypoint);
 }
 
 /**
@@ -261,27 +300,51 @@ export interface OsrmRouteDetails {
 const osrmCache = new Map<string, GeoJSON.GeoJsonObject | null>();
 const osrmDetailsCache = new Map<string, OsrmRouteDetails | null>();
 
+export interface OsrmFetchOptions {
+  timeoutMs?: number;
+}
+
+function buildOsrmCacheKey(waypoints: Array<{ lat: number; lng: number }>): string {
+  // OSRM public demo server limits waypoints (~100 max)
+  const capped = waypoints.slice(0, 100);
+  return capped.map((p) => `${p.lng},${p.lat}`).join(';');
+}
+
+/**
+ * Synchronously returns cached OSRM route details for waypoints when already fetched, or null.
+ */
+export function getCachedOsrmRouteDetails(
+  waypoints: Array<{ lat: number; lng: number }>
+): OsrmRouteDetails | null {
+  if (!waypoints || waypoints.length < 2) return null;
+  const coordsStr = buildOsrmCacheKey(waypoints);
+  return osrmDetailsCache.get(coordsStr) ?? null;
+}
+
 /**
  * Fetches real-world road-following driving route details between waypoints via OSRM,
  * including total road distance, individual waypoint-to-waypoint leg distances, and geometry.
  */
 export async function fetchOsrmRouteDetails(
-  waypoints: Array<{ lat: number; lng: number }>
+  waypoints: Array<{ lat: number; lng: number }>,
+  options?: OsrmFetchOptions
 ): Promise<OsrmRouteDetails | null> {
   if (!waypoints || waypoints.length < 2) return null;
 
-  // OSRM public demo server limits waypoints (~100 max)
-  const capped = waypoints.slice(0, 100);
-  const coordsStr = capped.map((p) => `${p.lng},${p.lat}`).join(';');
-
+  const coordsStr = buildOsrmCacheKey(waypoints);
   if (osrmDetailsCache.has(coordsStr)) {
     return osrmDetailsCache.get(coordsStr) ?? null;
   }
 
+  const timeoutMs = options?.timeoutMs ?? 3000;
+  const controller = typeof AbortController !== 'undefined' ? new AbortController() : undefined;
+  const timeout = createAbortTimeout(timeoutMs, controller);
+
   try {
     const url = `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`;
-    const response = await fetch(url);
-    if (!response.ok) {
+    const fetchInit: RequestInit = controller ? { signal: controller.signal } : {};
+    const response = await Promise.race([fetch(url, fetchInit), timeout.promise]);
+    if (!response || !response.ok) {
       return null;
     }
     const data = (await response.json()) as {
@@ -311,6 +374,8 @@ export async function fetchOsrmRouteDetails(
     }
   } catch (error) {
     console.error('OSRM route fetch failed:', error);
+  } finally {
+    timeout.clear();
   }
 
   return null;

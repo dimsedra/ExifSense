@@ -312,13 +312,18 @@ function formatAdaptiveKmDistance(distanceKm: number): string {
   return `${distanceKm.toFixed(1).replace('.0', '')} km`;
 }
 
+export interface CollectiveNarrativeOptions {
+  roadDistanceMeters?: number | null;
+}
+
 /**
  * Generates natural language multi-asset collective narratives for UI and report exports.
  */
 export function generateCollectiveNarratives(
   collective: CollectiveIntelligenceResult,
   totalAssets: number,
-  locale: string = 'en'
+  locale: string = 'en',
+  options?: CollectiveNarrativeOptions
 ): NarrativeSection[] {
   const sections: NarrativeSection[] = [];
 
@@ -441,7 +446,16 @@ export function generateCollectiveNarratives(
         collective.geospatial.spreadCategory === 'localized'
           ? 'combined_geo_localized'
           : 'combined_geo_trail';
-      geoText = translate(key, { dist: formatAdaptiveKmDistance(pathKm) }, locale);
+      const roadMeters = options?.roadDistanceMeters;
+      const roadClause =
+        roadMeters != null && roadMeters > 0
+          ? ` ${translate('geo_dual_road_clause', { roadDist: formatAdaptiveKmDistance(roadMeters / 1000) }, locale)}`
+          : '';
+      geoText = translate(
+        key,
+        { dist: formatAdaptiveKmDistance(pathKm), roadClause },
+        locale
+      );
     } else if (maxSpreadKm > 0) {
       geoText = translate(
         'combined_geo_spread_only',

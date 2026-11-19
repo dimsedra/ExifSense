@@ -141,7 +141,9 @@ export function generateMarkdownReport(
   if (assets.length > 1) {
     md += `## ${translate('combined_intel', {}, locale, 'reports')}\n\n`;
     const collective = evaluateCollectiveIntelligence(assets);
-    const sections = generateCollectiveNarratives(collective, assets.length, locale);
+    const sections = generateCollectiveNarratives(collective, assets.length, locale, {
+      roadDistanceMeters: meta.roadDistanceMeters ?? null
+    });
     for (const section of sections) {
       md += `### ${section.title}\n`;
       const blockquoted = section.narrative.split('\n').map((l) => `> ${l}`).join('\n');
@@ -242,7 +244,9 @@ export function generateClipboardReport(
     content += `${translate('combined_intel', {}, locale, 'reports')}\n`;
     content += `-----------------------------\n`;
     const collective = evaluateCollectiveIntelligence(assets);
-    const sections = generateCollectiveNarratives(collective, assets.length, locale);
+    const sections = generateCollectiveNarratives(collective, assets.length, locale, {
+      roadDistanceMeters: meta.roadDistanceMeters ?? null
+    });
     for (const section of sections) {
       content += `${section.title.toUpperCase()}\n`;
       content += `${section.narrative}\n\n`;
@@ -381,7 +385,9 @@ export async function generatePdfReport(
     currentY += 10;
 
     const collective = evaluateCollectiveIntelligence(assets);
-    const sections = generateCollectiveNarratives(collective, assets.length, locale);
+    const sections = generateCollectiveNarratives(collective, assets.length, locale, {
+      roadDistanceMeters: meta.roadDistanceMeters ?? null
+    });
 
     for (const section of sections) {
       if (currentY > 240) {

@@ -16,6 +16,11 @@ import { useHistoryStore } from './store/useHistoryStore';
 import { useI18nStore } from './store/useI18nStore';
 import { processSanitizerIntake } from './services/ingestionCoordinator';
 import {
+  extractChronologicalWaypoints,
+  fetchOsrmRouteDetails,
+  getCachedOsrmRouteDetails,
+} from './services/mapHelpers';
+import {
   generatePdfReport,
   generateJsonReport,
   generateCsvReport,
@@ -107,6 +112,24 @@ export const App: React.FC = () => {
     }
 
     const first = assets[0]!;
+    let roadDistanceMeters: number | null = null;
+    if (assets.length > 1 && (format === 'pdf' || format === 'md' || format === 'clipboard')) {
+      const waypoints = extractChronologicalWaypoints(assets).map((wp) => ({
+        lat: wp.lat,
+        lng: wp.lng,
+      }));
+      if (waypoints.length >= 2) {
+        if (format === 'clipboard') {
+          roadDistanceMeters = getCachedOsrmRouteDetails(waypoints)?.totalDistanceMeters ?? null;
+        } else {
+          const routeDetails = await fetchOsrmRouteDetails(waypoints, { timeoutMs: 2500 }).catch(
+            () => null
+          );
+          roadDistanceMeters = routeDetails?.totalDistanceMeters ?? null;
+        }
+      }
+    }
+
     const meta = {
       sessionTitle:
         assets.length === 1
@@ -115,6 +138,7 @@ export const App: React.FC = () => {
       forensicId: forensicId || 'ES-EXPORT',
       investigatorIdentity: 'ExifSense',
       generatedAt: new Date(),
+      roadDistanceMeters,
     };
 
     try {

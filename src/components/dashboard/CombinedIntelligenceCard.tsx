@@ -17,8 +17,11 @@ import { evaluateCollectiveIntelligence } from '../../core/forensics/collective'
 import { generateCollectiveNarratives } from '../../core/narratives/narratives';
 import type { NarrativeSection } from '../../core/narratives/types';
 import { useI18nStore } from '../../store/useI18nStore';
-import { formatNaturalDate, parseExifDate } from '../../core/forensics/metadata';
-import { fetchOsrmRouteDetails } from '../../services/mapHelpers';
+import { formatNaturalDate } from '../../core/forensics/metadata';
+import {
+  extractChronologicalWaypoints,
+  fetchOsrmRouteDetails,
+} from '../../services/mapHelpers';
 import type { OsrmRouteDetails } from '../../services/mapHelpers';
 
 function formatTotalDuration(
@@ -100,52 +103,31 @@ export const CombinedIntelligenceCard: React.FC<CombinedIntelligenceCardProps> =
   const tableContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setRoadRouteDetails(null);
     if (!assets || assets.length < 2) return;
 
-    const geoAssets = assets
-      .filter((a) => {
-        const lat = a.exifData?.latitude ?? a.exifData?.GPSLatitude;
-        const lng = a.exifData?.longitude ?? a.exifData?.GPSLongitude;
-        return (
-          lat != null &&
-          lng != null &&
-          !Number.isNaN(Number(lat)) &&
-          !Number.isNaN(Number(lng))
-        );
-      })
-      .map((a) => {
-        const rawDate =
-          a.exifData?.DateTimeOriginal ||
-          a.exifData?.CreateDate ||
-          a.exifData?.DateTime;
-        const d = parseExifDate(rawDate);
-        return {
-          asset: a,
-          time: d ? d.getTime() : a.fileDate || 0,
-          lat: Number(a.exifData?.latitude ?? a.exifData?.GPSLatitude),
-          lng: Number(a.exifData?.longitude ?? a.exifData?.GPSLongitude),
-        };
-      })
-      .sort((a, b) => a.time - b.time);
+    const waypoints = extractChronologicalWaypoints(assets).map((wp) => ({
+      lat: wp.lat,
+      lng: wp.lng,
+    }));
+
+    if (waypoints.length < 2) {
+      return;
+    }
 
     let isCancelled = false;
 
-    if (geoAssets.length >= 2) {
-      const waypoints = geoAssets.map((item) => ({
-        lat: item.lat,
-        lng: item.lng,
-      }));
-
-      fetchOsrmRouteDetails(waypoints)
-        .then((details) => {
-          if (!isCancelled && details) {
-            setRoadRouteDetails(details);
-          }
-        })
-        .catch(() => {
-          // graceful offline fallback
-        });
-    }
+    fetchOsrmRouteDetails(waypoints)
+      .then((details) => {
+        if (!isCancelled) {
+          setRoadRouteDetails(details);
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setRoadRouteDetails(null);
+        }
+      });
 
     return () => {
       isCancelled = true;
@@ -160,7 +142,8 @@ export const CombinedIntelligenceCard: React.FC<CombinedIntelligenceCardProps> =
   const narratives: NarrativeSection[] = generateCollectiveNarratives(
     collective,
     assets.length,
-    currentLang
+    currentLang,
+    { roadDistanceMeters: roadRouteDetails?.totalDistanceMeters ?? null }
   );
 
   const isCurrentOpen =

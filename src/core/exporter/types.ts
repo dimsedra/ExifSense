@@ -3,6 +3,7 @@ export interface ForensicExportMetadata {
   forensicId: string;
   investigatorIdentity?: string | null;
   generatedAt: Date;
+  roadDistanceMeters?: number | null;
 }
 
 export interface ExportFileResult {
