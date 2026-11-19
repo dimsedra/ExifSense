@@ -246,8 +246,6 @@ export function evaluateCollectiveIntelligence(
   let totalPathDistanceKm = 0;
   let spreadCategory: 'concentrated' | 'localized' | 'trail' | 'none' = 'none';
   const geoJumps: GeospatialJump[] = [];
-  let velocityAlert: CollectiveIntelligenceResult['geospatial']['velocityAlert'] =
-    null;
 
   if (geoAssets.length === 1) {
     spreadCategory = 'concentrated';
@@ -278,11 +276,6 @@ export function evaluateCollectiveIntelligence(
       .filter((g): g is typeof g & { time: number } => g.time != null)
       .sort((a, b) => a.time - b.time);
 
-    let hasVelocityAnomaly = false;
-    let maxSpeed = 0;
-    let anomalyFrom: string | undefined;
-    let anomalyTo: string | undefined;
-
     if (chronoPoints.length > 1) {
       for (let i = 0; i < chronoPoints.length - 1; i++) {
         const p1 = chronoPoints[i];
@@ -297,32 +290,7 @@ export function evaluateCollectiveIntelligence(
           distanceKm: distKm,
           distanceMeters: distM,
         });
-
-        const timeDiffHours = (p2.time - p1.time) / (1000 * 60 * 60);
-        if (timeDiffHours === 0 && distKm > 0.05) {
-          hasVelocityAnomaly = true;
-          anomalyFrom = p1.fileName;
-          anomalyTo = p2.fileName;
-          maxSpeed = Math.max(maxSpeed, 999999);
-        } else if (timeDiffHours > 0) {
-          const speed = distKm / timeDiffHours;
-          if (speed > maxSpeed) {
-            maxSpeed = speed;
-          }
-          if (speed > 1200 && !hasVelocityAnomaly) {
-            hasVelocityAnomaly = true;
-            anomalyFrom = p1.fileName;
-            anomalyTo = p2.fileName;
-          }
-        }
       }
-
-      velocityAlert = {
-        hasAnomaly: hasVelocityAnomaly,
-        maxSpeedKmh: Math.round(maxSpeed),
-        fromFileName: anomalyFrom,
-        toFileName: anomalyTo,
-      };
     }
   }
 
@@ -354,7 +322,6 @@ export function evaluateCollectiveIntelligence(
       spreadCategory,
       missingCoordinatesCount,
       jumps: geoJumps,
-      velocityAlert,
     },
   };
 }

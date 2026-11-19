@@ -23,13 +23,7 @@ export interface IntegrityAlert {
     | 'missing_gps'
     | 'missing_datetime'
     | 'missing_device'
-    | 'editing_software'
-    | 'future_capture_date'
-    | 'capture_after_file_modification'
-    | 'missing_original_metadata'
-    | 'dimension_mismatch'
-    | 'null_island'
-    | 'integer_coordinate_precision';
+    | 'editing_software';
   severity: 'info' | 'warning' | 'critical';
   messageParam?: Record<string, unknown>;
   defaultMessage: string;
@@ -119,11 +113,5 @@ export interface CollectiveIntelligenceResult {
     spreadCategory: 'concentrated' | 'localized' | 'trail' | 'none';
     missingCoordinatesCount: number;
     jumps: GeospatialJump[];
-    velocityAlert: {
-      hasAnomaly: boolean;
-      maxSpeedKmh: number;
-      fromFileName?: string;
-      toFileName?: string;
-    } | null;
   };
 }
